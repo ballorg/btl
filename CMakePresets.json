@@ -126,5 +126,56 @@
 			"description": "Release building with Visual Studio configuration",
 			"configuration": "Release"
 		}
+	],
+
+	"testPresets":
+	[
+		{
+			"name": "Debug",
+			"displayName": "CTest - Ninja - Debug",
+			"configurePreset": "Debug",
+			"output":
+			{
+				"outputOnFailure": true
+			}
+		},
+		{
+			"name": "RelWithDebInfo",
+			"displayName": "CTest - Ninja - RelWithDebInfo",
+			"configurePreset": "RelWithDebInfo",
+			"output":
+			{
+				"outputOnFailure": true
+			}
+		},
+		{
+			"name": "Release",
+			"displayName": "CTest - Ninja - Release",
+			"configurePreset": "Release",
+			"output":
+			{
+				"outputOnFailure": true
+			}
+		},
+		{
+			"name": "VisualStudio\\Debug",
+			"displayName": "CTest - Visual Studio - Debug",
+			"configurePreset": "VisualStudio",
+			"configuration": "Debug",
+			"output":
+			{
+				"outputOnFailure": true
+			}
+		},
+		{
+			"name": "VisualStudio\\Release",
+			"displayName": "CTest - Visual Studio - Release",
+			"configurePreset": "VisualStudio",
+			"configuration": "Release",
+			"output":
+			{
+				"outputOnFailure": true
+			}
+		}
 	]
 }

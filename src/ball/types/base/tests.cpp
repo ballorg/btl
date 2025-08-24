@@ -33,6 +33,8 @@ extern "C"
 // Helpers
 
 using namespace Ball::Types::Base::Arch;
+using namespace Ball::Types::Base::Fixed;
+using namespace Ball::Types::Base::Characters;
 
 template < usize_t N >
 static auto AppendString( usize_t &nPos, char_t ( &sBuffer )[ N ], cstr_t pszText ) -> usize_t
@@ -53,7 +55,7 @@ static auto AppendString( usize_t &nPos, char_t ( &sBuffer )[ N ], cstr_t pszTex
 // Entry point section.
 int main()
 {
-	using namespace Ball::Types::Base::Fixed;
+	// Fixed types.
 
 	BALL_STATIC_ASSERT_SIZEOF_BITS( int8_t, 8 );
 	BALL_STATIC_ASSERT_SIZEOF_BITS( int16_t, 16 );
@@ -70,13 +72,13 @@ int main()
 	BALL_STATIC_ASSERT_SIZEOF_BITS( sint32_t, 32 );
 	BALL_STATIC_ASSERT_SIZEOF_BITS( sint64_t, 64 );
 
-	using namespace Ball::Types::Base::Characters;
+	// Character types.
 
 	BALL_STATIC_ASSERT_SIZEOF_BITS( char8_t, 8 );
 	BALL_STATIC_ASSERT_SIZEOF_BITS( char16_t, 16 );
 	BALL_STATIC_ASSERT_SIZEOF_BITS( char32_t, 32 );
 
-	// using namespace Ball::Types::Base::Arch;
+	// Word types.
 
 	usize_t nPos = 0;
 	char sBuffer[1024];

@@ -1,0 +1,42 @@
+include(CTest)
+
+if(NOT BUILD_TESTING)
+	return()
+endif()
+
+enable_testing()
+
+set(PROJECT_BASE_TESTS_NAME ${PROJECT_NAME}-base-tests)
+set(PROJECT_BASE_TESTS_OUTPUT_NAME ${PROJECT_OUTPUT_NAME}-base-tests)
+
+add_executable(${PROJECT_BASE_TESTS_NAME}
+	${SOURCE_DIR}/ball/types/base/tests.cpp
+)
+
+target_compile_features(${PROJECT_BASE_TESTS_NAME} PRIVATE cxx_std_20)
+set_property(TARGET ${PROJECT_BASE_TESTS_NAME} PROPERTY CXX_SCAN_FOR_MODULES ON)
+
+target_link_libraries(${PROJECT_BASE_TESTS_NAME} PRIVATE ${PROJECT_NAME})
+
+set_target_properties(${PROJECT_BASE_TESTS_NAME} PROPERTIES
+	OUTPUT_NAME ${PROJECT_BASE_TESTS_OUTPUT_NAME}
+
+	C_EXTENSIONS OFF
+	C_STANDARD 20
+	C_STANDARD_REQUIRED ON
+
+	CXX_EXTENSIONS OFF
+	CXX_STANDARD 20
+	CXX_STANDARD_REQUIRED ON
+
+	CXX_SCAN_FOR_MODULES ON
+)
+
+if(MSVC)
+	target_compile_options(${PROJECT_BASE_TESTS_NAME} PRIVATE /permissive- /Zc:__cplusplus)
+endif()
+
+add_test(
+	NAME ${PROJECT_BASE_TESTS_NAME}
+	COMMAND $<TARGET_FILE:${PROJECT_BASE_TESTS_NAME}>
+)
