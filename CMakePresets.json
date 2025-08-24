@@ -1,0 +1,130 @@
+{
+	"version": 4,
+
+	"configurePresets":
+	[
+		{
+			"name": "NinjaBase",
+
+			"binaryDir": "${sourceDir}/build/${hostSystemName}/${presetName}",
+			"generator": "Ninja",
+			"description": "Build using Ninja generator",
+			"cacheVariables":
+			{
+				"CMAKE_CONFIGURATION_TYPES": "Debug;RelWithDebInfo;Release"
+			},
+
+			"hidden": true
+		},
+		{
+			"name": "VisualStudio",
+			"displayName": "Visual Studio",
+
+			"condition":
+			{
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			},
+
+			"binaryDir": "${sourceDir}\\build\\${hostSystemName}\\${presetName}",
+			"generator": "Visual Studio 17 2022",
+			"description": "Build using Visual Studio generator",
+			"cacheVariables":
+			{
+				"CMAKE_CONFIGURATION_TYPES": "Debug;Release"
+			}
+		},
+
+		{
+			"name": "Debug",
+			"displayName": "Ninja - Debug",
+			"inherits": "NinjaBase",
+
+			"cacheVariables":
+			{
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "RelWithDebInfo",
+			"displayName": "Ninja - Release With Debug Info",
+			"description": "Build using Visual Studio generator",
+			"inherits": "NinjaBase",
+
+			"cacheVariables":
+			{
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+		{
+			"name": "Release",
+			"displayName": "Ninja - Release",
+			"inherits": "NinjaBase",
+
+			"cacheVariables":
+			{
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		}
+	],
+
+	"buildPresets":
+	[
+		{
+			"name": "VisualStudioBase",
+
+			"condition":
+			{
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			},
+
+			"displayName": "Visual Studio - Base",
+			"description": "Visual Studio-based build preset",
+			"configurePreset": "VisualStudio",
+
+			"hidden": true
+		},
+
+		{
+			"name": "Debug",
+
+			"displayName": "Ninja - Debug",
+			"description": "Debug building with Ninja",
+			"configurePreset": "Debug"
+		},
+		{
+			"name": "RelWithDebInfo",
+
+			"displayName": "Ninja - Release With Debug Info",
+			"description": "Release With Debug Info building with Ninja configuration",
+			"configurePreset": "RelWithDebInfo"
+		},
+		{
+			"name": "Release",
+
+			"displayName": "Ninja - Release",
+			"description": "Release building with Ninja configuration",
+			"configurePreset": "Release"
+		},
+
+		{
+			"name": "VisualStudio\\Debug",
+			"inherits": "VisualStudioBase",
+
+			"displayName": "Visual Studio - Debug",
+			"description": "Debug building with Visual Studio configuration",
+			"configuration": "Debug"
+		},
+		{
+			"name": "VisualStudio\\Release",
+			"inherits": "VisualStudioBase",
+
+			"displayName": "Visual Studio - Release",
+			"description": "Release building with Visual Studio configuration",
+			"configuration": "Release"
+		}
+	]
+}
