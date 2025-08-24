@@ -30,6 +30,7 @@ PUBLIC
 		${INCLUDE_DIR}/ball/types/base/arch.cppm
 		${INCLUDE_DIR}/ball/types/base/characters.cppm
 		${INCLUDE_DIR}/ball/types/base/fixed.cppm
+		${INCLUDE_DIR}/ball/types/base.cppm
 )
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 set_target_properties(${PROJECT_NAME} PROPERTIES
