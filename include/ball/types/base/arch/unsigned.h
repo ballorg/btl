@@ -4,7 +4,7 @@
 #	ifdef __cplusplus
 typedef bool bool_t;
 #	else // !defined( __cplusplus )
-#		if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#		if defined( __STDC_VERSION__ ) && __STDC_VERSION__ >= 199901L
 typedef _Bool bool_t;
 #		else // !(defined( __STDC_VERSION__ ) && __STDC_VERSION__ >= 199901L)
 typedef unsigned char bool_t;

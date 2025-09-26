@@ -10,12 +10,12 @@ typedef float float_t;
 typedef double double_t;
 typedef long double ldouble_t;
 
-#	if !defined(_SIZE_T_DEFINED) && !( defined( _WIN32 ) && defined( _WIN64 ) )
+#	if !defined( _SIZE_T_DEFINED ) && !( defined( _WIN32 ) && defined( _WIN64 ) )
 #		ifdef __SIZE_TYPE__
 typedef __SIZE_TYPE__ size_t;
-#		else // !( !defined(_SIZE_T_DEFINED) && !( defined( _WIN32 ) && defined( _WIN64 ) ) )
+#		else // !( !defined( _SIZE_T_DEFINED ) && !( defined( _WIN32 ) && defined( _WIN64 ) ) )
 typedef long int size_t;
 #		endif // !defined( __SIZE_TYPE__ )
-#	endif // !defined(_SIZE_T_DEFINED) && !( defined( _WIN32 ) && defined( _WIN64 ) )
+#	endif // !defined( _SIZE_T_DEFINED ) && !( defined( _WIN32 ) && defined( _WIN64 ) )
 
 #endif // _INCLUDE_BALL_TYPES_BASE_ARCH_UNCERTAIN_H_
