@@ -9,6 +9,6 @@ typedef decltype( nullptr ) nullptr_t;
 typedef void_t *nullptr_t;
 #	endif // defined( __cplusplus ) && __cplusplus >= 201103L
 
-typedef const char *cstr_t;
+typedef char *str_t;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_BASE_ARCH_POINTER_H_ )

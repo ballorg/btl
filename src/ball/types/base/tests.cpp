@@ -36,8 +36,8 @@ using namespace Ball::Types::Base::Arch;
 using namespace Ball::Types::Base::Fixed;
 using namespace Ball::Types::Base::Characters;
 
-template < usize_t N >
-static auto AppendString( usize_t &nPos, char_t ( &sBuffer )[ N ], cstr_t pszText ) -> usize_t
+template< usize_t N >
+static auto AppendString( usize_t &nPos, char_t ( &sBuffer )[ N ], const char *pszText ) -> usize_t
 {
 	usize_t n = 0;
 
