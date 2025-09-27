@@ -6,4 +6,4 @@ namespace Ball::Types::Base::Fixed
 #	include "fixed.h"
 };
 
-#endif // _INCLUDE_BALL_TYPES_BASE_ARCH_HPP_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_ARCH_HPP_ )

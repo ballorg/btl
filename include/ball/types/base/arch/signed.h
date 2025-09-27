@@ -8,4 +8,4 @@ typedef signed long int slong_t;
 typedef signed long long int sllong_t;
 typedef signed long int ssize_t;
 
-#endif // _INCLUDE_BALL_TYPES_BASE_ARCH_SIGNED_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_ARCH_SIGNED_H_ )

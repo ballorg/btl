@@ -27,4 +27,4 @@ typedef unsigned int wchar_t;
 
 #	endif // !defined( _WCHAR_T_DEFINED )
 
-#endif // _INCLUDE_BALL_TYPES_BASE_CHARACTERS_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_CHARACTERS_H_ )

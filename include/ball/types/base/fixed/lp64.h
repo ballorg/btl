@@ -5,4 +5,4 @@
 #	include "lp64/uncertain.h"
 #	include "lp64/unsigned.h"
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_L64_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_L64_H_ )

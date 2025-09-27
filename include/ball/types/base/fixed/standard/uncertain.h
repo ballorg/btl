@@ -8,4 +8,4 @@ typedef long int int32_t;
 typedef long long int int64_t;
 typedef long int intptr_t;
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_STANDARD_UNCERTAIN_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_STANDARD_UNCERTAIN_H_ )

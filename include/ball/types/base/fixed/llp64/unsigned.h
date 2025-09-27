@@ -8,4 +8,4 @@ typedef unsigned int uint32_t;
 typedef unsigned long long int uint64_t;
 typedef unsigned long long int uintptr_t;
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_LLP64_UNSIGNED_H_
+#endif // !defined(_INCLUDE_BALL_TYPES_BASE_FIXED_LLP64_UNSIGNED_H_ )

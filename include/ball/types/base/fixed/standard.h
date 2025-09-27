@@ -5,4 +5,4 @@
 #	include "standard/uncertain.h"
 #	include "standard/unsigned.h"
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_STANDARD_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_STANDARD_H_ )

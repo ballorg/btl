@@ -5,4 +5,4 @@
 #	include "lp32/uncertain.h"
 #	include "lp32/unsigned.h"
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_LP32_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_LP32_H_ )

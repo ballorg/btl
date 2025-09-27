@@ -7,4 +7,4 @@ typedef signed int sint32_t;
 typedef signed long int sint64_t;
 typedef signed long long int sintptr_t;
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_LP64_SIGNED_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_LP64_SIGNED_H_ )

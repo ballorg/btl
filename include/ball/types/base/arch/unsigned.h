@@ -18,4 +18,4 @@ typedef unsigned long int ulong_t;
 typedef unsigned long long int ullong_t;
 typedef unsigned long int usize_t;
 
-#endif // _INCLUDE_BALL_TYPES_BASE_ARCH_UNSIGNED_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_ARCH_UNSIGNED_H_ )

@@ -6,4 +6,4 @@ namespace Ball::Types::Base::Characters
 #	include "characters.h"
 };
 
-#endif // _INCLUDE_BALL_TYPES_BASE_CHARACTERS_HPP_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_CHARACTERS_HPP_ )

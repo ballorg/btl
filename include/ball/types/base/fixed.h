@@ -15,4 +15,4 @@
 #	include "fixed/llp64.h"
 #endif
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_H_ )

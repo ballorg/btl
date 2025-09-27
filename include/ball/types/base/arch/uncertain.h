@@ -18,4 +18,4 @@ typedef long int size_t;
 #		endif // !defined( __SIZE_TYPE__ )
 #	endif // !defined( _SIZE_T_DEFINED ) && !( defined( _WIN32 ) && defined( _WIN64 ) )
 
-#endif // _INCLUDE_BALL_TYPES_BASE_ARCH_UNCERTAIN_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_ARCH_UNCERTAIN_H_ )

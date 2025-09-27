@@ -3,4 +3,4 @@
 
 #	include "ilp32.h"
 
-#endif // _INCLUDE_BALL_TYPES_BASE_FIXED_WIN32_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_WIN32_H_ )
