@@ -5,4 +5,4 @@
 #include "base/characters.h"
 #include "base/fixed.h"
 
-#endif // _INCLUDE_BALL_TYPES_BASE_H_
+#endif // !defined( _INCLUDE_BALL_TYPES_BASE_H_ )

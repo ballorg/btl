@@ -1,5 +1,3 @@
-include(CTest)
-
 if(NOT BUILD_TESTING)
 	return()
 endif()
@@ -12,9 +10,6 @@ set(PROJECT_BASE_TESTS_OUTPUT_NAME ${PROJECT_OUTPUT_NAME}-base-tests)
 add_executable(${PROJECT_BASE_TESTS_NAME}
 	${SOURCE_DIR}/ball/types/base/tests.cpp
 )
-
-target_compile_features(${PROJECT_BASE_TESTS_NAME} PRIVATE cxx_std_20)
-set_property(TARGET ${PROJECT_BASE_TESTS_NAME} PROPERTY CXX_SCAN_FOR_MODULES ON)
 
 target_link_libraries(${PROJECT_BASE_TESTS_NAME} PRIVATE ${PROJECT_NAME})
 
@@ -31,10 +26,6 @@ set_target_properties(${PROJECT_BASE_TESTS_NAME} PROPERTIES
 
 	CXX_SCAN_FOR_MODULES ON
 )
-
-if(MSVC)
-	target_compile_options(${PROJECT_BASE_TESTS_NAME} PRIVATE /permissive- /Zc:__cplusplus)
-endif()
 
 add_test(
 	NAME ${PROJECT_BASE_TESTS_NAME}

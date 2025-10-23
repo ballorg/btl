@@ -1,18 +1,11 @@
-import Ball.Types.Base.Arch;
-import Ball.Types.Base.Characters;
-import Ball.Types.Base.Fixed;
+import Ball.New;
+import Ball.Types;
 
 // Macros section.
 #define BALL_STATIC_ASSERT_SIZEOF( type, size ) static_assert( sizeof( type ) == ( size ), "sizeof( " #type " ) must be " #size " bytes")
 #define BALL_STATIC_ASSERT_SIZEOF_BITS( type, bits ) BALL_STATIC_ASSERT_SIZEOF( type, bits / 8 )
-#define BALL_APPEND_SIZEOF( func, pos, buf, type, end_str ) \
-	{ \
-		func( pos, buf, "sizeof( " #type " ) = "); \
-		func( pos, buf, Digit_t( sizeof( type ) ).str ); \
-		func( pos, buf, " bytes" ); \
-		if constexpr ( end_str && end_str[0] ) \
-			func( pos, buf, end_str ); \
-	}
+#define BALL_APPEND_SIZEOF( buffer, type ) \
+	buffer.AppendMultiple( "sizeof( " #type " ) = ", sizeof( type ), " bytes (", sizeof( type ) * 8 , " bits)\n" );
 
 
 // Structure section.
@@ -32,25 +25,7 @@ extern "C"
 
 // Helpers
 
-using namespace Ball::Types::Base::Arch;
-using namespace Ball::Types::Base::Fixed;
-using namespace Ball::Types::Base::Characters;
-
-template< usize_t N >
-static auto AppendString( usize_t &nPos, char_t ( &sBuffer )[ N ], const char *pszText ) -> usize_t
-{
-	usize_t n = 0;
-
-	while ( nPos + 1 < N && *pszText )
-	{
-		sBuffer[ nPos ] = *pszText++;
-		++nPos;
-	}
-
-	sBuffer[ nPos ] = '\0';
-
-	return nPos;
-};
+using namespace Ball::Types;
 
 // Entry point section.
 int main()
@@ -80,41 +55,69 @@ int main()
 
 	// Word types.
 
-	usize_t nPos = 0;
-	char sBuffer[1024];
+	BufferString_t< 2048 > sBuffer;
 
-	// BALL_APPEND_SIZEOF( AppendString, sBuffer, void_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, ptr_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, nullptr_t, "\n" );
+	// BALL_APPEND_SIZEOF( AppendString, sBuffer, void_t );
+	BALL_APPEND_SIZEOF( sBuffer, ptr_t );
+	BALL_APPEND_SIZEOF( sBuffer, nullptr_t );
 
-	AppendString( nPos, sBuffer, "---\n" );
+	sBuffer.Append( "---\n" );
 
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, char_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, short_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, int_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, long_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, llong_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, size_t, "\n" );
+	BALL_APPEND_SIZEOF( sBuffer, char_t );
+	BALL_APPEND_SIZEOF( sBuffer, short_t );
+	BALL_APPEND_SIZEOF( sBuffer, int_t );
+	BALL_APPEND_SIZEOF( sBuffer, long_t );
+	BALL_APPEND_SIZEOF( sBuffer, llong_t );
+	BALL_APPEND_SIZEOF( sBuffer, size_t );
 
-	AppendString( nPos, sBuffer, "---\n" );
+	sBuffer.Append( "---\n" );
 
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, uchar_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, ushort_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, uint_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, ulong_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, ullong_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, usize_t, "\n" );
+	BALL_APPEND_SIZEOF( sBuffer, uchar_t );
+	BALL_APPEND_SIZEOF( sBuffer, ushort_t );
+	BALL_APPEND_SIZEOF( sBuffer, uint_t );
+	BALL_APPEND_SIZEOF( sBuffer, ulong_t );
+	BALL_APPEND_SIZEOF( sBuffer, ullong_t );
+	BALL_APPEND_SIZEOF( sBuffer, usize_t );
 
-	AppendString( nPos, sBuffer, "---\n" );
+	sBuffer.Append( "---\n" );
 
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, schar_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, sshort_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, sint_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, slong_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, sllong_t, "\n" );
-	BALL_APPEND_SIZEOF( AppendString, nPos, sBuffer, ssize_t, "" );
+	BALL_APPEND_SIZEOF( sBuffer, schar_t );
+	BALL_APPEND_SIZEOF( sBuffer, sshort_t );
+	BALL_APPEND_SIZEOF( sBuffer, sint_t );
+	BALL_APPEND_SIZEOF( sBuffer, slong_t );
+	BALL_APPEND_SIZEOF( sBuffer, sllong_t );
+	BALL_APPEND_SIZEOF( sBuffer, ssize_t );
 
-	puts( sBuffer );
+	sBuffer.Append( "---\n" );
+
+	BALL_APPEND_SIZEOF( sBuffer, int8_t );
+	BALL_APPEND_SIZEOF( sBuffer, int16_t );
+	BALL_APPEND_SIZEOF( sBuffer, int32_t );
+	BALL_APPEND_SIZEOF( sBuffer, int64_t );
+
+	sBuffer.Append( "---\n" );
+
+	BALL_APPEND_SIZEOF( sBuffer, uint8_t );
+	BALL_APPEND_SIZEOF( sBuffer, uint16_t );
+	BALL_APPEND_SIZEOF( sBuffer, uint32_t );
+	BALL_APPEND_SIZEOF( sBuffer, uint64_t );
+
+	sBuffer.Append( "---\n" );
+
+	BALL_APPEND_SIZEOF( sBuffer, sint8_t );
+	BALL_APPEND_SIZEOF( sBuffer, sint16_t );
+	BALL_APPEND_SIZEOF( sBuffer, sint32_t );
+	BALL_APPEND_SIZEOF( sBuffer, sint64_t );
+
+	sBuffer.Append( "---\n" );
+
+	BALL_APPEND_SIZEOF( sBuffer, char8_t );
+	BALL_APPEND_SIZEOF( sBuffer, char16_t );
+	BALL_APPEND_SIZEOF( sBuffer, char32_t );
+
+	sBuffer.Append( "---" );
+
+	puts( sBuffer.String() );
 
 	return 0;
 }
