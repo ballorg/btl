@@ -1,5 +1,10 @@
+#ifdef BALL_ENABLE_MODULES
 import Ball.New;
 import Ball.Types;
+#else // !defined( BALL_ENABLE_MODULES )
+#	include <ball/new.hpp>
+#	include <ball/types.hpp>
+#endif // defined( BALL_ENABLE_MODULES )
 
 // Macros section.
 #define BALL_STATIC_ASSERT_SIZEOF( type, size ) static_assert( sizeof( type ) == ( size ), "sizeof( " #type " ) must be " #size " bytes")

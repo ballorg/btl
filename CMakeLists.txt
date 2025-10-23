@@ -16,6 +16,7 @@ string(TOLOWER "${PROJECT_NAME_SUBSTRING}" PROJECT_NAME_LOWER)
 string(TOUPPER "${PROJECT_NAME_SUBSTRING}" PROJECT_NAME_UPPER)
 
 option(BALL_ENABLE_ASSERT ON)
+option(BALL_ENABLE_MODULES ON)
 
 set(PROJECT_OUTPUT_NAME "ball-types")
 
@@ -30,6 +31,10 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 if(BALL_ENABLE_ASSERT)
 	target_compile_definitions(${PROJECT_NAME} PUBLIC BALL_ENABLE_ASSERT=1)
+endif()
+
+if(BALL_ENABLE_MODULES)
+	target_compile_definitions(${PROJECT_NAME} PUBLIC BALL_ENABLE_MODULES=1)
 endif()
 
 if(MSVC)
@@ -50,19 +55,22 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 	OUTPUT_NAME ${PROJECT_OUTPUT_NAME}
 )
-target_sources(${PROJECT_NAME}
-PUBLIC
-	FILE_SET cxx_modules
-	TYPE CXX_MODULES
-	BASE_DIRS ${INCLUDE_DIR}
-	FILES
-		${INCLUDE_DIR}/ball/new.cppm
-		${INCLUDE_DIR}/ball/types/base/arch.cppm
-		${INCLUDE_DIR}/ball/types/base/characters.cppm
-		${INCLUDE_DIR}/ball/types/base/fixed.cppm
-		${INCLUDE_DIR}/ball/types/base.cppm
-		${INCLUDE_DIR}/ball/types.cppm
-)
+
+if(BALL_ENABLE_MODULES)
+	target_sources(${PROJECT_NAME}
+	PUBLIC
+		FILE_SET cxx_modules
+		TYPE CXX_MODULES
+		BASE_DIRS ${INCLUDE_DIR}
+		FILES
+			${INCLUDE_DIR}/ball/new.cppm
+			${INCLUDE_DIR}/ball/types/base/arch.cppm
+			${INCLUDE_DIR}/ball/types/base/characters.cppm
+			${INCLUDE_DIR}/ball/types/base/fixed.cppm
+			${INCLUDE_DIR}/ball/types/base.cppm
+			${INCLUDE_DIR}/ball/types.cppm
+	)
+endif()
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_ASSERT_NAME} ${PROJECT_MEMORY_NAME})
 

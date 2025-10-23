@@ -1,5 +1,10 @@
+#ifdef BALL_ENABLE_MODULES
 import Ball.New;
 import Ball.Types;
+#else // !defined( BALL_ENABLE_MODULES )
+#	include <ball/new.hpp>
+#	include <ball/types.hpp>
+#endif // defined( BALL_ENABLE_MODULES )
 
 using namespace Ball::Types;
 
