@@ -22,7 +22,7 @@
 				} \
 			}
 #	else // !BALL_ENABLE_ASSERT
-#		define BALL_ASSERT_IMPL( func, expr, message, name, filename, line, column ) ( ( void )0 )
+#		define BALL_ASSERT_IMPL( func, expr, message, name, filename, line, column ) ( ( void )0 );
 #	endif // BALL_ENABLE_ASSERT
 #	define BALL_ASSERT_MESSAGE( expr, message ) BALL_ASSERT_IMPL( Ball_AssertFail, expr, message, __FUNCTION__, __FILE__, __LINE__, 0 )
 #	define BALL_ASSERT( expr ) BALL_ASSERT_MESSAGE( expr, BALL_NULL )
