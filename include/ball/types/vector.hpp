@@ -1,5 +1,5 @@
-#ifndef _INCLUDE_BALL_TYPES_LEANVECTOR_HPP_
-#	define _INCLUDE_BALL_TYPES_LEANVECTOR_HPP_
+#ifndef _INCLUDE_BALL_TYPES_VECTOR_HPP_
+#	define _INCLUDE_BALL_TYPES_VECTOR_HPP_
 
 #	pragma once
 
@@ -665,4 +665,4 @@ template < typename T, uint16_t N > using BufferVector16_t =        CBufferVecto
 template < typename T, uint32_t N > using BufferVector32_t =        CBufferVector< uint32_t, T, N >;
 template < typename T, uint64_t N > using BufferVector64_t =        CBufferVector< uint64_t, T, N >;
 
-#endif // !defined( _INCLUDE_BALL_TYPES_LEANVECTOR_HPP_ )
+#endif // !defined( _INCLUDE_BALL_TYPES_VECTOR_HPP_ )

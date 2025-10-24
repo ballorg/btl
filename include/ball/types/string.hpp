@@ -1,5 +1,5 @@
-#ifndef _INCLUDE_BALL_TYPES_BUFFERSTRING_HPP_
-#	define _INCLUDE_BALL_TYPES_BUFFERSTRING_HPP_
+#ifndef _INCLUDE_BALL_TYPES_STRING_HPP_
+#	define _INCLUDE_BALL_TYPES_STRING_HPP_
 
 #	include "base/arch.h"
 #	include "vector.hpp"
@@ -490,4 +490,4 @@ template < uint16_t N > using UTF32BufferString16_t =    CBufferString< uint16_t
 template < uint32_t N > using UTF32BufferString32_t =    CBufferString< uint32_t, char32_t, N >;
 template < uint64_t N > using UTF32BufferString64_t =    CBufferString< uint64_t, char32_t, N >;
 
-#endif // !defined( _INCLUDE_BALL_TYPES_BUFFERSTRING_HPP_ )
+#endif // !defined( _INCLUDE_BALL_TYPES_STRING_HPP_ )
