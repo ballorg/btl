@@ -38,21 +38,21 @@ public:
 		if constexpr ( IS_SAME< Type, T > )
 			m_Node = newNode;
 		else
-			static_assert( false, "MPack: typed OOB for empty pack" );
+			static_assert( IS_SAME< Type, T >, "MPack: typed OOB for empty pack" );
 	}
 	template < typename T > T &GetByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
-			static_assert( false, "MPack: typed OOB for empty pack" );
+			static_assert( IS_SAME< Type, T >, "MPack: typed OOB for empty pack" );
 	}
 	template < typename T > const T &GetByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
-			static_assert( false, "MPack: index OOB for empty pack" );
+			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
 	}
 
 	// index access
@@ -61,21 +61,21 @@ public:
 		if constexpr ( K == 0 )
 			m_Node = newNode;
 		else
-			static_assert( false, "MPack: index OOB for empty pack" );
+			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
 	}
 	template < TI K, typename T > T &GetByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			static_assert( false, "MPack: index OOB for empty pack" );
+			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
 	}
 	template < TI K, typename T > const T &GetByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			static_assert( false, "MPack: index OOB for empty pack" );
+			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
 	}
 
 	// utilities
