@@ -77,10 +77,8 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	                          BALL_PROT_READ | BALL_PROT_WRITE,
 	                          BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS, -1, 0 );
 
-	if ( pMapInitial == BALL_MAP_FAILED )
+	BALL_ASSERT_IF_MESSAGE( pMapInitial == BALL_MAP_FAILED, "Initial map failed" )
 	{
-		BALL_ASSERT_MESSAGE( pMapInitial == BALL_MAP_FAILED, "Initial map failed" );
-
 		return BALL_NULL;
 	}
 
@@ -167,17 +165,13 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 
 	if ( !BALL_IS_POW2( nAlign ) || nAlign < sizeof( ptr_t ) )
 	{
-		BALL_ASSERT_MESSAGE( !BALL_IS_POW2( nAlign ) || nAlign < sizeof( ptr_t ), "Incorrect alignment" );
-
 		return BALL_NULL;
 	}
 
 	struct Ball_AlignedHeader_t *pHeader = Ball_HeaderFromUser( pMem );
 
-	if ( !pHeader )
+	BALL_ASSERT_IF_MESSAGE( !pHeader, "Memory validation failed" )
 	{
-		BALL_ASSERT_MESSAGE( !pHeader, "Memory validation failed" );
-
 		return BALL_NULL;
 	}
 
@@ -243,10 +237,8 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	//-----------------------------------------------------------------------------
 	ptr_t pNew = Ball_AllocAlign( nNewSize, nAlign );
 
-	if ( !pNew )
+	BALL_ASSERT_IF_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" );
 	{
-		BALL_ASSERT_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" );
-
 		return BALL_NULL;
 	}
 
