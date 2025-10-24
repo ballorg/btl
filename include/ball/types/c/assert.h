@@ -17,7 +17,7 @@
 			{ \
 				if ( !( expr ) ) \
 				{ \
-					func( #expr, message, name, filename, static_cast< unsigned int >( line ), static_cast< unsigned int >( column ) ); \
+					func( #expr, message, name, filename, ( unsigned int )( line ), ( unsigned int )( column ) ); \
 					BALL_DEBUGBREAK(); \
 				} \
 			}
@@ -26,9 +26,11 @@
 #	else // !BALL_ENABLE_ASSERT
 #		define BALL_ASSERT_MESSAGE( expr, message ) ( ( void )0 )
 #		define BALL_ASSERT( expr ) ( ( void )0 )
-#		define BALL_FATAL_MESSAGE( expr, message ) ( ( void )0 )
-#		define BALL_FATAL( expr ) ( ( void )0 )
 #	endif // BALL_ENABLE_ASSERT
+
+//TODO
+#	define BALL_FATAL_MESSAGE( expr, message ) ( ( void )0 )
+#	define BALL_FATAL( expr ) ( ( void )0 )
 
 // BALL_ASSUME(x)
 //  - Optimization hint to the compiler that x is always true in Release.
@@ -43,11 +45,11 @@
 
 BALL_EXTERN_C void Ball_AssertFail(
 	const char *pszExpression,
-	const char *pszMessage = nullptr,
-	const char *pszName = nullptr,
-	const char *pszFile = nullptr,
-	unsigned int nLine = 0,
-	unsigned int nColumn = 0
+	const char *pszMessage,
+	const char *pszName,
+	const char *pszFile,
+	unsigned int nLine,
+	unsigned int nColumn
 );
 
 #endif // !defined( _INCLUDE_BALL_TYPES_C_ASSERT_HPP_ )

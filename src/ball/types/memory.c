@@ -1,5 +1,6 @@
 #include <ball/types/base/arch.h>
 #include <ball/types/base/fixed.h>
+#include <ball/types/c/assert.h>
 #include <ball/types/c/mmap.h>
 #include <ball/types/c/memory.h>
 #include <ball/types/c/math.h>
@@ -77,7 +78,11 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	                          BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS, -1, 0 );
 
 	if ( pMapInitial == BALL_MAP_FAILED )
+	{
+		BALL_ASSERT_MESSAGE( pMapInitial == BALL_MAP_FAILED, "Initial map failed" );
+
 		return BALL_NULL;
+	}
 
 	// Compute aligned user pointer with space for the header right before it.
 	const uintptr_t pData       = ( uintptr_t )pMapInitial;
@@ -156,15 +161,25 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	if ( !nNewSize )
 	{
 		Ball_FreeAlign( pMem );
+
 		return BALL_NULL;
 	}
 
 	if ( !BALL_IS_POW2( nAlign ) || nAlign < sizeof( ptr_t ) )
+	{
+		BALL_ASSERT_MESSAGE( !BALL_IS_POW2( nAlign ) || nAlign < sizeof( ptr_t ), "Incorrect alignment" );
+
 		return BALL_NULL;
+	}
 
 	struct Ball_AlignedHeader_t *pHeader = Ball_HeaderFromUser( pMem );
+
 	if ( !pHeader )
+	{
+		BALL_ASSERT_MESSAGE( !pHeader, "Memory validation failed" );
+
 		return BALL_NULL;
+	}
 
 	const uintptr_t pOldBase = ( uintptr_t )pHeader->pRaw;     // Base address of the current mapping (VMA)
 	const uintptr_t pUserPtr = ( uintptr_t )pMem;              // User-visible pointer
@@ -188,6 +203,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 			// The new data region is still fully inside the existing mapping.
 			// Simply update the logical size and return the same pointer.
 			pHeader->nSize = nNewSize;
+
 			// Physical map length remains unchanged.
 			return ( ptr_t )pUserPtr;
 		}
@@ -228,7 +244,11 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	ptr_t pNew = Ball_AllocAlign( nNewSize, nAlign );
 
 	if ( !pNew )
+	{
+		BALL_ASSERT_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" );
+
 		return BALL_NULL;
+	}
 
 	const size_t nToCopy = ( pHeader->nSize < nNewSize ) ? pHeader->nSize : nNewSize;
 

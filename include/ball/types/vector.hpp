@@ -122,11 +122,13 @@ protected:
 		{
 			// Re-bucket to the new power-of-two capacity. ALIGNED_SIZE is a hint.
 			pElements = Allocator_t::Realloc( pElements, nRequestCapacity, ALIGNED_SIZE );
+			BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
 		}
 		else
 		{
 			// First-time allocation to the requested power-of-two capacity.
 			pElements = Allocator_t::Alloc( nRequestCapacity, ALIGNED_SIZE );
+			BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
 		}
 
 		// Note: We intentionally do not call Set() here; the caller controls
@@ -272,14 +274,14 @@ protected:
 
 				// If allocation fails, pElements would be nullptr; we assert in debug.
 				// In release builds, downstream code must not dereference nullptr.
-				BALL_ASSERT( pElements != nullptr );
+				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements (growable)" );
 			}
 			// Subcase A2: Currently using the fixed inline buffer — migrate to heap.
 			else
 			{
 				// Allocate a new heap block with the requested power-of-two capacity.
 				pElements = Allocator_t::Alloc( nNewCapacity, ALIGNED_SIZE );
-				BALL_ASSERT( pElements != nullptr );
+				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements (growable)" );
 
 				// Move/copy existing elements from the fixed buffer into the new heap block
 				// and update the base pointer inside Base_t. This is O(n).
