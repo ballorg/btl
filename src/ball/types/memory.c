@@ -237,7 +237,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	//-----------------------------------------------------------------------------
 	ptr_t pNew = Ball_AllocAlign( nNewSize, nAlign );
 
-	BALL_ASSERT_IF_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" );
+	BALL_ASSERT_IF_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" )
 	{
 		return BALL_NULL;
 	}
