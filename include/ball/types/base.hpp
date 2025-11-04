@@ -1,7 +1,7 @@
 #ifndef _INCLUDE_BALL_TYPES_BASE_HPP_
 #	define _INCLUDE_BALL_TYPES_BASE_HPP_
 
-namespace Ball::Types::Base
+namespace BTL::Base
 {
 #	include "base.h"
 };

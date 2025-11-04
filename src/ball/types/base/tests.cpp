@@ -30,7 +30,7 @@ extern "C"
 
 // Helpers
 
-using namespace Ball::Types;
+using namespace BTL;
 
 // Entry point section.
 int main()

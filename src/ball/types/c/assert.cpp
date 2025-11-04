@@ -10,7 +10,7 @@ import Ball.Types;
 #	include <ball/types.hpp>
 #endif // defined( BALL_ENABLE_MODULES )
 
-using namespace Ball::Types;
+using namespace BTL;
 
 void Ball_AssertFail(
 	const char *pszExpression,

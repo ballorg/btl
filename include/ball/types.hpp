@@ -3,7 +3,7 @@
 
 #	include "types/c/macros.h"
 
-BALL_EXPORT namespace Ball::Types
+BALL_EXPORT namespace BTL
 {
 #	include "types/base.h"
 #	include "types/allocator.hpp"
