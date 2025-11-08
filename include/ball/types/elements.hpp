@@ -24,7 +24,7 @@ constexpr void DestructElement( T *pMemory )
 	pMemory->~T();
 }
 
-template < typename T, typename I, I N >
+template < typename I, typename T, I N >
 constexpr void DestructElement( T ( *pMemory )[ N ] )
 {
 	for ( I n = 0; n < N; n++ )
@@ -38,7 +38,7 @@ constexpr void DestructElement( T ( *pMemory )[ N ] )
 ///        Overlap-safe, memmove-like (byte-wise for trivially copyable types).
 /// @return pDest
 ///-----------------------------------------------------------------------------
-template < typename T, typename I >
+template < typename I, typename T >
 inline T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 {
 	for ( I n = 0; n < nCount; ++n )
@@ -54,7 +54,7 @@ inline T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 ///        Useful when ranges may overlap with pDest >= pSrc.
 /// @return pDest
 ///-----------------------------------------------------------------------------
-template < typename T, typename I >
+template < typename I, typename T >
 inline T *CopyElementsFromEnd( I nCount, T *pDest, const T *pSrc ) noexcept
 {
 	for ( I n = nCount; n-- > 0; )
@@ -107,7 +107,7 @@ constexpr void DestructElements( T *pElement, const T *pEnd ) noexcept
 /// @return <0 if a<b, 0 if equal, >0 if a>b (first differing byte decides).
 /// @note    Precondition: if nCount > 0 then @p pLeft and @p pRight must be non-null.
 ///          Comparison is performed on raw bytes of the objects (not value-wise for T).
-template < typename T, typename I = size_t >
+template < typename I, typename T >
 constexpr int8_t CompareElements( const I nCount, const T *pLeft, const T *pRight )
 {
 	if ( pLeft == pRight || nCount == I( 0 ) )
