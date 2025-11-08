@@ -85,8 +85,8 @@ public:
 	constexpr bool Empty() const noexcept { return Count() == I( 0 ); }
 
 	/// @brief Raw base pointer for the given type T from the parameter pack.
-	template < typename T, Enable_t< T > = 0 > constexpr T *Base() noexcept { return m_Elements.template GetByType< T * >(); }
-	template < typename T, Enable_t< T > = 0 > constexpr const T *Base() const noexcept { return m_Elements.template GetByType< T * >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr T *Base() noexcept { return m_Elements.template ByType< T * >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *Base() const noexcept { return m_Elements.template ByType< T * >(); }
 	template < typename T, Enable_t< T > = 0 > constexpr T *Data() noexcept { return Base< T >(); }
 	template < typename T, Enable_t< T > = 0 > constexpr const T *Data() const noexcept { return Base< T >(); }
 
@@ -247,7 +247,7 @@ protected:
 	template < TI K, typename T0, typename ...Rest >
 	constexpr void SetElements( T0 *pFirstElement, Rest *...pNextElements ) noexcept
 	{
-		m_Elements.template SetByIndex< K >( pFirstElement );
+		m_Elements.template ByIndex< K, T0 * >() = pFirstElement;
 
 		if constexpr ( sizeof...( Rest ) > 0 )
 			SetElements< K + 1 >( pNextElements... );

@@ -8,8 +8,8 @@
 ///        MPack< A, B, C >  stores: A, B, C
 ///
 /// API:
-///   - GetByType< T >()     -> pointer by type (T must be unique in Ts...)
-///   - GetByIndex< K >()    -> pointer by index (0..N-1)
+///   - ByType< T >()     -> pointer by type (T must be unique in Ts...)
+///   - ByIndex< K >()    -> pointer by index (0..N-1)
 ///   - Reset()              -> null all pointers
 ///   - Swap( other )        -> swap pointers
 ///   - CopyFrom( other )    -> shallow copy of pointers
@@ -33,21 +33,14 @@ public:
 	constexpr MPack &operator=( MPack &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
 
 	// type access (T must be unique within Ts...)
-	template < typename T > void SetByType( const T &newNode ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			m_Node = newNode;
-		else
-			static_assert( IS_SAME< Type, T >, "MPack: typed OOB for empty pack" );
-	}
-	template < typename T > T &GetByType() noexcept
+	template < typename T > T &ByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
 			static_assert( IS_SAME< Type, T >, "MPack: typed OOB for empty pack" );
 	}
-	template < typename T > const T &GetByType() const noexcept
+	template < typename T > const T &ByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
@@ -56,21 +49,14 @@ public:
 	}
 
 	// index access
-	template < TI K, typename T > void SetByIndex( const T &newNode ) noexcept
-	{
-		if constexpr ( K == 0 )
-			m_Node = newNode;
-		else
-			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
-	}
-	template < TI K, typename T > T &GetByIndex() noexcept
+	template < TI K, typename T > T &ByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
 			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
 	}
-	template < TI K, typename T > const T &GetByIndex() const noexcept
+	template < TI K, typename T > const T &ByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
@@ -124,49 +110,35 @@ public:
 	constexpr MPack &operator=( MPack &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
 
 	// type access (T must be unique within Ts...)
-	template < typename T > void SetByType( const T &newNode ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			m_Node = newNode;
-		else
-			m_Tail.template SetByType< T >();
-	}
-	template < typename T > T &GetByType() noexcept
+	template < typename T > T &ByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
-			return m_Tail.template GetByType< T >();
+			return m_Tail.template ByType< T >();
 	}
-	template < typename T > const T &GetByType() const noexcept
+	template < typename T > const T &ByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
-			return m_Tail.template GetByType< T >();
+			return m_Tail.template ByType< T >();
 	}
 
 	// index access
-	template < TI K, typename T > void SetByIndex( const T &newNode ) noexcept
-	{
-		if constexpr ( K == 0 )
-			m_Node = newNode;
-		else
-			m_Tail.template SetByIndex< K - 1 >( newNode );
-	}
-	template < TI K, typename T > T &GetByIndex() noexcept
+	template < TI K, typename T > T &ByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			return m_Tail.template GetByIndex< K - 1 >();
+			return m_Tail.template ByIndex< K - 1 >();
 	}
-	template < TI K, typename T > const T &GetByIndex() const noexcept
+	template < TI K, typename T > const T &ByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			return m_Tail.template GetByIndex< K - 1 >();
+			return m_Tail.template ByIndex< K - 1 >();
 	}
 
 	// utilities
