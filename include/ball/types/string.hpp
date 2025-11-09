@@ -399,7 +399,7 @@ public:
 	}
 };
 
-template < typename I, typename T, I N > class CBufferString;
+template < typename I, I N, typename T > class CBufferString;
 
 template < typename I = size_t, typename T = char >
 class CString : public CStringImpl< CVectorBase< CStringView< I, T >, I, T >, I, T >
@@ -409,18 +409,18 @@ public:
 	using Base_t::Base_t;
 
 	template < I N >
-	CString( const CBufferString< I, T, N > &other ) :
+	CString( const CBufferString< I, N, T > &other ) :
 		Base_t()
 	{
 		Base_t::CopyFrom( other.View() );
 	}
 };
 
-template < typename I, typename T, I N >
-class CBufferString : public CStringImpl< CVectorBase_Growable< CStringView< I, T >, I, T, N >, I, T >
+template < typename I, I N, typename T >
+class CBufferString : public CStringImpl< CVectorBase_Growable< CStringView< I, T >, I, N, T >, I, T >
 {
 public:
-	using Base_t = CStringImpl< CVectorBase_Growable< CStringView< I, T >, I, T, N >, I, T >;
+	using Base_t = CStringImpl< CVectorBase_Growable< CStringView< I, T >, I, N, T >, I, T >;
 	using Base_t::Base_t;
 
 	CBufferString( const CString< I, T > &other ) :
@@ -460,34 +460,34 @@ using UTF32String16_t = CString< uint16_t, char32_t >;
 using UTF32String32_t = CString< uint32_t, char32_t >;
 using UTF32String64_t = CString< uint64_t, char32_t >;
 
-template < size_t N >   using BufferString_t =           CBufferString< size_t, char_t, N >;
-template < uint8_t N >  using BufferString8_t =          CBufferString< uint8_t, char_t, N >;
-template < uint16_t N > using BufferString16_t =         CBufferString< uint16_t, char_t, N >;
-template < uint32_t N > using BufferString32_t =         CBufferString< uint32_t, char_t, N >;
-template < uint64_t N > using BufferString64_t =         CBufferString< uint64_t, char_t, N >;
+template < size_t N >   using BufferString_t =           CBufferString< size_t, N, char_t >;
+template < uint8_t N >  using BufferString8_t =          CBufferString< uint8_t, N, char_t >;
+template < uint16_t N > using BufferString16_t =         CBufferString< uint16_t, N, char_t >;
+template < uint32_t N > using BufferString32_t =         CBufferString< uint32_t, N, char_t >;
+template < uint64_t N > using BufferString64_t =         CBufferString< uint64_t, N, char_t >;
 
-template < size_t N >   using WBufferString_t =          CBufferString< size_t, wchar_t, N >;
-template < uint8_t N >  using WBufferString8_t =         CBufferString< uint8_t, wchar_t, N >;
-template < uint16_t N > using WBufferString16_t =        CBufferString< uint16_t, wchar_t, N >;
-template < uint32_t N > using WBufferString32_t =        CBufferString< uint32_t, wchar_t, N >;
-template < uint64_t N > using WBufferString64_t =        CBufferString< uint64_t, wchar_t, N >;
+template < size_t N >   using WBufferString_t =          CBufferString< size_t, N, wchar_t >;
+template < uint8_t N >  using WBufferString8_t =         CBufferString< uint8_t, N, wchar_t >;
+template < uint16_t N > using WBufferString16_t =        CBufferString< uint16_t, N, wchar_t >;
+template < uint32_t N > using WBufferString32_t =        CBufferString< uint32_t, N, wchar_t >;
+template < uint64_t N > using WBufferString64_t =        CBufferString< uint64_t, N, wchar_t >;
 
-template < size_t N >   using UTF8BufferString_t =       CBufferString< size_t, char8_t, N >;
-template < uint8_t N >  using UTF8BufferString8_t =      CBufferString< uint8_t, char8_t, N >;
-template < uint16_t N > using UTF8BufferString16_t =     CBufferString< uint16_t, char8_t, N >;
-template < uint32_t N > using UTF8BufferString32_t =     CBufferString< uint32_t, char8_t, N >;
-template < uint64_t N > using UTF8BufferString64_t =     CBufferString< uint64_t, char8_t, N >;
+template < size_t N >   using UTF8BufferString_t =       CBufferString< size_t, N, char8_t >;
+template < uint8_t N >  using UTF8BufferString8_t =      CBufferString< uint8_t, N, char8_t >;
+template < uint16_t N > using UTF8BufferString16_t =     CBufferString< uint16_t, N, char8_t >;
+template < uint32_t N > using UTF8BufferString32_t =     CBufferString< uint32_t, N, char8_t >;
+template < uint64_t N > using UTF8BufferString64_t =     CBufferString< uint64_t, N, char8_t >;
 
-template < size_t N >   using UTF16BufferString_t =      CBufferString< size_t, char16_t, N >;
-template < uint8_t N >  using UTF16BufferString8_t =     CBufferString< uint8_t, char16_t, N >;
-template < uint16_t N > using UTF16BufferString16_t =    CBufferString< uint16_t, char16_t, N >;
-template < uint32_t N > using UTF16BufferString32_t =    CBufferString< uint32_t, char16_t, N >;
-template < uint64_t N > using UTF16BufferString64_t =    CBufferString< uint64_t, char16_t, N >;
+template < size_t N >   using UTF16BufferString_t =      CBufferString< size_t, N, char16_t >;
+template < uint8_t N >  using UTF16BufferString8_t =     CBufferString< uint8_t, N, char16_t >;
+template < uint16_t N > using UTF16BufferString16_t =    CBufferString< uint16_t, N, char16_t >;
+template < uint32_t N > using UTF16BufferString32_t =    CBufferString< uint32_t, N, char16_t >;
+template < uint64_t N > using UTF16BufferString64_t =    CBufferString< uint64_t, N, char16_t >;
 
-template < size_t N >   using UTF32BufferString_t =      CBufferString< size_t, char32_t, N >;
-template < uint8_t N >  using UTF32BufferString8_t =     CBufferString< uint8_t, char32_t, N >;
-template < uint16_t N > using UTF32BufferString16_t =    CBufferString< uint16_t, char32_t, N >;
-template < uint32_t N > using UTF32BufferString32_t =    CBufferString< uint32_t, char32_t, N >;
-template < uint64_t N > using UTF32BufferString64_t =    CBufferString< uint64_t, char32_t, N >;
+template < size_t N >   using UTF32BufferString_t =      CBufferString< size_t, N, char32_t >;
+template < uint8_t N >  using UTF32BufferString8_t =     CBufferString< uint8_t, N, char32_t >;
+template < uint16_t N > using UTF32BufferString16_t =    CBufferString< uint16_t, N, char32_t >;
+template < uint32_t N > using UTF32BufferString32_t =    CBufferString< uint32_t, N, char32_t >;
+template < uint64_t N > using UTF32BufferString64_t =    CBufferString< uint64_t, N, char32_t >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_STRING_HPP_ )

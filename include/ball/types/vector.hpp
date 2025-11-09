@@ -156,7 +156,7 @@ protected:
 	using Base_t::MoveFrom;
 };
 
-template < class B, typename I, typename T, I N, class A = CAllocator< I, T > >
+template < class B, typename I, I N, typename T, class A = CAllocator< I, T > >
 class CVectorBase_Growable : public CVectorBase< B, I, T, A >
 {
 public:
@@ -610,7 +610,7 @@ protected:
 	}
 }; // class CVectorImpl
 
-template < typename I, typename T, I N, class A > class CBufferVector;
+template < typename I, I N, typename T, class A > class CBufferVector;
 
 template < typename I, typename T, class A = CAllocator< I, T > >
 class CVector : public CVectorImpl< CVectorBase< CMemoryView< I, T >, I, T, A >, I, T >
@@ -620,12 +620,12 @@ public:
 	using Base_t::Base_t;
 
 	template < I N >
-	CVector( const CBufferVector< I, T, N, A > &other ) :
+	CVector( const CBufferVector< I, N, T, A > &other ) :
 		Base_t( other.View() )
 	{
 	}
 
-	template < I N > CVector &operator=( const CBufferVector< I, T, N, A > &other )
+	template < I N > CVector &operator=( const CBufferVector< I, N, T, A > &other )
 	{
 		Base_t::operator=( other.View() );
 
@@ -633,11 +633,11 @@ public:
 	}
 };
 
-template < typename I, typename T, I N, class A = CAllocator< I, T > >
-class CBufferVector : public CVectorImpl< CVectorBase_Growable< CMemoryView< I, T >, I, T, N, A >, I, T >
+template < typename I, I N, typename T, class A = CAllocator< I, T > >
+class CBufferVector : public CVectorImpl< CVectorBase_Growable< CMemoryView< I, T >, I, N, T, A >, I, T >
 {
 public:
-	using Base_t = CVectorImpl< CVectorBase_Growable< CMemoryView< I, T >, I, T, N, A >, I, T >;
+	using Base_t = CVectorImpl< CVectorBase_Growable< CMemoryView< I, T >, I, N, T, A >, I, T >;
 	using Base_t::Base_t;
 
 	CBufferVector( const CVector< I, T, A > &other ) :
@@ -659,10 +659,10 @@ template < typename T > using Vector16_t =          CVector< uint16_t, T >;
 template < typename T > using Vector32_t =          CVector< uint32_t, T >;
 template < typename T > using Vector64_t =          CVector< uint64_t, T >;
 
-template < typename T, size_t N > using BufferVector_t =            CBufferVector< size_t, T, N >;
-template < typename T, uint8_t N > using BufferVector8_t =          CBufferVector< uint8_t, T, N >;
-template < typename T, uint16_t N > using BufferVector16_t =        CBufferVector< uint16_t, T, N >;
-template < typename T, uint32_t N > using BufferVector32_t =        CBufferVector< uint32_t, T, N >;
-template < typename T, uint64_t N > using BufferVector64_t =        CBufferVector< uint64_t, T, N >;
+template < typename T, size_t N > using BufferVector_t =            CBufferVector< size_t, N, T >;
+template < typename T, uint8_t N > using BufferVector8_t =          CBufferVector< uint8_t, N, T >;
+template < typename T, uint16_t N > using BufferVector16_t =        CBufferVector< uint16_t, N, T >;
+template < typename T, uint32_t N > using BufferVector32_t =        CBufferVector< uint32_t, N, T >;
+template < typename T, uint64_t N > using BufferVector64_t =        CBufferVector< uint64_t, N, T >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_VECTOR_HPP_ )
