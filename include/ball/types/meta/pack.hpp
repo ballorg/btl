@@ -54,14 +54,14 @@ public:
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
+			static_assert( K == 0 , "MPack: index OOB for empty pack" );
 	}
 	template < TI K, typename T > const T &ByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			static_assert( IS_SAME< Type, T >, "MPack: index OOB for empty pack" );
+			static_assert( K == 0, "MPack: index OOB for empty pack" );
 	}
 
 	// utilities
@@ -176,10 +176,10 @@ public:
 };
 
 template < typename TI, typename ...Ts >
-class MPackPointer;
+class MPointerPack;
 
 template < typename TI, typename T0 >
-class MPackPointer< TI, T0 > : public MPack< TI, T0 * >
+class MPointerPack< TI, T0 > : public MPack< TI, T0 * >
 {
 public:
 	using Base_t = MPack< TI, T0 * >;
@@ -187,10 +187,10 @@ public:
 };
 
 template < typename TI, typename T0, typename ...Ts >
-class MPackPointer< TI, T0, Ts... > : public MPackPointer< TI, T0 *, Ts... >
+class MPointerPack< TI, T0, Ts... > : public MPointerPack< TI, T0 *, Ts... >
 {
 public:
-	using Base_t = MPackPointer< TI, T0 *, Ts... >;
+	using Base_t = MPointerPack< TI, T0 *, Ts... >;
 	using Base_t::Base_t;
 };
 

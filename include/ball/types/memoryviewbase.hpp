@@ -334,7 +334,7 @@ protected:
 
 private:
 	I                          m_nCount;
-	MPackPointer< TI, Ts ... > m_Elements;
+	MPointerPack< TI, Ts ... > m_Elements;
 }; // class CMemoryViewBase
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEWBASE_HPP_ )
