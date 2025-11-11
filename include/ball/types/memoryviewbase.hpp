@@ -7,7 +7,8 @@
 #	include "meta/enableif.hpp"
 #	include "meta/issame.hpp"
 #	include "meta/number.hpp"
-#	include "meta/pack.hpp"
+#	include "elements.hpp"
+#	include "elementspack.hpp"
 #	include "math.hpp"
 
 ///-----------------------------------------------------------------------------
@@ -16,7 +17,7 @@
 ///        Example: CMemoryViewBase<I, float, int, char>
 ///        holds { float*, int*, char* } with common Count().
 ///-----------------------------------------------------------------------------
-template < typename I, typename TI, typename ...Ts >
+template < typename I, I N, typename TI, typename ...Ts >
 class CMemoryViewBase
 {
 public:
@@ -24,7 +25,10 @@ public:
 	using TypeIndex_t   = TI;
 	using Number_t      = MNumber< Index_t >;
 	using TypeNumber_t  = MNumber< TypeIndex_t >;
-	using ConstView_t   = CMemoryViewBase< Index_t, TypeIndex_t, const Ts... >;
+	using Pack_t        = CElementsPack< I, N, TI, Ts ... >;
+	using Const_t       = CMemoryViewBase< Index_t, 0, TypeIndex_t, const Ts... >;
+
+	static constexpr I FIXED_COUNT = Pack_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
 	static constexpr I INVALID_INDEX = Number_t::INVALID;
@@ -56,39 +60,41 @@ private:
 public:
 	constexpr CMemoryViewBase() noexcept : m_nCount( I( 0 ) )
 	{
-		ResetElements< 0 >();
 	}
 
 	/// @brief Construct from count and per-type pointers in the same order as Ts...
-	explicit constexpr CMemoryViewBase( I nCount, Ts *...pElements ) noexcept
-		: m_nCount( nCount )
+	explicit constexpr CMemoryViewBase( I nCount, Ts *...pElements ) noexcept :
+		m_nCount( nCount )
 	{
-		SetElements< 0 >( pElements... );
+		SetElements( pElements... );
 	}
 
 	/// @brief Construct from fixed-size C-arrays (all N must match implicitly).
-	template < I N >
-	explicit constexpr CMemoryViewBase( const Ts ( &...arrays )[ N ] ) noexcept
-		: CMemoryViewBase( I( N ), static_cast< Ts * >( arrays )... )
+	template < I CN >
+	explicit constexpr CMemoryViewBase( const Ts ( &...arrays )[ CN ] ) noexcept
+		: CMemoryViewBase( I( CN ), static_cast< Ts * >( arrays )... )
 	{}
 
-	constexpr CMemoryViewBase( const CMemoryViewBase &copyFrom ) noexcept : CMemoryViewBase() { CopyFrom( copyFrom ); }
+	constexpr CMemoryViewBase( const CMemoryViewBase &copyFrom ) noexcept { CopyFrom( copyFrom ); }
 	constexpr CMemoryViewBase( CMemoryViewBase &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
 	constexpr CMemoryViewBase &operator=( const CMemoryViewBase &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
-	constexpr CMemoryViewBase &operator=( CMemoryViewBase &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
+	constexpr CMemoryViewBase &operator=( CMemoryViewBase &&moveFrom ) noexcept { return MoveFrom( Move( moveFrom ) ); }
 
 	// --------- sizes / byte sizes ----------
 	static constexpr size_t Stride() noexcept { return ( size_t( 0 ) + ... + sizeof( Ts ) ); }
 	constexpr size_t Size() const noexcept { return static_cast< size_t >( m_nCount ) * Stride(); }
-	template < typename T, Enable_t< T > = 0 > constexpr size_t SizeOf() const noexcept { return static_cast< size_t >( m_nCount ) * sizeof(T); }
 	constexpr I Count() const noexcept { return m_nCount; }
 	constexpr bool Empty() const noexcept { return Count() == I( 0 ); }
+	template < typename T > constexpr bool IsOverflow( I nCount ) const noexcept { return m_Elements.template IsOverflowByType< T >( nCount ); }
+	template < typename T > constexpr bool IsOverflow() const noexcept { return IsOverflow< T >( Count() ); }
 
 	/// @brief Raw base pointer for the given type T from the parameter pack.
-	template < typename T, Enable_t< T > = 0 > constexpr T *Base() noexcept { return m_Elements.template ByType< T * >(); }
-	template < typename T, Enable_t< T > = 0 > constexpr const T *Base() const noexcept { return m_Elements.template ByType< T * >(); }
-	template < typename T, Enable_t< T > = 0 > constexpr T *Data() noexcept { return Base< T >(); }
-	template < typename T, Enable_t< T > = 0 > constexpr const T *Data() const noexcept { return Base< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr T *FixedData() noexcept { return m_Elements.template FixedByType< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *FixedData() const noexcept { return m_Elements.template FixedByType< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr T *Data() noexcept { return m_Elements.template DataByType< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *Data() const noexcept { return m_Elements.template DataByType< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr T *Base() noexcept { return IsOverflow< T >() ? Data< T >() : FixedData< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *Base() const noexcept { return IsOverflow< T >() ? Data< T >() : FixedData< T >(); }
 
 	// --------- element access (typed) ----------
 	constexpr bool IsValidIndex( I i ) const noexcept { return i != INVALID_INDEX; }
@@ -131,12 +137,14 @@ public:
 	}
 
 	// --------- iterators (typed) ----------
-	template < typename T, Enable_t< T > = 0 > constexpr T *begin() { return Data< T >(); }
-	template < typename T, Enable_t< T > = 0 > constexpr T *end() { return Data< T >() + Count(); }
-	template < typename T, Enable_t< T > = 0 > constexpr const T *begin() const noexcept { return Data< T >(); }
-	template < typename T, Enable_t< T > = 0 > constexpr const T *end() const noexcept { return Data< T >() + Count(); }
-	template < typename T, Enable_t< T > = 0 > constexpr const T *cbegin() const noexcept { return Data< T >(); }
-	template < typename T, Enable_t< T > = 0 > constexpr const T *cend() const noexcept { return Data< T >() + Count(); }
+	template < typename T, Enable_t< T > = 0 > constexpr T *begin() { return Base< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr T *end() { return Base< T >() + Count(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *begin() const noexcept { return Base< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *end() const noexcept { return Base< T >() + Count(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *cbegin() noexcept { return Base< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *cend() noexcept { return Base< T >() + Count(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *cbegin() const noexcept { return Base< T >(); }
+	template < typename T, Enable_t< T > = 0 > constexpr const T *cend() const noexcept { return Base< T >() + Count(); }
 
 	// --------- typed find helpers (optional, no memcmp/STL) ----------
 	template < typename T, Enable_t< T > = 0 >
@@ -218,96 +226,19 @@ public:
 	}
 
 	// --------- views / conversions ----------
-	constexpr CMemoryViewBase &View() noexcept { return *this; }
-	constexpr const CMemoryViewBase &View() const noexcept { return *this; }
-	constexpr ConstView_t ConstView() const noexcept
+	constexpr Const_t Const() const noexcept
 	{
-		ConstView_t v;
+		Const_t v;
 
 		v.m_nCount = m_nCount;
-		CopyElementsConstInto( v );
+		CopyElements( *this );
 
 		return v;
 	}
 
-	constexpr operator ConstView_t() const { return ConstView(); }
+	constexpr operator Const_t() const { return Const(); }
 
 protected:
-	// internal utils
-	template < TI K >
-	constexpr void ResetElements() noexcept
-	{
-		if constexpr ( K < NUM_TYPES )
-		{
-			m_Elements.Reset();
-			ResetElements< K + 1 >();
-		}
-	}
-
-	template < TI K, typename T0, typename ...Rest >
-	constexpr void SetElements( T0 *pFirstElement, Rest *...pNextElements ) noexcept
-	{
-		m_Elements.template ByIndex< K, T0 * >() = pFirstElement;
-
-		if constexpr ( sizeof...( Rest ) > 0 )
-			SetElements< K + 1 >( pNextElements... );
-	}
-
-	constexpr void CopyElementsFrom( const CMemoryViewBase &other ) noexcept
-	{
-		m_Elements = other.m_Elements;
-	}
-
-	template < typename ...CTs >
-	constexpr CMemoryViewBase< I, TI, CTs... > CopyElementsConstInto( CMemoryViewBase< I, TI, CTs... > &out ) const noexcept
-	{
-		for ( TI i = 0; i < NUM_TYPES; ++i )
-			out.m_Elements[ i ] = m_Elements[ i ];
-	}
-
-	constexpr void AdvanceAllInto( CMemoryViewBase &out, I nAdvance ) const noexcept
-	{
-		out.ResetElements< 0 >();
-
-		for ( TI i = 0; i < NUM_TYPES; ++i )
-			out.m_Elements[ i ] = AdvanceRaw( m_Elements[ i ], i, nAdvance );
-	}
-
-	static constexpr void *AdvanceRaw( void *pData, TI iType, I nAdvance ) noexcept
-	{
-		// Dispatch by index -> sizeof of the corresponding type in Ts...
-		return AdvanceRawImpl< 0, Ts... >( pData, iType, nAdvance );
-	}
-
-	template < TI K, typename T0, typename ...Rest >
-	static constexpr void *AdvanceRawImpl( void *pData, TI nIndex, I nAdvance ) noexcept
-	{
-		if ( nIndex == K )
-		{
-			auto *pTyped = reinterpret_cast< T0 * >( pData );
-
-			return reinterpret_cast< void * >( pTyped ? ( pTyped + nAdvance ) : nullptr );
-		}
-		if constexpr ( sizeof...( Rest ) > 0 )
-			return AdvanceRawImpl< K + 1, Rest... >( pData, nIndex, nAdvance );
-		else
-			return pData; // unreachable for valid idx
-	}
-
-	constexpr void Set( I nCount, Ts *...pElements ) noexcept
-	{
-		m_nCount = nCount;
-		SetElements< 0 >( pElements... );
-	}
-
-	constexpr void Swap( CMemoryViewBase &other ) noexcept
-	{
-		Math_Swap( m_nCount, other.m_nCount );
-
-		for ( TI i = 0; i < NUM_TYPES; ++i )
-			Math_Swap( m_Elements[ i ], other.m_Elements[ i ] );
-	}
-
 	// --------- copying / moving ----------
 	/// @brief Replace this view with another view (shallow copy of pointer + length).
 	constexpr CMemoryViewBase &CopyFrom( const CMemoryViewBase &other ) noexcept
@@ -316,7 +247,7 @@ protected:
 			return *this;
 
 		m_nCount = other.m_nCount;
-		CopyElementsFrom( other );
+		CopyElements( other );
 
 		return *this;
 	}
@@ -327,14 +258,60 @@ protected:
 		if ( this == &other )
 			return *this;
 
-		Swap( static_cast< CMemoryViewBase & >( other ) );
+		Math_Swap( m_nCount, other.m_nCount );
+		SwapElements( static_cast< CMemoryViewBase & >( other ) );
 
 		return *this;
 	}
 
+protected: // internal utils
+	template < TI K = 0, typename T0, typename ...Rest >
+	constexpr void SetElements( T0 *pFirstElement, Rest *...pNextElements ) noexcept
+	{
+		I nCount = Count();
+
+		if ( m_Elements.template IsOverflowByIndex< K >( nCount ) )
+			m_Elements.template DataByIndex< K, T0 >() = pFirstElement;
+		else
+			BTL::CopyElements( nCount, m_Elements.template FixedByIndex< K, T0 >(), pFirstElement );
+
+		if constexpr ( K < sizeof...( Rest ) )
+			SetElements< K + 1 >( pNextElements... );
+	}
+
+	template < TI K = 0 >
+	constexpr void CopyElements( const CMemoryViewBase &other ) noexcept
+	{
+		m_Elements.template CopyByIndex< K >( Count(), other.m_Elements );
+
+		if constexpr ( K + 1 < NUM_TYPES )
+			CopyElements< K + 1 >( other );
+	}
+
+	template < TI K = 0 >
+	constexpr void SwapElements( CMemoryViewBase &other ) noexcept
+	{
+		m_Elements.template SwapByIndex< K >( Count(), other.m_Elements );
+
+		if constexpr ( K + 1 < NUM_TYPES )
+			SwapElements< K + 1 >( other );
+	}
+
+	constexpr void Set( I nCount, Ts *...pElements ) noexcept
+	{
+		m_nCount = nCount;
+		SetElements( pElements... );
+	}
+
+	constexpr void Swap( CMemoryViewBase &other ) noexcept
+	{
+		Math_Swap( m_nCount, other.m_nCount );
+		SwapElements( other );
+	}
+
 private:
-	I                          m_nCount;
-	MPointerPack< TI, Ts ... > m_Elements;
+	I       m_nCount;
+	Pack_t  m_Elements;
 }; // class CMemoryViewBase
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEWBASE_HPP_ )

@@ -8,38 +8,37 @@
 #	include "memoryview.hpp"
 #	include "elements.hpp"
 
-template < typename I = size_t, typename T = char >
-class CStringView : public CMemoryView< I, T >
+template < typename I, typename T, I N = 0 >
+class CStringView : public CMemoryView< I, T, N >
 {
 public:
-	using Base_t = CMemoryView< I, T >;
-	using Const_t = const CStringView< I, const T >;
+	using Base_t = CMemoryView< I, T, N >;
+	using View_t = CStringView< I, T, 0 >;
+	using ConstView_t = CStringView< I, const T, 0 >;
 
 	using Base_t::Get;
 
+	using Base_t::FIXED_COUNT;
 	static constexpr I INVALID_INDEX = Base_t::INVALID_INDEX;
 
 	//------------------ Constructors ------------------
 
 	explicit constexpr CStringView( I nLength, T *pStr ) noexcept : Base_t( nLength, pStr ) {}
+	explicit constexpr CStringView( const T *pStr ) noexcept : CStringView( Length( pStr ), pStr ) {}
 	constexpr CStringView() noexcept : CStringView( I( 0 ), nullptr ) {}
 
 	/// @brief Construct from zero-terminated string.
-	constexpr CStringView( const T *pStr ) noexcept
-		: Base_t( Length( pStr ), pStr )
-	{
-	}
 
 	/// @brief Construct from a C-array (string literal).
-	template < size_t N >
-	constexpr CStringView( const T ( &str )[ N ] ) noexcept : 
-		Base_t( N - 1, reinterpret_cast< const T *>( str ) )
+	template < size_t CN >
+	constexpr CStringView( const T ( &str )[ CN ] ) noexcept : 
+		Base_t( CN - 1, reinterpret_cast< const T *>( str ) )
 	{
 	}
 
-	template < size_t N >
-	constexpr CStringView( T ( &&str )[ N ] ) noexcept : 
-		Base_t( N - 1, reinterpret_cast< const T *>( str ) )
+	template < size_t CN >
+	constexpr CStringView( T ( &&str )[ CN ] ) noexcept : 
+		Base_t( CN - 1, reinterpret_cast< const T *>( str ) )
 	{
 	}
 
@@ -83,13 +82,13 @@ public:
 	}
 	constexpr I Length() const noexcept { return Base_t::Count(); }
 
-	static constexpr const T *EmptyString() noexcept { return reinterpret_cast< const T * >( "" ); }
-	static constexpr const T *NullString() noexcept { return reinterpret_cast< const T * >( "(null)" ); }
+	static constexpr const CStringView EmptyView() noexcept { return CStringView( "" ); }
+	static constexpr const CStringView NullView() noexcept { return CStringView( "(null)" ); }
 	constexpr const T *String() const noexcept
 	{
 		const T *p = Base_t::Get();
 
-		return p ? p : EmptyString();
+		return p ? p : EmptyView().String();
 	}
 
 	static bool_t IsSpaceASCII( T ch ) noexcept
@@ -162,35 +161,35 @@ public:
 	}
 };
 
-using StringView_t =        const CStringView< size_t, const char_t >;
-using StringView8_t =       const CStringView< uint8_t, const char_t >;
-using StringView16_t =      const CStringView< uint16_t, const char_t >;
-using StringView32_t =      const CStringView< uint32_t, const char_t >;
-using StringView64_t =      const CStringView< uint64_t, const char_t >;
+using StringView_t =        CStringView< size_t, const char_t >;
+using StringView8_t =       CStringView< uint8_t, const char_t >;
+using StringView16_t =      CStringView< uint16_t, const char_t >;
+using StringView32_t =      CStringView< uint32_t, const char_t >;
+using StringView64_t =      CStringView< uint64_t, const char_t >;
 
-using WStringView_t =       const CStringView< size_t, const wchar_t >;
-using WStringView8_t =      const CStringView< uint8_t, const wchar_t >;
-using WStringView16_t =     const CStringView< uint16_t, const wchar_t >;
-using WStringView32_t =     const CStringView< uint32_t, const wchar_t >;
-using WStringView64_t =     const CStringView< uint64_t, const wchar_t >;
+using WStringView_t =       CStringView< size_t, const wchar_t >;
+using WStringView8_t =      CStringView< uint8_t, const wchar_t >;
+using WStringView16_t =     CStringView< uint16_t, const wchar_t >;
+using WStringView32_t =     CStringView< uint32_t, const wchar_t >;
+using WStringView64_t =     CStringView< uint64_t, const wchar_t >;
 
-using UTF8StringView_t =    const CStringView< size_t, const char8_t >;
-using UTF8StringView8_t =   const CStringView< uint8_t, const char8_t >;
-using UTF8StringView16_t =  const CStringView< uint16_t, const char8_t >;
-using UTF8StringView32_t =  const CStringView< uint32_t, const char8_t >;
-using UTF8StringView64_t =  const CStringView< uint64_t, const char8_t >;
+using UTF8StringView_t =    CStringView< size_t, const char8_t >;
+using UTF8StringView8_t =   CStringView< uint8_t, const char8_t >;
+using UTF8StringView16_t =  CStringView< uint16_t, const char8_t >;
+using UTF8StringView32_t =  CStringView< uint32_t, const char8_t >;
+using UTF8StringView64_t =  CStringView< uint64_t, const char8_t >;
 
-using UTF16StringView_t =   const CStringView< size_t, const char16_t >;
-using UTF16StringView8_t =  const CStringView< uint8_t, const char16_t >;
-using UTF16StringView16_t = const CStringView< uint16_t, const char16_t >;
-using UTF16StringView32_t = const CStringView< uint32_t, const char16_t >;
-using UTF16StringView64_t = const CStringView< uint64_t, const char16_t >;
+using UTF16StringView_t =   CStringView< size_t, const char16_t >;
+using UTF16StringView8_t =  CStringView< uint8_t, const char16_t >;
+using UTF16StringView16_t = CStringView< uint16_t, const char16_t >;
+using UTF16StringView32_t = CStringView< uint32_t, const char16_t >;
+using UTF16StringView64_t = CStringView< uint64_t, const char16_t >;
 
-using UTF32StringView_t =   const CStringView< size_t, const char32_t >;
-using UTF32StringView8_t =  const CStringView< uint8_t, const char32_t >;
-using UTF32StringView16_t = const CStringView< uint16_t, const char32_t >;
-using UTF32StringView32_t = const CStringView< uint32_t, const char32_t >;
-using UTF32StringView64_t = const CStringView< uint64_t, const char32_t >;
+using UTF32StringView_t =   CStringView< size_t, const char32_t >;
+using UTF32StringView8_t =  CStringView< uint8_t, const char32_t >;
+using UTF32StringView16_t = CStringView< uint16_t, const char32_t >;
+using UTF32StringView32_t = CStringView< uint32_t, const char32_t >;
+using UTF32StringView64_t = CStringView< uint64_t, const char32_t >;
 
 //------------------------------------------------------------------------------
 // StringView literals

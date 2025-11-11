@@ -25,25 +25,25 @@ void Ball_AssertFail(
 
 	if ( pszExpression  != nullptr )
 	{
-		sMessage.AppendMultiple( "Assertion failed: ", pszExpression, "\n" );
+		sMessage.AppendMultiple( "Assertion failed: ", StringView_t( pszExpression ), "\n" );
 	}
 
 	// Message (if available)
 	if ( pszMessage != nullptr )
 	{
-		sMessage.AppendMultiple( "Message: ", pszMessage, "\n" );
+		sMessage.AppendMultiple( "Message: ", StringView_t( pszMessage ), "\n" );
 	}
 
-	// Defintion name (if available)
+	// Definition name (if available)
 	if ( pszName != nullptr )
 	{
-		sMessage.AppendMultiple( "Name: ", pszName, "\n" );
+		sMessage.AppendMultiple( "Name: ", StringView_t( pszName ), "\n" );
 	}
 
 	// Location (file:line)
 	if ( pszFile != nullptr )
 	{
-		sMessage.AppendMultiple( "Localtion: ", pszFile );
+		sMessage.AppendMultiple( "Localtion: ", StringView_t( pszFile ) );
 
 		if ( nLine )
 		{

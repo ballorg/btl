@@ -56,7 +56,7 @@ String_t DumpVector( const V &vec )
 // Entry point section.
 int main()
 {
-	Vector_t< pair_t > vec;
+	BufferVector_t< pair_t, 1000 > vec;
 
 	{
 		for ( size_t n = 0; n < 100'000; n += 2 )

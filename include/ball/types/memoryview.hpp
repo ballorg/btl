@@ -9,15 +9,18 @@
 
 #	include "memoryviewbase.hpp"
 
-template < typename I, typename T >
-class CMemoryView : public CMemoryViewBase< I, uint8_t, T >
+template < typename I, typename T, I N = 0 >
+class CMemoryView : public CMemoryViewBase< I, N, uint8_t, T >
 {
 public:
-	using Base_t        = CMemoryViewBase< I, uint8_t, T >;
+	using Base_t        = CMemoryViewBase< I, N, uint8_t, T >;
 	using Element_t     = T;
 	using Index_t       = I;
-	using Const_t       = CMemoryView< Index_t, const Element_t >;
+	using View_t        = CMemoryView< Index_t, Element_t >;
+	using ConstView_t   = CMemoryView< Index_t, const Element_t >;
 	using Number_t      = MNumber< Index_t >;
+
+	using Base_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
 	static constexpr I INVALID_INDEX = Number_t::INVALID;
@@ -35,7 +38,7 @@ public:
 	// --------- ctors ----------
 	explicit constexpr CMemoryView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
 	constexpr CMemoryView() noexcept : CMemoryView( I( 0 ), nullptr ) {}
-	template < size_t N > constexpr CMemoryView( T ( &elements )[ N ] ) noexcept : CMemoryView( I( N ), reinterpret_cast< T * >( elements ) ) {}
+	template < size_t CN > constexpr CMemoryView( T ( &elements )[ CN ] ) noexcept : CMemoryView( I( CN ), reinterpret_cast< T * >( elements ) ) {}
 	explicit constexpr CMemoryView( T &element ) noexcept : Base_t( { element } ) {}
 	constexpr CMemoryView( T *pBegin, const T *pEnd ) noexcept : CMemoryView( I( 0 ), nullptr )
 	{
@@ -46,7 +49,7 @@ public:
 	}
 
 	// Copy / Move
-	constexpr CMemoryView( const CMemoryView &copyFrom ) noexcept : CMemoryView() { CopyFrom( copyFrom ); }
+	constexpr CMemoryView( const CMemoryView &copyFrom ) noexcept { CopyFrom( copyFrom ); }
 	constexpr CMemoryView( CMemoryView &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
 	constexpr CMemoryView &operator=( const CMemoryView &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
 	constexpr CMemoryView &operator=( CMemoryView &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
@@ -54,10 +57,15 @@ public:
 	// --------- sizes / count / base ----------
 	using Base_t::Size;
 	using Base_t::Count;
+	constexpr const bool IsOverflow( I nCount ) const { return Base_t::template IsOverflow< T >( nCount ); }
+	constexpr const bool IsOverflow() const           { return IsOverflow( Count() ); }
+
+	constexpr T        *FixedData() noexcept          { return Base_t::template FixedData< T >(); }
+	constexpr const T  *FixedData() const noexcept    { return Base_t::template FixedData< T >(); }
+	constexpr T        *Data() noexcept               { return Base_t::template Data< T >(); }
+	constexpr const T  *Data() const noexcept         { return Base_t::template Data< T >(); }
 	constexpr T        *Base() noexcept               { return Base_t::template Base< T >(); }
 	constexpr const T  *Base() const noexcept         { return Base_t::template Base< T >(); }
-	constexpr T        *Data() noexcept               { return Base(); }
-	constexpr const T  *Data() const noexcept       { return Base(); }
 
 	// --------- basic access ----------
 	using Base_t::Empty;
@@ -72,14 +80,10 @@ public:
 	constexpr const_iterator cend() const noexcept    { return Base() + Count(); }
 
 	/// @brief Mutable view over current elements.
-	constexpr CMemoryView &View() noexcept { return *this; }
-	constexpr const CMemoryView &View() const noexcept { return *this; }
-
-	/// @brief Mutable view over current elements.
-	constexpr Const_t Const() const noexcept { return Const_t( Count(), Base() ); }
+	constexpr ConstView_t Const() const noexcept { return ConstView_t( Count(), Base() ); }
 
 	/// @brief Implicit conversion to read-only view.
-	constexpr operator Const_t() const { return Const(); }
+	constexpr operator ConstView_t() const { return Const(); }
 
 	constexpr bool IsValidIndex( I i ) const { return i != INVALID_INDEX; }
 
@@ -123,29 +127,29 @@ public:
 
 	constexpr CMemoryView First( I nCount ) const noexcept
 	{
-		return ( nCount >= Count() ) ? *this : CMemoryView( nCount, Data() );
+		return ( nCount >= Count() ) ? *this : CMemoryView( nCount, Base() );
 	}
 
 	constexpr CMemoryView Last( I nCount ) const noexcept
 	{
 		return ( nCount >= Count() ) ? *this
-		                             : CMemoryView( nCount, Data() + ( Count() - nCount ) );
+		                             : CMemoryView( nCount, Base() + ( Count() - nCount ) );
 	}
 
 	constexpr CMemoryView DropFront( I nCount ) const noexcept
 	{
 		return ( nCount >= Count() ) ? CMemoryView()
-		                             : CMemoryView( static_cast< I >( Count() - nCount ), Data() + nCount );
+		                             : CMemoryView( static_cast< I >( Count() - nCount ), Base() + nCount );
 	}
 
 	constexpr CMemoryView DropBack( I nCount ) const noexcept
 	{
 		return ( nCount >= Count() ) ? CMemoryView()
-		                             : CMemoryView( static_cast< I >( Count() - nCount ), Data() );
+		                             : CMemoryView( static_cast< I >( Count() - nCount ), Base() );
 	}
 
 	// --------- prefix / suffix checks ----------
-	constexpr bool StartsWith( Const_t &vPrefix ) const noexcept
+	constexpr bool StartsWith( const ConstView_t &vPrefix ) const noexcept
 	{
 		I nPrefixCount = vPrefix.Count();
 
@@ -153,13 +157,13 @@ public:
 			return false;
 
 		for ( I i = 0; i < nPrefixCount; ++i )
-			if ( !( Data()[ i ] == vPrefix.Data()[ i ] ) )
+			if ( !( Base()[ i ] == vPrefix.Base()[ i ] ) )
 				return false;
 
 		return true;
 	}
 
-	constexpr bool EndsWith( Const_t &vSuffix ) const noexcept
+	constexpr bool EndsWith( const ConstView_t &vSuffix ) const noexcept
 	{
 		I nCount = Count(), nSuffixCount = vSuffix.Count();
 
@@ -169,7 +173,7 @@ public:
 		I nOffset = static_cast< I >( nCount - nSuffixCount );
 
 		for ( I i = 0; i < nSuffixCount; ++i )
-			if ( !( Data()[ nOffset + i ] == vSuffix.Data()[ i ] ) )
+			if ( !( Base()[ nOffset + i ] == vSuffix.Base()[ i ] ) )
 				return false;
 
 		return true;
@@ -182,7 +186,7 @@ public:
 	///        Returns INVALID_INDEX if not found.
 	///        Element-wise comparison; works for non-trivial T.
 	///        No STL / memcmp.
-	constexpr I Find( Const_t v, const I iFrom = INVALID_INDEX ) const noexcept
+	constexpr I Find( const ConstView_t v, const I iFrom = INVALID_INDEX ) const noexcept
 	{
 		const I nCount     = Count();
 		const I nViewCount = v.Count();
@@ -242,7 +246,7 @@ public:
 	///   - Empty needle convention: returns the clamped start position
 	///     (see below) if it is within [0..Count()], otherwise INVALID_INDEX.
 	///-----------------------------------------------------------------------------
-	constexpr I RFind( Const_t v, const I iFrom = INVALID_INDEX ) const noexcept
+	constexpr I RFind( const ConstView_t v, const I iFrom = INVALID_INDEX ) const noexcept
 	{
 		const I nCount     = Count();
 		const I nViewCount = v.Count();
@@ -260,6 +264,7 @@ public:
 		if ( nViewCount == I( 0 ) )
 		{
 			const I nStart = ( iFrom == INVALID_INDEX ) ? nCount : iFrom;
+
 			return ( nStart <= nCount ) ? nStart : INVALID_INDEX;
 		}
 

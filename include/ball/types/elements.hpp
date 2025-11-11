@@ -27,7 +27,7 @@ constexpr void DestructElement( T *pMemory )
 template < typename I, typename T, I N >
 constexpr void DestructElement( T ( *pMemory )[ N ] )
 {
-	for ( I n = 0; n < N; n++ )
+	for ( I n = 0; n < N; ++n )
 	{
 		DestructElement( pMemory[ n ] );
 	}

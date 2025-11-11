@@ -21,32 +21,36 @@ template < class B, typename I, typename T, class A = CAllocator< I, T > >
 class CVectorBase : public B
 {
 public:
-	using Base_t =      B;
-	using Index_t =     I;
-	using Element_t =   T;
+	using Base_t      = B;
+	using Index_t     = I;
+	using Element_t   = T;
 	using Allocator_t = A;
-	using Number_t =    MNumber< Index_t >;
-	using Unsigned_t =  typename Number_t::U;
-	using View_t =      Base_t;
-	using ConstView_t = typename Base_t::Const_t;
+	using Number_t    = MNumber< Index_t >;
+	using Unsigned_t  = typename Number_t::U;
+	using View_t      = Base_t::View_t;
+	using ConstView_t = Base_t::ConstView_t;
 
 	using Base_t::Base_t;
+	using Base_t::FIXED_COUNT;
 	using Base_t::Count;
+	using Base_t::IsOverflow;
+	using Base_t::FixedData;
 	using Base_t::Data;
+	using Base_t::Base;
 
-	static constexpr bool IS_GROWABLE = false;
+	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
 	static constexpr size_t ALIGNED_SIZE = NextPowerOfTwo_Const( 8 * sizeof( Element_t ) );
 	static constexpr I INVALID_INDEX = Number_t::INVALID;
 
 	/// @brief Default / external ctor. Does not assume ownership semantics beyond this instance.
 	constexpr ~CVectorBase() noexcept
 	{
-		T *pElements = Data();
-
-		if ( pElements )
+		if ( IsOverflow() )
 		{
-			Allocator_t::Free( pElements );
+			Allocator_t::Free( Data() );
 		}
+
+		Base_t::Set( 0, nullptr );
 	}
 
 	// ---------------------------
@@ -54,301 +58,142 @@ public:
 	// ---------------------------
 
 	/// @warning This returns next power-of-two of Count(), not a tracked internal capacity.
-	constexpr I Capacity() const noexcept { return NextPowerOfTwo( Count() ); }
+	constexpr I Capacity() const noexcept { return NextPowerOfTwo< I, FIXED_COUNT >( Count() ); }
 	constexpr size_t CapacitySize() const noexcept { return static_cast< size_t >( Capacity() ) * sizeof( Element_t ); }
 
-protected:
-	using Base_t::Set;
+	constexpr I FixedCount() const noexcept { return FIXED_COUNT; }
+	constexpr size_t FixedSize() const noexcept { return FixedCount() * sizeof( Element_t ); }
 
+	constexpr I FixedCapacity() const noexcept { return NextPowerOfTwo_Unified( FixedCount() ); } 
+	constexpr size_t FixedCapacitySize() const noexcept { return FixedCapacity() * sizeof( Element_t ); }
+
+protected:
 	///-----------------------------------------------------------------------------
-	/// @brief Ensure the backing heap storage can hold at least @p nRequestCapacity
-	///        elements (rounded up to a power of two).
+	/// @brief Ensures that heap storage can accommodate at least @p nRequestCapacity
+	///        elements, rounding up to the next power of two.
 	///
-	/// Behavior overview:
-	///   - Rounds @p nRequestCapacity to the next power of two via NextPowerOfTwo().
-	///   - Grows only (never shrinks heap capacity). If the rounded capacity is
-	///     <= current derived capacity (see below), it is a no-op.
-	///   - Uses Allocator_t::Realloc() when storage already exists; otherwise
-	///     Allocator_t::Alloc() to create a new heap block.
+	/// Overview:
+	///   - Rounds @p nRequestCapacity up to the next power of two via NextPowerOfTwo().
+	///   - Expands capacity only; never shrinks unless migrating back to fixed storage.
+	///   - Uses Allocator_t::Realloc() for existing heap memory, otherwise Allocator_t::Alloc().
 	///
-	/// Important notes and invariants:
-	///   - Capacity() here is *derived from Count()* (next power of two) rather
-	///     than being tracked as a dedicated member. This class assumes callers
-	///     will not rely on a stored capacity field.
-	///   - NUM_ALIGNED/ALIGNED_SIZE act as allocator hints for bucket/alignment.
-	///     The allocator is expected to understand ALIGNED_SIZE as a preferred
-	///     alignment/size class for amortized growth.
-	///   - On overflow of power-of-two computation, NextPowerOfTwo() yields
-	///     Number_t::INVALID; we assert and bail defensively.
-	///   - No element moves/copies occur here; this function is *purely about
-	///     reserving heap memory*. The caller is responsible for updating
-	///     the vector’s internal state (e.g., Set) and for constructing
-	///     or moving elements if required elsewhere.
-	///   - Not thread-safe. External synchronization is required for concurrent use.
+	/// Behavior details:
+	///   - If @p nRequestCapacity exceeds the fixed inline buffer (N), capacity grows to the
+	///     next power of two >= nRequestCapacity.
+	///   - If already on heap and new capacity equals the current derived capacity, this is a no-op.
+	///   - If still using fixed storage but overflow is detected, a new heap block is allocated,
+	///     and data is migrated via MoveToHeap() if IS_GROWABLE is enabled.
+	///   - If the new request fits back into the inline buffer while currently on heap,
+	///     the data is migrated back via MoveToFixed() (only if IS_GROWABLE).
+	///
+	/// Invariants and assumptions:
+	///   - Capacity() is derived from Count() (rounded to power of two), not stored explicitly.
+	///   - NUM_ALIGNED / ALIGNED_SIZE act as allocator hints for alignment and bucket size.
+	///   - Overflow in NextPowerOfTwo() yields Number_t::INVALID — this is asserted defensively.
+	///   - The function does *not* construct, move, or destroy elements — it only manages memory.
+	///   - Callers are responsible for element placement and internal state consistency.
+	///   - Not thread-safe; external synchronization is required for concurrent access.
 	///
 	/// Complexity:
-	///   - O(1) when no allocation occurs.
-	///   - O(1) expected for Alloc/Realloc (allocator-dependent); element
-	///     relocation, if any, is an allocator concern and not performed here.
+	///   - O(1) when no reallocation or migration occurs.
+	///   - O(1) expected for allocator operations; O(n) for migration (MoveToHeap/MoveToFixed).
 	///
-	/// Safety:
-	///   - At call sites is preserved by policy; we assert
-	///     on overflow. If Alloc/Realloc returns nullptr, callers must check the
-	///     returned pointer before use (this function does not throw).
+	/// Safety and diagnostics:
+	///   - Defensive assertions guard against capacity overflow and null allocator results.
+	///   - On allocation failure, nullptr may be returned; the caller must validate the pointer.
+	///   - Function never throws exceptions; caller must enforce safety policy.
 	///
-	/// @param nRequestCapacity Minimum required number of elements before rounding.
-	/// @return Data pointer to storage (may be unchanged or reallocated).
+	/// @param nRequestCapacity  Minimum required number of elements before rounding.
+	/// @return Pointer to valid element storage (possibly reallocated or migrated).
 	///-----------------------------------------------------------------------------
 	constexpr T *EnsureCapacity( I nRequestCapacity )
 	{
-		// Normalize request: round up to next power of two.
-		nRequestCapacity = NextPowerOfTwo( nRequestCapacity );
+		T *pElements = Base();
 
-		// Current heap pointer (may be null if nothing allocated yet).
-		T *pElements = Data();
-
-		// Guard against overflow in power-of-two computation.
-		BALL_ASSERT_MESSAGE( nRequestCapacity != Number_t::INVALID, "Capacity overflow!" );
-
-		// If overflow detected or the requested (rounded) capacity is not greater
-		// than the current derived capacity, nothing to do.
-		if ( nRequestCapacity == Number_t::INVALID || nRequestCapacity < Capacity() )
-			return pElements;
-
-		// Grow path:
-		// - If storage exists, try to reallocate in place (or move by allocator).
-		// - Otherwise, allocate a fresh block.
-		if ( pElements )
+		// Case A: request exceeds inline storage
+		if ( IsOverflow( nRequestCapacity ) )
 		{
-			// Re-bucket to the new power-of-two capacity. ALIGNED_SIZE is a hint.
-			pElements = Allocator_t::Realloc( pElements, nRequestCapacity, ALIGNED_SIZE );
-			BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
+			const I nCapacity = Capacity();
+			const I nNewCapacity = NextPowerOfTwo< I, FIXED_COUNT >( nRequestCapacity );
+
+			BALL_ASSERT_MESSAGE( nNewCapacity != Number_t::INVALID, "Capacity overflow!" );
+
+			if ( nNewCapacity == Number_t::INVALID || nNewCapacity < nCapacity )
+				return pElements;
+
+			// Subcase A1: already on heap
+			if ( IsOverflow() )
+			{
+				if ( pElements && nNewCapacity == nCapacity )
+					return pElements;
+
+				pElements = Allocator_t::Realloc( pElements, nNewCapacity, ALIGNED_SIZE );
+				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
+			}
+			else // Subcase A2: currently inline — migrate to heap
+			{
+				pElements = Allocator_t::Alloc( nNewCapacity, ALIGNED_SIZE );
+				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
+
+				if constexpr ( IS_GROWABLE )
+					MoveToHeap( pElements );
+			}
 		}
-		else
+		// Case B: fits into inline storage, but currently on heap — migrate back
+		else if ( IsOverflow() )
 		{
-			// First-time allocation to the requested power-of-two capacity.
-			pElements = Allocator_t::Alloc( nRequestCapacity, ALIGNED_SIZE );
-			BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
+			if constexpr ( IS_GROWABLE )
+				MoveToFixed( pElements );
 		}
 
-		// Note: We intentionally do not call Set() here; the caller controls
-		// when to commit the new pointer/size relationship to Base_t.
 		return pElements;
 	}
 
+	constexpr void MoveToFixed( const T *pElements )
+	{
+		T *pFixedElements = FixedData();
+
+		BALL_ASSERT( pFixedElements != nullptr );
+		BALL_ASSERT( pElements != nullptr );
+		CopyElements( FixedCount(), pFixedElements, pElements );
+	}
+
+	constexpr void MoveToHeap( T *pElements )
+	{
+		const T *pFixedElements = FixedData();
+
+		BALL_ASSERT( pElements != nullptr );
+		BALL_ASSERT( pFixedElements != nullptr );
+		CopyElements( FixedCount(), pElements, pFixedElements );
+	}
+
 	/// @brief Copy contents from another CVectorBase.
-	CVectorBase &CopyFrom( const CMemoryView< I, T > &other )
+	CVectorBase &CopyFrom( const ConstView_t &other )
 	{
 		const I nNewCount = other.Count();
 
 		T *pElements = EnsureCapacity( nNewCount );
 
-		if ( nNewCount > 0 )
-		{
-			CopyElements( other.Count(), pElements, other.Data() );
-		}
+		CopyElements( other.Count(), pElements, other.Base() );
+		Base_t::Set( nNewCount, pElements );
 
-		Set( nNewCount, pElements );
+		return *this;
+	}
+
+	template< I LN > CVectorBase &CopyFrom( const CMemoryView< I, T, LN > &other )
+	{
+		const I nNewCount = other.Count();
+
+		T *pElements = EnsureCapacity( nNewCount );
+
+		CopyElements( other.Count(), pElements, other.Base() );
+		Base_t::Set( nNewCount, pElements );
 
 		return *this;
 	}
 
 	using Base_t::MoveFrom;
 };
-
-template < class B, typename I, I N, typename T, class A = CAllocator< I, T > >
-class CVectorBase_Growable : public CVectorBase< B, I, T, A >
-{
-public:
-	using Base_t =      CVectorBase< B, I, T, A >;
-	using Index_t =     Base_t::Index_t;
-	using Element_t =   Base_t::Element_t;
-	using Allocator_t = Base_t::Allocator_t;
-	using Number_t =    Base_t::Number_t;
-	using Unsigned_t =  Base_t::Unsigned_t;
-	using View_t =      Base_t::View_t;
-	using ConstView_t = Base_t::ConstView_t;
-
-	using Base_t::Count;
-	using Base_t::Size;
-	using Base_t::Data;
-
-	static constexpr bool IS_GROWABLE = true;
-	static constexpr size_t ALIGNED_SIZE = NextPowerOfTwo_Const( N * sizeof( Element_t ) );
-	static constexpr I INVALID_INDEX = Number_t::INVALID;
-
-	constexpr CVectorBase_Growable() noexcept : Base_t( 0, reinterpret_cast< Element_t * >( &m_FixedElements ) ) {}
-	constexpr ~CVectorBase_Growable() noexcept
-	{
-		if ( IsOverflow() )
-		{
-			Allocator_t::Free( Base_t::Data() );
-		}
-
-		Base_t::Set( 0, nullptr );
-	}
-
-	/// @warning This returns next power-of-two of Count(), not a tracked internal capacity.
-	constexpr I Capacity() const noexcept { return NextPowerOfTwo< I, N >( Count() ); }
-	constexpr size_t CapacitySize() const noexcept { return static_cast< size_t >( Capacity() ) * sizeof( Element_t ); }
-
-	constexpr I FixedCount() const noexcept { return static_cast< I >( N ); }
-	constexpr size_t FixedSize() const noexcept { return FixedCount() * sizeof( Element_t ); }
-
-	constexpr I FixedCapacity() const noexcept { return NextPowerOfTwo_Unified( FixedCount() ); } 
-	constexpr size_t FixedCapacitySize() const noexcept { return FixedCapacity() * sizeof( Element_t ); }
-
-	constexpr bool IsOverflow( I nCount ) const noexcept { return nCount > I( FixedCount() ); }
-	constexpr bool IsOverflow() const noexcept { return IsOverflow( Count() ); }
-
-protected:
-	///-----------------------------------------------------------------------------
-	/// @brief Ensure underlying storage can hold at least @p nRequestCapacity elements.
-	///
-	/// This grows or shrinks the backing storage depending on two conditions:
-	///   1) Whether the requested capacity exceeds the fixed inline buffer (N).
-	///   2) Whether the vector is currently "overflowed" (i.e., backed by heap memory).
-	///
-	/// Growth policy:
-	///   - When @p nRequestCapacity > FixedCount() the capacity is rounded up to the
-	///     next power of two ( >= N ) via NextPowerOfTwo< I, N >(). This ensures amortized
-	///     O(1) append behavior and reduces the number of reallocations.
-	///
-	/// Shrink policy:
-	///   - This function never shrinks heap capacity to a smaller heap capacity.
-	///     However, if the request fits into the fixed inline storage and the vector
-	///     is currently overflowed, it migrates back to the fixed buffer and frees
-	///     the heap block (MoveToFixed()).
-	///
-	/// Invariants and notes:
-	///   - Capacity() here is computed from Count() (next power of two); there is no
-	///     separately tracked "capacity" member. We rely on the allocator's returned
-	///     block being >= the computed next power-of-two when growing.
-	///   - NUM_ALIGNED/ALIGNED_SIZE act as allocator hints (alignment/bucket size).
-	///     For heap allocations/reallocations we pass ALIGNED_SIZE to let the allocator
-	///     choose a bucket aligned to a power-of-two number of elements.
-	///   - On overflow of the capacity computation, NextPowerOfTwo returns Number_t::INVALID.
-	///     We assert on that condition and bail out defensively.
-	///   - Not thread-safe; external synchronization is required if used concurrently.
-	///   - Strong no-throw guarantee for client code paths (this function itself does not
-	///     throw, but will assert on allocation failure in debug builds).
-	///
-	/// Complexity:
-	///   - O(1) when no migration occurs.
-	///   - O(n) element moves when switching between fixed and heap storage (via MoveToHeap /
-	///     MoveToFixed) or when the allocator has to reallocate.
-	///
-	/// @param nRequestCapacity Minimum number of elements the storage must be able to hold.
-	///                         May be >= Count() when growing; can be < Count() if the caller
-	///                         only wants to ensure it still fits in fixed storage (no removal
-	///                         of elements is performed here).
-	/// @return New base pointer to elements (may be different from previous Data()).
-	///-----------------------------------------------------------------------------
-	constexpr T *EnsureCapacity( const I nRequestCapacity )
-	{
-		// Current base pointer; may point to the fixed inline buffer or to heap.
-		T *pElements = Data();
-
-		// Case A: The request exceeds the fixed inline storage (N).
-		if ( IsOverflow( nRequestCapacity ) )
-		{
-			// Compute the next power-of-two capacity (>= nRequestCapacity and >= N).
-			const I nNewCapacity = NextPowerOfTwo< I, N >( nRequestCapacity );
-
-			// If the power-of-two computation overflowed, abort in debug builds.
-			BALL_ASSERT_MESSAGE( nNewCapacity != Number_t::INVALID, "Capacity overflow!" );
-
-			// Defensive bail-out: if computation failed or the proposed capacity would be
-			// smaller than our current (derived) capacity, do nothing.
-			// Note: We never shrink heap capacity here; shrinking is only done by migrating
-			// back to fixed storage (see Case B below).
-			if ( nNewCapacity == Number_t::INVALID || nNewCapacity < Capacity() )
-				return pElements;
-
-			// Subcase A1: Already on heap — grow in place if possible.
-			if ( IsOverflow() )
-			{
-				// Try to re-bucket the allocation to the new power-of-two capacity.
-				// ALIGNED_SIZE is used as an allocator hint (alignment/bucket size).
-				pElements = Allocator_t::Realloc( pElements, nNewCapacity, ALIGNED_SIZE );
-
-				// If allocation fails, pElements would be nullptr; we assert in debug.
-				// In release builds, downstream code must not dereference nullptr.
-				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements (growable)" );
-			}
-			// Subcase A2: Currently using the fixed inline buffer — migrate to heap.
-			else
-			{
-				// Allocate a new heap block with the requested power-of-two capacity.
-				pElements = Allocator_t::Alloc( nNewCapacity, ALIGNED_SIZE );
-				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements (growable)" );
-
-				// Move/copy existing elements from the fixed buffer into the new heap block
-				// and update the base pointer inside Base_t. This is O(n).
-				MoveToHeap( pElements );
-			}
-		}
-		// Case B: The request fits into the fixed inline storage.
-		else if ( IsOverflow() )
-		{
-			// We are currently on heap but the required capacity fits inline.
-			// Migrate elements back to the fixed buffer and free the heap block.
-			// This reduces memory footprint; complexity is O(n).
-			MoveToFixed( pElements );
-			// After MoveToFixed, Data() now points to the fixed buffer; keep returning
-			// the (updated) pElements for convenience/consistency with callers.
-		}
-
-		// Return the (possibly updated) base pointer for the caller to continue working with.
-		return pElements;
-	}
-
-	using Base_t::Set;
-
-	constexpr void MoveToFixed( const T *pElements )
-	{
-		BALL_ASSERT( pElements != nullptr );
-		CopyElements( FixedCount(), reinterpret_cast< T * >( &m_FixedElements ), pElements );
-	}
-
-	constexpr void MoveToHeap( T *pElements )
-	{
-		BALL_ASSERT( pElements != nullptr );
-		CopyElements( FixedCount(), pElements, reinterpret_cast< const T * >( &m_FixedElements ) );
-	}
-
-	constexpr void Swap( CVectorBase_Growable &other ) noexcept
-	{
-		Base_t::Swap( other.View() );
-
-		if ( !IsOverflow() )
-		{
-			Math_Swap( m_FixedElements, other.m_FixedElements );
-		}
-	}
-
-	constexpr CVectorBase_Growable &CopyFrom( ConstView_t &other ) noexcept
-	{
-		I nOtherCount = other.Count();
-
-		T *pElements = EnsureCapacity( nOtherCount );
-
-		CopyElements( other.Count(), pElements, other.Data() );
-		Set( nOtherCount, pElements );
-
-		return *this;
-	}
-	constexpr CVectorBase_Growable &CopyFrom( View_t &other ) noexcept { return CopyFrom( other.Const() );  }
-	constexpr CVectorBase_Growable &MoveFrom( CVectorBase_Growable &&other ) noexcept
-	{
-		Swap( static_cast< CVectorBase_Growable & >( other ) );
-
-		return *this;
-	}
-
-private:
-	T m_FixedElements[ N ];
-}; // class CVectorBase_Growable
 
 template < class B, typename I, typename T >
 class CVectorImpl : public B
@@ -361,9 +206,10 @@ public:
 	using ConstView_t = Base_t::ConstView_t;
 
 	using Base_t::Base_t;
+	using Base_t::INVALID_INDEX;
 	using Base_t::Count;
-	using Base_t::Data;
-	using Base_t::EnsureCapacity;
+	using Base_t::Base;
+	using Base_t::Find;
 
 	constexpr CVectorImpl( const View_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
 	constexpr CVectorImpl( const ConstView_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
@@ -392,13 +238,13 @@ public:
 	{
 		BALL_ASSERT( !v.Empty() );
 
-		const T *pViewData = v.Data();
+		const T *pViewData = v.Base();
 		I nViewCount = v.Count();
 
 		T *pData = EnsureInsert( nIndex, nViewCount );
 
 		// Construct each new element
-		for ( I n = 0; n < nViewCount; n++ )
+		for ( I n = 0; n < nViewCount; ++n )
 		{
 			ConstructElement( &pData[ n ], pViewData[ n ] );
 		}
@@ -421,7 +267,7 @@ public:
 		T *pData = EnsureInsert( nIndex, nCount );
 
 		// Construct each new element
-		for ( I n = 0; n < nCount; n++ )
+		for ( I n = 0; n < nCount; ++n )
 		{
 			ConstructElement( &pData[ n ], arrElements[ n ] );
 		}
@@ -443,7 +289,7 @@ public:
 		T *pData = EnsureInsert( nIndex, nCount );
 
 		// Construct each new element
-		for ( I n = 0; n < nCount; n++ )
+		for ( I n = 0; n < nCount; ++n )
 		{
 			ConstructElement( &pData[ n ], Move( arrElements[ n ] ) );
 		}
@@ -496,13 +342,171 @@ public:
 		BALL_ASSERT( 0 < nCount );
 		BALL_ASSERT( 0 <= nIndex && nIndex <= nCount );
 
-		T *pData = Data();
+		T *pData = Base();
 
 		DestructElement( &pData[ nIndex ] );
 		ShiftElements( &pData[ nIndex ], &pData[ nIndex + n ], &pData[ nCount ] );
 		Grow( -n );
 
 		return nIndex;
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Replace a range [index, index + nRemove) with @p svRepl in-place.
+	///        No aliasing with temporaries: we shift the suffix explicitly and
+	///        copy the replacement into its final position.
+	///        Returns index of the last written character of the inserted part
+	///        (or prefix end - 1 if svRepl is empty and string shrinks).
+	///-----------------------------------------------------------------------------
+	I Replace( I i, I nRemove, ConstView_t svRepl )
+	{
+		const I nCount = Count();
+
+		BALL_ASSERT( i <= nCount );
+		BALL_ASSERT( nRemove <= ( nCount - i ) );
+
+		const I nWith   = svRepl.Count();
+		const I nDelta  = nWith - nRemove; // can be negative
+		T *pData        = const_cast< T * >( Base() );
+
+		// Case 1: exact-size replace -> copy over the window and done.
+		if ( nDelta == I( 0 ) )
+		{
+			for ( I k = 0; k < nWith; ++k )
+				pData[ i + k ] = svRepl[ k ];
+
+			return ( nWith == I( 0 ) ) ? ( ( i == I( 0 ) ) ? INVALID_INDEX : ( i - 1 ) )
+			                           : ( i + nWith - 1 );
+		}
+
+		// Case 2: shrink (nWith < nRemove) -> move suffix left, shrink logical size.
+		if ( nDelta < I( 0 ) )
+		{
+			const I nShrink = -nDelta; // amount to pull left
+			// 2.1 Copy replacement into its final spot [i .. i + nWith)
+			for ( I k = 0; k < nWith; ++k )
+				pData[ i + k ] = svRepl[ k ];
+
+			// 2.2 Shift suffix left by nShrink.
+			const I nSuffixBegin  = i + nRemove;
+			const I nOldCount     = nCount;
+
+			ShiftElements( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
+
+			// 2.3 Commit new logical size.
+			Base_t::Set( nCount - nShrink, pData );
+
+			return ( nWith == I( 0 ) ) ? ( ( i == I( 0 ) ) ? INVALID_INDEX : i )
+			                           : ( i + nWith );
+		}
+
+		// Case 3: grow (nWith > nRemove) -> ensure capacity, shift suffix right, then copy.
+		{
+			const I nGrow = nDelta; // amount to push right
+			const I nNew  = nCount + nGrow;
+
+			// 3.1 Ensure capacity; pointer may change.
+			pData = Base_t::EnsureCapacity( nNew );
+
+			// 3.2 Shift suffix right by nGrow: [i + nRemove .. n) -> starts at [i + nWith .. )
+			const I nSuffixBegin  = i + nRemove;
+			const I nOldCount     = nCount;
+
+			ShiftElements( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
+
+			// 3.3 Commit new logical size before filling the gap.
+			Base_t::Set( nNew, pData );
+
+			// 3.4 Copy replacement into its final spot.
+			for ( I k = 0; k < nWith; ++k )
+				pData[ i + k ] = svRepl[ k ];
+
+			return i + nWith - 1;
+		}
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Replace a range [index, index + nRemove) with a C-string (null-terminated).
+	///-----------------------------------------------------------------------------
+	I Replace( I i, I nRemove, const T *pRepl )
+	{
+		// Treat nullptr as empty replacement.
+		return Replace( i, nRemove, pRepl ? ConstView_t( pRepl ) : ConstView_t() );
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Replace first occurrence of @p what with @p with. Returns index of replaced range start or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
+	I ReplaceFirst( ConstView_t svWhat, ConstView_t svWith )
+	{
+		const I iFound = Find( svWhat );
+
+		if ( iFound == INVALID_INDEX )
+			return INVALID_INDEX;
+
+		Replace( iFound, svWhat.Count(), svWith );
+
+		return iFound;
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Replace all non-overlapping occurrences of @p what with @p with.
+	///        Returns count of replacements.
+	///        NOTE: If @p what is empty, no-op (returns 0) to avoid infinite loop.
+	///-----------------------------------------------------------------------------
+	I ReplaceAll( ConstView_t svWhat, ConstView_t svWith )
+	{
+		const I nWhat = svWhat.Count();
+
+		if ( nWhat == I( 0 ) )
+			return I( 0 );
+
+		I nReplaced = 0;
+		I nFrom     = I( 0 );
+
+		for ( ; ; )
+		{
+			const I iFound = Find( svWhat, nFrom );
+			if ( iFound == INVALID_INDEX )
+				break;
+
+			Replace( iFound, nWhat, svWith );
+			++nReplaced;
+
+			// Advance beyond the just-inserted region to avoid re-matching inside replacement.
+			const I nWith = svWith.Count();
+
+			nFrom = iFound + ( nWith > 0 ? nWith : I( 1 ) ); // ensure forward progress even when nWith == 0
+
+			// Clamp in case of pathological inputs.
+			if ( nFrom > Count() )
+				break;
+		}
+
+		return nReplaced;
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Replace all occurrences of single character @p fromCh with @p toCh.
+	///        Returns count of replacements.
+	///-----------------------------------------------------------------------------
+	I Replace( const T &from, const T &to )
+	{
+		T *p = const_cast< T * >( Base() );
+		const I nCount = Count();
+
+		I n = 0;
+
+		for ( I k = 0; k < nCount; ++k )
+		{
+			if ( p[ k ] == from )
+			{
+				p[ k ] = to;
+				++n;
+			}
+		}
+
+		return n;
 	}
 
 	/// @brief Replace [index, index + len) with src (shifts tail if needed).
@@ -534,7 +538,7 @@ public:
 		// Copy inserted segment.
 		if ( nInsertCount > 0 )
 		{
-			CopyElements( nInsertCount, pElements + nIndex, src.Data() );
+			CopyElements( nInsertCount, pElements + nIndex, src.Base() );
 		}
 
 		Set( nNewCount, pElements );
@@ -546,8 +550,6 @@ public:
 	{
 		for ( auto &it : *this )
 			DestructElement( &it );
-
-		SetCount( 0 );
 	}
 
 	void Purge()
@@ -556,6 +558,9 @@ public:
 	}
 
 protected:
+	using Base_t::EnsureCapacity;
+	using Base_t::Set;
+
 	///-----------------------------------------------------------------------------
 	/// @brief Ensure space for inserting @p nAddCount elements at position @p nIndex,
 	///        grow storage if needed, shift the tail to the right, and commit size.
@@ -590,7 +595,7 @@ protected:
 
 		// 3) Commit the new logical size; the gap [nIndex, nIndex + nAddCount)
 		//    is now reserved for the caller to fill.
-		Base_t::Set( nNewCount, pData );
+		Set( nNewCount, pData );
 
 		return &pData[ nIndex ];
 	}
@@ -599,9 +604,9 @@ protected:
 	{
 		I nOld = Count();
 
-		Base_t::Set( nNew, Base_t::EnsureCapacity( nNew ) );
+		Set( nNew, EnsureCapacity( nNew ) );
 
-		T *pData = Data();
+		T *pData = Base();
 
 		if ( nOld < nNew )
 			ConstructElements( &pData[ nOld ], &pData[ nNew ] );
@@ -619,35 +624,26 @@ public:
 	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T >, I, T, A >, I, T >;
 	using Base_t::Base_t;
 
-	template < I N >
-	CVector( const CBufferVector< I, N, T, A > &other ) :
-		Base_t( other.View() )
-	{
-	}
-
+	template < I N > CVector( const CBufferVector< I, N, T, A > &other ) : Base_t( other ) {}
 	template < I N > CVector &operator=( const CBufferVector< I, N, T, A > &other )
 	{
-		Base_t::operator=( other.View() );
+		Base_t::operator=( other );
 
 		return *this;
 	}
 };
 
 template < typename I, I N, typename T, class A = CAllocator< I, T > >
-class CBufferVector : public CVectorImpl< CVectorBase_Growable< CMemoryView< I, T >, I, N, T, A >, I, T >
+class CBufferVector : public CVectorImpl< CVectorBase< CMemoryView< I, T, N >, I, T, A >, I, T >
 {
 public:
-	using Base_t = CVectorImpl< CVectorBase_Growable< CMemoryView< I, T >, I, N, T, A >, I, T >;
+	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T, N >, I, T, A >, I, T >;
 	using Base_t::Base_t;
 
-	CBufferVector( const CVector< I, T, A > &other ) :
-		Base_t( other.View() )
-	{
-	}
-
+	CBufferVector( const CVector< I, T, A > &other ) : Base_t( other ) {}
 	CBufferVector &operator=( const CVector< I, T, A > &other )
 	{
-		Base_t::operator=( other.View() );
+		Base_t::operator=( other );
 
 		return *this;
 	}

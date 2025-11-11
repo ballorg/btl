@@ -120,7 +120,7 @@ int main()
 	BALL_APPEND_SIZEOF( sBuffer, char16_t );
 	BALL_APPEND_SIZEOF( sBuffer, char32_t );
 
-	sBuffer.Append( "---" );
+	sBuffer.Append( "---\0" );
 
 	puts( sBuffer.String() );
 
