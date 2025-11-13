@@ -5,6 +5,7 @@
 #	include "base/fixed.h"
 #	include "c/assert.h"
 #	include "meta/enableif.hpp"
+#	include "meta/indexof.hpp"
 #	include "meta/issame.hpp"
 #	include "meta/number.hpp"
 #	include "elements.hpp"
@@ -35,26 +36,15 @@ public:
 	static constexpr I INVALID_TYPE_INDEX = TypeNumber_t::INVALID;
 
 	// --------- meta helpers ----------
-private:
+protected:
+	template< typename T > using IndexOf_t = MIndexOf< TI, T, Ts... >;
+
 	static constexpr TI NUM_TYPES = sizeof...( Ts );
 
-	template < typename T, typename U, typename ...Rest >
-	struct IndexOf_t
-	{
-		static constexpr TI VALUE = IS_SAME< T, U > ? 0u : ( 1u + IndexOf_t< T, Rest... >::VALUE );
-	};
-
-	template < typename T, typename U >
-	struct IndexOf_t< T, U >
-	{
-		static constexpr TI VALUE = IS_SAME< T, U > ? 0u : INVALID_TYPE_INDEX;
-	};
-
-	template < typename T > static constexpr TI TYPE_INDEX = IndexOf_t< T, Ts... >::VALUE;
+	template < typename T > static constexpr TI TYPE_INDEX = IndexOf_t< T >::VALUE;
 	template < typename T > static constexpr bool TYPE_IN_PACK = ( TYPE_INDEX< T > != INVALID_TYPE_INDEX );
 
-	template < typename T >
-	using Enable_t = EnableIf_t< TYPE_IN_PACK< T >, int >;
+	template < typename T > using Enable_t = EnableIf_t< TYPE_IN_PACK< T >, int >;
 
 	// --------- state ----------
 public:
