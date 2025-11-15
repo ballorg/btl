@@ -43,7 +43,7 @@ public:
 
 	constexpr CElementsPack() noexcept : m_Node() {}
 
-	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > N; }
+	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > FIXED_COUNT; }
 	template < typename T > constexpr bool IsOverflowByType( I nCount ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
@@ -224,20 +224,20 @@ public:
 
 	constexpr CElementsPack() noexcept : m_Node() {};
 
-	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount >= N; }
+	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount >= FIXED_COUNT; }
 	template < typename T > constexpr bool IsOverflowByType( I nCount ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return IsOverflow( nCount );
 		else
-			return m_Tail.template IsOverflowByType< T >();
+			return m_Tail.template IsOverflowByType< T >( nCount );
 	}
 	template < TI K > constexpr bool IsOverflowByIndex( I nCount ) const noexcept
 	{
 		if constexpr ( K == 0 )
 			return IsOverflow( nCount );
 		else
-			return m_Tail.template IsOverflowByIndex< K - 1 >();
+			return m_Tail.template IsOverflowByIndex< K - 1 >( nCount );
 	}
 
 	// ---- static storage access (SoA arrays), returns T* ----
