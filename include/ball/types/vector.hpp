@@ -168,7 +168,7 @@ protected:
 	}
 
 	/// @brief Copy contents from another CVectorBase.
-	CVectorBase &CopyFrom( const ConstView_t &other )
+	constexpr CVectorBase &CopyFrom( const ConstView_t &other )
 	{
 		const I nNewCount = other.Count();
 
@@ -180,7 +180,7 @@ protected:
 		return *this;
 	}
 
-	template< I LN > CVectorBase &CopyFrom( const CMemoryView< I, T, LN > &other )
+	template< I LN > constexpr CVectorBase &CopyFrom( const CMemoryView< I, T, LN > &other )
 	{
 		const I nNewCount = other.Count();
 
@@ -358,7 +358,7 @@ public:
 	///        Returns index of the last written character of the inserted part
 	///        (or prefix end - 1 if svRepl is empty and string shrinks).
 	///-----------------------------------------------------------------------------
-	I Replace( I i, I nRemove, ConstView_t svRepl )
+	constexpr I Replace( I i, I nRemove, ConstView_t svRepl )
 	{
 		const I nCount = Count();
 
@@ -428,7 +428,7 @@ public:
 	///-----------------------------------------------------------------------------
 	/// @brief Replace a range [index, index + nRemove) with a C-string (null-terminated).
 	///-----------------------------------------------------------------------------
-	I Replace( I i, I nRemove, const T *pRepl )
+	constexpr I Replace( I i, I nRemove, const T *pRepl )
 	{
 		// Treat nullptr as empty replacement.
 		return Replace( i, nRemove, pRepl ? ConstView_t( pRepl ) : ConstView_t() );
@@ -437,7 +437,7 @@ public:
 	///-----------------------------------------------------------------------------
 	/// @brief Replace first occurrence of @p what with @p with. Returns index of replaced range start or INVALID_INDEX.
 	///-----------------------------------------------------------------------------
-	I ReplaceFirst( ConstView_t svWhat, ConstView_t svWith )
+	constexpr I ReplaceFirst( ConstView_t svWhat, ConstView_t svWith )
 	{
 		const I iFound = Find( svWhat );
 
@@ -454,7 +454,7 @@ public:
 	///        Returns count of replacements.
 	///        NOTE: If @p what is empty, no-op (returns 0) to avoid infinite loop.
 	///-----------------------------------------------------------------------------
-	I ReplaceAll( ConstView_t svWhat, ConstView_t svWith )
+	constexpr I ReplaceAll( ConstView_t svWhat, ConstView_t svWith )
 	{
 		const I nWhat = svWhat.Count();
 
@@ -490,7 +490,7 @@ public:
 	/// @brief Replace all occurrences of single character @p fromCh with @p toCh.
 	///        Returns count of replacements.
 	///-----------------------------------------------------------------------------
-	I Replace( const T &from, const T &to )
+	constexpr I Replace( const T &from, const T &to )
 	{
 		T *p = const_cast< T * >( Base() );
 		const I nCount = Count();
@@ -546,13 +546,13 @@ public:
 		return nIndex;
 	}
 
-	void RemoveAll()
+	constexpr void RemoveAll()
 	{
 		for ( auto &it : *this )
 			DestructElement( &it );
 	}
 
-	void Purge()
+	constexpr void Purge()
 	{
 		RemoveAll();
 	}
@@ -576,7 +576,7 @@ protected:
 	///       the nAddCount elements into the returned gap.
 	/// @pre  0 <= nIndex <= Count(), nAddCount > 0.
 	///-----------------------------------------------------------------------------
-	constexpr T *EnsureInsert( I nIndex, I nAddCount ) noexcept
+	constexpr T *EnsureInsert( I nIndex, I nAddCount )
 	{
 		BALL_ASSERT( nAddCount > 0 );
 		BALL_ASSERT( nIndex <= Count() );
@@ -600,7 +600,7 @@ protected:
 		return &pData[ nIndex ];
 	}
 
-	constexpr void SetCount( I nNew ) noexcept
+	constexpr void SetCount( I nNew )
 	{
 		I nOld = Count();
 
@@ -624,13 +624,8 @@ public:
 	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T >, I, T, A >, I, T >;
 	using Base_t::Base_t;
 
-	template < I N > CVector( const CBufferVector< I, N, T, A > &other ) : Base_t( other ) {}
-	template < I N > CVector &operator=( const CBufferVector< I, N, T, A > &other )
-	{
-		Base_t::operator=( other );
-
-		return *this;
-	}
+	template < I N > constexpr CVector( const CBufferVector< I, N, T, A > &other ) : Base_t( other ) {}
+	template < I N > constexpr CVector &operator=( const CBufferVector< I, N, T, A > &other ) { Base_t::CopyFrom( other ); return *this; }
 };
 
 template < typename I, I N, typename T, class A = CAllocator< I, T > >
@@ -640,13 +635,8 @@ public:
 	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T, N >, I, T, A >, I, T >;
 	using Base_t::Base_t;
 
-	CBufferVector( const CVector< I, T, A > &other ) : Base_t( other ) {}
-	CBufferVector &operator=( const CVector< I, T, A > &other )
-	{
-		Base_t::operator=( other );
-
-		return *this;
-	}
+	constexpr CBufferVector( const CVector< I, T, A > &other ) : Base_t( other ) {}
+	constexpr CBufferVector &operator=( const CVector< I, T, A > &other ) { Base_t::CopyFrom( other ); return *this; }
 };
 
 template < typename T > using Vector_t =            CVector< size_t, T >;

@@ -39,7 +39,7 @@ constexpr void DestructElement( T ( *pMemory )[ N ] )
 /// @return pDest
 ///-----------------------------------------------------------------------------
 template < typename I, typename T >
-inline T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
+constexpr T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 {
 	for ( I n = 0; n < nCount; ++n )
 		pDest[ n ] = pSrc[ n ];
@@ -55,7 +55,7 @@ inline T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 /// @return pDest
 ///-----------------------------------------------------------------------------
 template < typename I, typename T >
-inline T *CopyElementsFromEnd( I nCount, T *pDest, const T *pSrc ) noexcept
+constexpr T *CopyElementsFromEnd( I nCount, T *pDest, const T *pSrc ) noexcept
 {
 	for ( I n = nCount; n-- > 0; )
 		pDest[ n ] = pSrc[ n ];

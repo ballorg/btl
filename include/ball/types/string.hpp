@@ -24,8 +24,8 @@ public:
 	using Base_t::EnsureInsert;
 	using Base_t::RemoveAll;
 
-	I Length() const { return Base_t::Count(); }
-	const T *String() const { return Empty() ? "\0" : Base(); }
+	constexpr I Length() const { return Base_t::Count(); }
+	constexpr const T *String() const { return Empty() ? "\0" : Base(); }
 
 protected:
 	///-----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ protected:
 	///        Uses EnsureInsert to do a single grow+shift and returns last written idx.
 	///-----------------------------------------------------------------------------
 	template < uint8_t NS, typename U >
-	I InsertUnsigned( I nIndex, U u )
+	constexpr I InsertUnsigned( I nIndex, U u )
 	{
 		static_assert( NS >= 2 && NS <= 36, "InsertUnsigned: base must be in [2,36]" );
 
@@ -54,7 +54,7 @@ protected:
 	///        Does a single EnsureInsert for sign + digits (when negative).
 	///-----------------------------------------------------------------------------
 	template < uint8_t NS, typename S >
-	I InsertSigned( I nIndex, S v )
+	constexpr I InsertSigned( I nIndex, S v )
 	{
 		using U = typename MUnsigned< S >::Type;
 
@@ -88,20 +88,20 @@ protected:
 	///-----------------------------------------------------------------------------
 	/// @brief Convenience wrappers to keep old call sites working.
 	///-----------------------------------------------------------------------------
-	template < typename U > I InsertUnsigned8( I nIndex, U u ) { return InsertUnsigned< 8u, U >( nIndex, u ); }
-	template < typename U > I InsertUnsigned10( I nIndex, U u ) { return InsertUnsigned< 10u, U >( nIndex, u ); }
-	template < typename U > I InsertUnsigned16( I nIndex, U u ) { return InsertUnsigned< 16u, U >( nIndex, u ); }
+	template < typename U > constexpr I InsertUnsigned8( I nIndex, U u )  { return InsertUnsigned< 8u, U >( nIndex, u ); }
+	template < typename U > constexpr I InsertUnsigned10( I nIndex, U u ) { return InsertUnsigned< 10u, U >( nIndex, u ); }
+	template < typename U > constexpr I InsertUnsigned16( I nIndex, U u ) { return InsertUnsigned< 16u, U >( nIndex, u ); }
 
-	template < typename S > I InsertSigned8( I nIndex, S v ) { return InsertSigned< 8u, S >( nIndex, v ); }
-	template < typename S > I InsertSigned10( I nIndex, S v ) { return InsertSigned< 10u, S >( nIndex, v ); }
-	template < typename S > I InsertSigned16( I nIndex, S v ) { return InsertSigned< 16u, S >( nIndex, v ); }
+	template < typename S > constexpr I InsertSigned8( I nIndex, S v )  { return InsertSigned< 8u, S >( nIndex, v ); }
+	template < typename S > constexpr I InsertSigned10( I nIndex, S v ) { return InsertSigned< 10u, S >( nIndex, v ); }
+	template < typename S > constexpr I InsertSigned16( I nIndex, S v ) { return InsertSigned< 16u, S >( nIndex, v ); }
 
 
 	/// @brief Appends a floating-point value with fixed precision.
 	/// @tparam P Number of digits after decimal point.
 	/// @tparam F Floating type (float or double).
 	template < uint_t P, typename F >
-	I InsertFloatFixed( I nIndex, F x )
+	constexpr I InsertFloatFixed( I nIndex, F x )
 	{
 		if ( x < F( 0 ) )
 		{
@@ -147,39 +147,39 @@ protected:
 	}
 
 public:
-	I Insert( I i, T character )                                        { return Base_t::Insert( i, character ); }
-	template < size_t N > I Insert( I i, const T ( &str )[ N ] )        { return Base_t::Insert( i, N - 1, str ); }
-	template < size_t N > I Insert( I i, T ( &&str )[ N ] )             { return Base_t::Insert( i, N - 1, Move( str ) ); }
-	I Insert( I i, View_t sv )                                          { return Base_t::Insert( i, sv ); }
-	I Insert( I i, ConstView_t sv )                                     { return Base_t::Insert( i, sv ); }
-	I Insert( I i, I nLength, const T *pString )                        { return Insert( i, ConstView_t( nLength, pString ) ); }
-	I Insert( I i, bool_t b )                                           { return b ? Insert( i, "true" ) : Insert( i, "false" ); }
-	I Insert( I i, int_t v )                                            { return InsertSigned10( i, v ); }
-	I Insert( I i, long_t v )                                           { return InsertSigned10( i, v ); }
-	I Insert( I i, llong_t v )                                          { return InsertSigned10( i, v ); }
-	I Insert( I i, uint_t v )                                           { return InsertUnsigned10( i, v ); }
-	I Insert( I i, ulong_t v )                                          { return InsertUnsigned10( i, v ); }
-	I Insert( I i, ullong_t v )                                         { return InsertUnsigned10( i, v ); }
-	template < size_t P = 6 > I Insert( I i, float_t x )                { return InsertFloatFixed< P >( i, x ); }
-	template < size_t P = 6 > I Insert( I i, double_t x )               { return InsertFloatFixed< P >( i, x ); }
-	I Insert( I i, const void *p )                                      { return InsertUnsigned16( Insert( i, "0x" ), reinterpret_cast< uintptr_t >( p ) ); }
-	template < typename ...Ts > I InsertMultiple( I i, Ts &&...args )   { ( ( i = Insert( i, Forward< Ts >( args ) ) ), ... ); return i; }
+	constexpr I Insert( I i, T character )                                          { return Base_t::Insert( i, character ); }
+	template < size_t N > constexpr I Insert( I i, const T ( &str )[ N ] )          { return Base_t::Insert( i, N - 1, str ); }
+	template < size_t N > constexpr I Insert( I i, T ( &&str )[ N ] )               { return Base_t::Insert( i, N - 1, Move( str ) ); }
+	constexpr I Insert( I i, View_t sv )                                            { return Base_t::Insert( i, sv ); }
+	constexpr I Insert( I i, ConstView_t sv )                                       { return Base_t::Insert( i, sv ); }
+	constexpr I Insert( I i, I nLength, const T *pString )                          { return Insert( i, ConstView_t( nLength, pString ) ); }
+	constexpr I Insert( I i, bool_t b )                                             { return b ? Insert( i, "true" ) : Insert( i, "false" ); }
+	constexpr I Insert( I i, int_t v )                                              { return InsertSigned10( i, v ); }
+	constexpr I Insert( I i, long_t v )                                             { return InsertSigned10( i, v ); }
+	constexpr I Insert( I i, llong_t v )                                            { return InsertSigned10( i, v ); }
+	constexpr I Insert( I i, uint_t v )                                             { return InsertUnsigned10( i, v ); }
+	constexpr I Insert( I i, ulong_t v )                                            { return InsertUnsigned10( i, v ); }
+	constexpr I Insert( I i, ullong_t v )                                           { return InsertUnsigned10( i, v ); }
+	template < size_t P = 6 > constexpr I Insert( I i, float_t x )                  { return InsertFloatFixed< P >( i, x ); }
+	template < size_t P = 6 > constexpr I Insert( I i, double_t x )                 { return InsertFloatFixed< P >( i, x ); }
+	constexpr I Insert( I i, const void *p )                                        { return InsertUnsigned16( Insert( i, "0x" ), reinterpret_cast< uintptr_t >( p ) ); }
+	template < typename ...Ts > constexpr I InsertMultiple( I i, Ts &&...args )     { ( ( i = Insert( i, Forward< Ts >( args ) ) ), ... ); return i; }
 
-	template < typename ...Ts > I Set( Ts &&...args )                   { RemoveAll(); return Insert( 0, Forward< Ts >( args )... ); }
-	template < typename ...Ts > I SetMultiple( Ts &&...args )           { RemoveAll(); InsertMultiple( 0, Forward< Ts >( args )... ); return Length(); }
+	template < typename ...Ts > constexpr I Set( Ts &&...args )                     { RemoveAll(); return Insert( 0, Forward< Ts >( args )... ); }
+	template < typename ...Ts > constexpr I SetMultiple( Ts &&...args )             { RemoveAll(); InsertMultiple( 0, Forward< Ts >( args )... ); return Length(); }
 
-	template < typename ...Ts > CStringImpl &operator=( Ts &&...args )  { Set( Forward< Ts >( args )... ); return *this; }
+	template < typename ...Ts > constexpr CStringImpl &operator=( Ts &&...args )    { Set( Forward< Ts >( args )... ); return *this; }
 
-	template < typename ...Ts > I Append( Ts &&...args )                { return Insert( Length(), Forward< Ts >( args )... ); }
-	template < typename ...Ts > I AppendMultiple( Ts &&...args )        { InsertMultiple( Length(), Forward< Ts >( args )... ); return Length(); }
+	template < typename ...Ts > constexpr I Append( Ts &&...args )                  { return Insert( Length(), Forward< Ts >( args )... ); }
+	template < typename ...Ts > constexpr I AppendMultiple( Ts &&...args )          { InsertMultiple( Length(), Forward< Ts >( args )... ); return Length(); }
 
-	template < typename ...Ts > CStringImpl &operator+=( Ts &&...args ) { Append( Forward< Ts >( args )... ); return *this; }
+	template < typename ...Ts > constexpr CStringImpl &operator+=( Ts &&...args )   { Append( Forward< Ts >( args )... ); return *this; }
 
 public:
 	///-----------------------------------------------------------------------------
 	/// @brief Trim leading ASCII whitespace in-place.
 	///-----------------------------------------------------------------------------
-	I TrimLeft() noexcept
+	constexpr I TrimLeft() noexcept
 	{
 		const T *p = Base();
 		const I nLength = Length();
@@ -199,7 +199,7 @@ public:
 	///-----------------------------------------------------------------------------
 	/// @brief Trim trailing ASCII whitespace in-place.
 	///-----------------------------------------------------------------------------
-	I TrimRight() noexcept
+	constexpr I TrimRight() noexcept
 	{
 		const T *p = Base();
 		const I nLength  = Length();
@@ -230,7 +230,7 @@ public:
 	///-----------------------------------------------------------------------------
 	/// @brief Trim both ends. Returns new length.
 	///-----------------------------------------------------------------------------
-	I Trim() noexcept
+	constexpr I Trim() noexcept
 	{
 		TrimRight();
 
@@ -246,13 +246,10 @@ class CString : public CStringImpl< CVectorBase< CStringView< I, T >, I, T >, I,
 public:
 	using Base_t = CStringImpl< CVectorBase< CStringView< I, T >, I, T >, I, T >;
 	using Base_t::Base_t;
+	using Base_t::CopyFrom;
 
-	template < I N >
-	CString( const CBufferString< I, T, N > &other ) :
-		Base_t()
-	{
-		Base_t::CopyFrom( other );
-	}
+	template < I N > constexpr CString( const CBufferString< I, T, N > &other ) { CopyFrom( other ); }
+	template < I N > constexpr CString &operator=( const CBufferString< I, T, N > &other ) { CopyFrom( other ); }
 };
 
 template < typename I, typename T, I N >
@@ -261,12 +258,10 @@ class CBufferString : public CStringImpl< CVectorBase< CStringView< I, T, N >, I
 public:
 	using Base_t = CStringImpl< CVectorBase< CStringView< I, T, N >, I, T >, I, T >;
 	using Base_t::Base_t;
+	using Base_t::CopyFrom;
 
-	CBufferString( const CString< I, T > &other ) :
-		Base_t()
-	{
-		Base_t::CopyFrom( other );
-	}
+	constexpr CBufferString( const CString< I, T > &other ) { CopyFrom( other ); }
+	constexpr CBufferString &operator=( const CString< I, T > &other ) { CopyFrom( other ); return *this; }
 };
 
 using String_t =        CString< size_t, char_t >;

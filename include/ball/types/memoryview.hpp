@@ -39,7 +39,7 @@ public:
 	explicit constexpr CMemoryView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
 	constexpr CMemoryView() noexcept : CMemoryView( I( 0 ), nullptr ) {}
 	template < size_t CN > constexpr CMemoryView( T ( &elements )[ CN ] ) noexcept : CMemoryView( I( CN ), reinterpret_cast< T * >( elements ) ) {}
-	explicit constexpr CMemoryView( T &element ) noexcept : Base_t( { element } ) {}
+	constexpr CMemoryView( T &element ) noexcept : Base_t( { element } ) {}
 	constexpr CMemoryView( T *pBegin, const T *pEnd ) noexcept : CMemoryView( I( 0 ), nullptr )
 	{
 		uintptr_t nBegin = reinterpret_cast< uintptr_t >( pBegin );
