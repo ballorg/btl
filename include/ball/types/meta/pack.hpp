@@ -33,14 +33,14 @@ public:
 	constexpr MPack &operator=( MPack &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
 
 	// type access (T must be unique within Ts...)
-	template < typename T > T &ByType() noexcept
+	template < typename T > constexpr T &ByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
 			static_assert( IS_SAME< Type, T >, "MPack: typed OOB for empty pack" );
 	}
-	template < typename T > const T &ByType() const noexcept
+	template < typename T > constexpr const T &ByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
@@ -49,14 +49,14 @@ public:
 	}
 
 	// index access
-	template < TI K, typename T > T &ByIndex() noexcept
+	template < TI K, typename T > constexpr T &ByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
 			static_assert( K == 0 , "MPack: index OOB for empty pack" );
 	}
-	template < TI K, typename T > const T &ByIndex() const noexcept
+	template < TI K, typename T > constexpr const T &ByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
@@ -110,14 +110,14 @@ public:
 	constexpr MPack &operator=( MPack &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
 
 	// type access (T must be unique within Ts...)
-	template < typename T > T &ByType() noexcept
+	template < typename T > constexpr T &ByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
 			return m_Tail.template ByType< T >();
 	}
-	template < typename T > const T &ByType() const noexcept
+	template < typename T > constexpr const T &ByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
@@ -126,14 +126,14 @@ public:
 	}
 
 	// index access
-	template < TI K, typename T > T &ByIndex() noexcept
+	template < TI K, typename T > constexpr T &ByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
 			return m_Tail.template ByIndex< K - 1 >();
 	}
-	template < TI K, typename T > const T &ByIndex() const noexcept
+	template < TI K, typename T > constexpr const T &ByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;

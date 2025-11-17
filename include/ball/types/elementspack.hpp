@@ -60,28 +60,28 @@ public:
 	}
 
 	// ---- static storage access (SoA arrays), returns T* ----
-	template < typename T > RemoveCV_t< T > *FixedByType() noexcept
+	template < typename T > constexpr RemoveCV_t< T > *FixedByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_Fixed.Data();
 		else
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
-	template < typename T > const T *FixedByType() const noexcept
+	template < typename T > constexpr const T *FixedByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_Fixed.Data();
 		else
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
-	template < TI K, typename T > RemoveCV_t< T > *FixedByIndex() noexcept
+	template < TI K, typename T > constexpr RemoveCV_t< T > *FixedByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_Fixed.Data();
 		else
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
 	}
-	template < TI K, typename T > const T *FixedByIndex() const noexcept
+	template < TI K, typename T > constexpr const T *FixedByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_Fixed.Data();
@@ -90,28 +90,28 @@ public:
 	}
 
 	// ---- pointer storage access (AoS of pointers), returns T* ----
-	template < typename T > Data_t &DataByType() noexcept
+	template < typename T > constexpr Data_t &DataByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_pData;
 		else
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
-	template < typename T > const Data_t &DataByType() const noexcept
+	template < typename T > constexpr const Data_t &DataByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_pData;
 		else
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
-	template < TI K, typename T > Data_t &DataByIndex() noexcept
+	template < TI K, typename T > constexpr Data_t &DataByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_pData;
 		else
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
 	}
-	template < TI K, typename T > const Data_t &DataByIndex() const noexcept
+	template < TI K, typename T > constexpr const Data_t &DataByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_pData;
@@ -119,14 +119,14 @@ public:
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
 	}
 
-	template < typename T > T *ByType( I nCount ) noexcept
+	template < typename T > constexpr T *ByType( I nCount ) noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return IsOverflow( nCount ) ? DataByType< T >() : FixedByType< T >();
 		else
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
-	template < typename T > const T *ByType( I nCount ) const noexcept
+	template < typename T > constexpr const T *ByType( I nCount ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return IsOverflow( nCount ) ? DataByType< T >() : FixedByType< T >();
@@ -134,7 +134,7 @@ public:
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
 
-	template < TI K, typename T > T *ByIndex( I nCount ) noexcept
+	template < TI K, typename T > constexpr T *ByIndex( I nCount ) noexcept
 	{
 		if constexpr ( K == 0 )
 			return IsOverflow( nCount ) ? DataByIndex< K, T >() : FixedByIndex< K, T >();
@@ -241,28 +241,28 @@ public:
 	}
 
 	// ---- static storage access (SoA arrays), returns T* ----
-	template < typename T > RemoveCV_t< T > *FixedByType() noexcept
+	template < typename T > constexpr RemoveCV_t< T > *FixedByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_Fixed.Data();
 		else
 			return m_Tail.template FixedByType< T >();
 	}
-	template < typename T > const T *FixedByType() const noexcept
+	template < typename T > constexpr const T *FixedByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_Fixed.Data();
 		else
 			return m_Tail.template FixedByType< T >();
 	}
-	template < TI K, typename T > RemoveCV_t< T > *FixedByIndex() noexcept
+	template < TI K, typename T > constexpr RemoveCV_t< T > *FixedByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_Fixed.Data();
 		else
 			return m_Tail.template FixedByIndex< K - 1, T >();
 	}
-	template < TI K, typename T > const T *FixedByIndex() const noexcept
+	template < TI K, typename T > constexpr const T *FixedByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_Fixed.Data();
@@ -271,28 +271,28 @@ public:
 	}
 
 	// ---- pointer storage access (AoS of pointers), returns T* ----
-	template < typename T > Data_t &DataByType() noexcept
+	template < typename T > constexpr Data_t &DataByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_pData;
 		else
 			return m_Tail.template DataByType< T >();
 	}
-	template < typename T > const Data_t &DataByType() const noexcept
+	template < typename T > constexpr const Data_t &DataByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_pData;
 		else
 			return m_Tail.template DataByType< T >();
 	}
-	template < TI K, typename T > Data_t &DataByIndex() noexcept
+	template < TI K, typename T > constexpr Data_t &DataByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_pData;
 		else
 			return m_Tail.template DataByIndex< K - 1, T >();
 	}
-	template < TI K, typename T > const Data_t &DataByIndex() const noexcept
+	template < TI K, typename T > constexpr const Data_t &DataByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_pData;
@@ -300,14 +300,14 @@ public:
 			return m_Tail.template DataByIndex< K - 1, T >();
 	}
 
-	template < typename T > T *ByType( bool bOverflow ) noexcept
+	template < typename T > constexpr T *ByType( bool bOverflow ) noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return bOverflow ? DataByType< T >() : FixedByType< T >();
 		else
 			return m_Tail.template ByType< T >();
 	}
-	template < typename T > const T *ByType( bool bOverflow ) const noexcept
+	template < typename T > constexpr const T *ByType( bool bOverflow ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return bOverflow ? DataByType< T >() : FixedByType< T >();
@@ -315,14 +315,14 @@ public:
 			return m_Tail.template ByType< T >();
 	}
 
-	template < TI K, typename T > T *ByIndex( bool bOverflow ) noexcept
+	template < TI K, typename T > constexpr T *ByIndex( bool bOverflow ) noexcept
 	{
 		if constexpr ( K == 0 )
 			return bOverflow ? DataByIndex< K, T >() : FixedByIndex< K, T >();
 		else
 			return m_Tail.template ByIndex< K - 1, T >();
 	}
-	template < TI K, typename T > const T *ByIndex( bool bOverflow ) const noexcept
+	template < TI K, typename T > constexpr const T *ByIndex( bool bOverflow ) const noexcept
 	{
 		if constexpr ( K == 0 )
 			return bOverflow ? DataByIndex< K, T >() : FixedByIndex< K, T >();
