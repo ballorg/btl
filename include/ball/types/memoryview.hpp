@@ -374,10 +374,10 @@ protected:
 	using Base_t::MoveFrom;
 }; // class CMemoryView
 
-template < typename T > using View_t =      CMemoryView< size_t, T >;
-template < typename T > using View8_t =     CMemoryView< uint8_t, T >;
-template < typename T > using View16_t =    CMemoryView< uint16_t, T >;
-template < typename T > using View32_t =    CMemoryView< uint32_t, T >;
-template < typename T > using View64_t =    CMemoryView< uint64_t, T >;
+template < typename T > using View_t =      CMemoryView< size_t, const T >;
+template < typename T > using View8_t =     CMemoryView< uint8_t, const T >;
+template < typename T > using View16_t =    CMemoryView< uint16_t, const T >;
+template < typename T > using View32_t =    CMemoryView< uint32_t, const T >;
+template < typename T > using View64_t =    CMemoryView< uint64_t, const T >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEW_HPP_ )
