@@ -29,6 +29,7 @@ public:
 	using Pack_t        = CElementsPack< I, N, TI, Ts ... >;
 	using Const_t       = CMemoryViewBase< Index_t, 0, TypeIndex_t, const Ts... >;
 
+	static constexpr I FIRST_INDEX = I( 0 );
 	static constexpr I FIXED_COUNT = Pack_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
@@ -48,7 +49,7 @@ protected:
 
 	// --------- state ----------
 public:
-	constexpr CMemoryViewBase() noexcept : m_nCount( I( 0 ) )
+	constexpr CMemoryViewBase() noexcept : m_nCount( FIRST_INDEX )
 	{
 	}
 
@@ -74,7 +75,7 @@ public:
 	static constexpr size_t Stride() noexcept { return ( size_t( 0 ) + ... + sizeof( Ts ) ); }
 	constexpr size_t Size() const noexcept { return static_cast< size_t >( m_nCount ) * Stride(); }
 	constexpr I Count() const noexcept { return m_nCount; }
-	constexpr bool Empty() const noexcept { return Count() == I( 0 ); }
+	constexpr bool Empty() const noexcept { return Count() == FIRST_INDEX; }
 	template < typename T > constexpr bool IsOverflow( I nCount ) const noexcept { return m_Elements.template IsOverflowByType< T >( nCount ); }
 	template < typename T > constexpr bool IsOverflow() const noexcept { return IsOverflow< T >( Count() ); }
 
@@ -93,7 +94,7 @@ public:
 	constexpr T &At( I i )
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
-		BALL_ASSERT( I( 0 ) <= i && i < Count() );
+		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
 
 		return Base< T >()[ i ];
 	}
@@ -102,7 +103,7 @@ public:
 	constexpr const T &At( I i ) const
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
-		BALL_ASSERT( I( 0 ) <= i && i < Count() );
+		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
 
 		return Base< T >()[ i ];
 	}
@@ -113,7 +114,7 @@ public:
 	template < typename T, Enable_t< T > = 0 >
 	constexpr const T &Front() const
 	{
-		BALL_ASSERT( Count() > I( 0 ) );
+		BALL_ASSERT( Count() > FIRST_INDEX );
 
 		return Base< T >()[ 0 ];
 	}
@@ -121,7 +122,7 @@ public:
 	template < typename T, Enable_t< T > = 0 >
 	constexpr const T &Back() const
 	{
-		BALL_ASSERT( Count() > I( 0 ) );
+		BALL_ASSERT( Count() > FIRST_INDEX );
 
 		return Base< T >()[ Count() - 1 ];
 	}
@@ -138,7 +139,7 @@ public:
 
 	// --------- typed find helpers (optional, no memcmp/STL) ----------
 	template < typename T, Enable_t< T > = 0 >
-	constexpr I Find( const T &value, const I iFrom = I( 0 ) ) const noexcept
+	constexpr I Find( const T &value, const I iFrom = FIRST_INDEX ) const noexcept
 	{
 		const I nCount = Count();
 		const T *p = Base< T >();
@@ -159,10 +160,10 @@ public:
 		const I nCount = Count();
 		const T *p = Base< T >();
 
-		if ( !p || nCount == I( 0 ) )
+		if ( !p || nCount == FIRST_INDEX )
 			return INVALID_INDEX;
 
-		for ( I i = nCount; i > I( 0 ); --i )
+		for ( I i = nCount; i > FIRST_INDEX; --i )
 			if ( p[ i - 1 ] == value )
 				return i - 1;
 
@@ -188,7 +189,7 @@ public:
 
 	constexpr CMemoryViewBase First( I nCount ) const noexcept
 	{
-		return ( nCount >= m_nCount ) ? *this : Subview( I( 0 ), nCount );
+		return ( nCount >= m_nCount ) ? *this : Subview( FIRST_INDEX, nCount );
 	}
 
 	constexpr CMemoryViewBase Last( I nCount ) const noexcept

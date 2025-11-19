@@ -6,7 +6,6 @@
 #	include "c/assert.h"
 #	include "meta/number.hpp"
 #	include "math.hpp"
-#	include "memoryviewbase.hpp"
 
 template < typename I, typename T >
 class CEmptyArray
@@ -48,7 +47,8 @@ public:
 	using Index_t       = I;
 	using Number_t      = MNumber< Index_t >;
 
-	static constexpr I  INVALID_INDEX = Number_t::INVALID;
+	static constexpr I FIRST_INDEX   =  I( 0 );
+	static constexpr I INVALID_INDEX =  Number_t::INVALID;
 
 public:
 	// --------- ctors / assignment ----------
@@ -94,7 +94,7 @@ public:
 	constexpr T &At( I i )
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
-		BALL_ASSERT( I( 0 ) <= i && i < N );
+		BALL_ASSERT( FIRST_INDEX <= i && i < N );
 
 		return m_Elements[ i ];
 	}
@@ -102,7 +102,7 @@ public:
 	constexpr const T &At( I i ) const
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
-		BALL_ASSERT( I( 0 ) <= i && i < N );
+		BALL_ASSERT( FIRST_INDEX <= i && i < N );
 
 		return m_Elements[ i ];
 	}
@@ -112,28 +112,28 @@ public:
 
 	constexpr T &Front()
 	{
-		static_assert( N > I( 0 ) );
+		static_assert( N > FIRST_INDEX );
 
 		return m_Elements[ 0 ];
 	}
 
 	constexpr const T &Front() const
 	{
-		static_assert( N > I( 0 ) );
+		static_assert( N > FIRST_INDEX );
 
 		return m_Elements[ 0 ];
 	}
 
 	constexpr T &Back()
 	{
-		static_assert( N > I( 0 ) );
+		static_assert( N > FIRST_INDEX );
 
 		return m_Elements[ N - 1 ];
 	}
 
 	constexpr const T &Back() const
 	{
-		static_assert( N > I( 0 ) );
+		static_assert( N > FIRST_INDEX );
 
 		return m_Elements[ N - 1 ];
 	}
@@ -170,7 +170,7 @@ public:
 	}
 
 	/// @brief Find first occurrence; returns INVALID_INDEX when not found.
-	constexpr I Find( const T &value, const I iFrom = I( 0 ) ) const noexcept
+	constexpr I Find( const T &value, const I iFrom = FIRST_INDEX ) const noexcept
 	{
 		if ( Empty() || iFrom >= I( N ) )
 			return INVALID_INDEX;
@@ -188,7 +188,7 @@ public:
 		if ( Empty() )
 			return INVALID_INDEX;
 
-		for ( I i( N ); i > I( 0 ); --i )
+		for ( I i( N ); i > FIRST_INDEX; --i )
 			if ( m_Elements[ i - 1 ] == value )
 				return i - 1;
 

@@ -20,6 +20,7 @@ public:
 	using ConstView_t   = CMemoryView< Index_t, const Element_t >;
 	using Number_t      = MNumber< Index_t >;
 
+	using Base_t::FIRST_INDEX;
 	using Base_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
@@ -37,10 +38,10 @@ public:
 
 	// --------- ctors ----------
 	explicit constexpr CMemoryView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
-	constexpr CMemoryView() noexcept : CMemoryView( I( 0 ), nullptr ) {}
-	template < size_t CN > constexpr CMemoryView( T ( &elements )[ CN ] ) noexcept : CMemoryView( I( CN ), reinterpret_cast< T * >( elements ) ) {}
+	constexpr CMemoryView() noexcept : CMemoryView( FIRST_INDEX, nullptr ) {}
+	template < size_t CN > constexpr CMemoryView( T ( &elements )[ CN ] ) noexcept : CMemoryView( I( CN ), static_cast< T * >(  elements ) ) {}
 	constexpr CMemoryView( T &element ) noexcept : Base_t( { element } ) {}
-	constexpr CMemoryView( T *pBegin, const T *pEnd ) noexcept : CMemoryView( I( 0 ), nullptr )
+	constexpr CMemoryView( T *pBegin, const T *pEnd ) noexcept : CMemoryView( FIRST_INDEX, nullptr )
 	{
 		uintptr_t nBegin = reinterpret_cast< uintptr_t >( pBegin );
 		const uintptr_t nEnd = reinterpret_cast< const uintptr_t >( pEnd );
@@ -179,14 +180,14 @@ public:
 		return true;
 	}
 
-	constexpr I Find( const T &value, const I iFrom = I( 0 ) ) const noexcept { return Base_t::template Find< T >( value, iFrom ); }
-	constexpr I RFind( const T &value, const I iFrom = I( 0 ) ) const noexcept { return Base_t::template RFind< T >( value, iFrom ); }
+	constexpr I Find( const T &value, const I iFrom = FIRST_INDEX ) const noexcept { return Base_t::template Find< T >( value, iFrom ); }
+	constexpr I RFind( const T &value, const I iFrom = FIRST_INDEX ) const noexcept { return Base_t::template RFind< T >( value, iFrom ); }
 
 	/// @brief Find first occurrence of subelement @p needle starting at @p from.
 	///        Returns INVALID_INDEX if not found.
 	///        Element-wise comparison; works for non-trivial T.
 	///        No STL / memcmp.
-	constexpr I Find( const ConstView_t v, const I iFrom = INVALID_INDEX ) const noexcept
+	constexpr I Find( const ConstView_t v, const I iFrom = FIRST_INDEX ) const noexcept
 	{
 		const I nCount     = Count();
 		const I nViewCount = v.Count();
@@ -198,7 +199,7 @@ public:
 			return INVALID_INDEX;
 
 		// Empty needle: by convention return clamped start position.
-		if ( nViewCount == I( 0 ) )
+		if ( nViewCount == FIRST_INDEX )
 			return iFrom;
 
 		// Out-of-range or needle longer than the remaining span.
@@ -261,7 +262,7 @@ public:
 		// Start position for empty needle is:
 		//   - last element + 1 when nFrom == INVALID_INDEX  -> nCount
 		//   - otherwise the provided nFrom
-		if ( nViewCount == I( 0 ) )
+		if ( nViewCount == FIRST_INDEX )
 		{
 			const I nStart = ( iFrom == INVALID_INDEX ) ? nCount : iFrom;
 
@@ -278,7 +279,7 @@ public:
 		// Determine the initial backward start index.
 		// If nFrom == INVALID_INDEX -> start from nLastStart.
 		// Otherwise require nFrom to be within [0..nLastStart].
-		I iStart = I( 0 );
+		I iStart = FIRST_INDEX;
 
 		if ( iFrom == INVALID_INDEX )
 		{
@@ -313,7 +314,7 @@ public:
 			}
 
 			// Stop when i == 0 to avoid unsigned underflow.
-			if ( n == I( 0 ) )
+			if ( n == FIRST_INDEX )
 				break;
 
 			--n;
