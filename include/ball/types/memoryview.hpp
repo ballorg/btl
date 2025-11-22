@@ -39,7 +39,7 @@ public:
 	// --------- ctors ----------
 	explicit constexpr CMemoryView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
 	constexpr CMemoryView() noexcept : CMemoryView( FIRST_INDEX, nullptr ) {}
-	template < size_t CN > constexpr CMemoryView( T ( &elements )[ CN ] ) noexcept : CMemoryView( I( CN ), static_cast< T * >(  elements ) ) {}
+	template < size_t CN > constexpr CMemoryView( T ( &elements )[ CN ] ) noexcept : CMemoryView( I( CN ), static_cast< T * >( elements ) ) {}
 	constexpr CMemoryView( T &element ) noexcept : Base_t( { element } ) {}
 	constexpr CMemoryView( T *pBegin, const T *pEnd ) noexcept : CMemoryView( FIRST_INDEX, nullptr )
 	{
@@ -380,5 +380,11 @@ template < typename T > using View8_t =     CMemoryView< uint8_t, const T >;
 template < typename T > using View16_t =    CMemoryView< uint16_t, const T >;
 template < typename T > using View32_t =    CMemoryView< uint32_t, const T >;
 template < typename T > using View64_t =    CMemoryView< uint64_t, const T >;
+
+template < typename T, size_t N > using BufferView_t =      CMemoryView< size_t, const T, N >;
+template < typename T, size_t N > using BufferView8_t =     CMemoryView< uint8_t, const T, N >;
+template < typename T, size_t N > using BufferView16_t =    CMemoryView< uint16_t, const T, N >;
+template < typename T, size_t N > using BufferView32_t =    CMemoryView< uint32_t, const T, N >;
+template < typename T, size_t N > using BufferView64_t =    CMemoryView< uint64_t, const T, N >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEW_HPP_ )

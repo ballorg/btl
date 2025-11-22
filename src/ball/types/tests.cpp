@@ -22,6 +22,8 @@ extern "C"
 	int puts( const char *pszTextNoNextLine );
 };
 
+constinit Array8_t< pair_t, 2 > g_arrFindElements( { { 11, 12 }, { 12, 13 } } );
+
 template < class V >
 String_t DumpVector( const V &vec )
 {
@@ -77,18 +79,19 @@ int main()
 
 		str.ReplaceAll( "{0, 0}", "<removed element>" );
 
-		{
-			constexpr decltype( vec )::Element_t search { 11, 12 };
+		auto iFound = vec.FIRST_INDEX;
 
-			auto iFound = vec.Find( search );
+		for( const auto &it : g_arrFindElements )
+		{
+			iFound = vec.Find( it, iFound );
 
 			if ( vec.IsValidIndex( iFound ) )
 			{
-				str.AppendMultiple( "Found {", search.first, ", ", search.second, "} element at index ", iFound, "\n" );
+				str.AppendMultiple( "Found {", it.first, ", ", it.second, "} element at index ", iFound, "\n" );
 			}
 			else
 			{
-				str.AppendMultiple( "Can't find {", search.first, ", ", search.second, "} element \n" );
+				str.AppendMultiple( "Can't find {", it.first, ", ", it.second, "} element \n" );
 			}
 		}
 

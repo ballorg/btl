@@ -249,7 +249,7 @@ public:
 	using Base_t::CopyFrom;
 
 	template < I N > constexpr CString( const CBufferString< I, T, N > &other ) { CopyFrom( other ); }
-	template < I N > constexpr CString &operator=( const CBufferString< I, T, N > &other ) { CopyFrom( other ); }
+	template < I N > constexpr CString &operator=( const CBufferString< I, T, N > &other ) { return CopyFrom( other ); }
 };
 
 template < typename I, typename T, I N >
@@ -261,7 +261,7 @@ public:
 	using Base_t::CopyFrom;
 
 	constexpr CBufferString( const CString< I, T > &other ) { CopyFrom( other ); }
-	constexpr CBufferString &operator=( const CString< I, T > &other ) { CopyFrom( other ); return *this; }
+	constexpr CBufferString &operator=( const CString< I, T > &other ) { return CopyFrom( other ); }
 };
 
 using String_t =        CString< size_t, char_t >;

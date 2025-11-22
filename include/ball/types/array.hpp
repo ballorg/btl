@@ -59,11 +59,10 @@ public:
 	constexpr CArray &operator=( CArray && ) noexcept = default;
 
 	/// @brief Construct from an N-sized C array (copies elements).
-	constexpr CArray( const T ( &src )[ N ] ) noexcept
-		: CArray()
-	{
-		CopyFrom( src );
-	}
+	constexpr CArray( const T ( &src )[ N ] ) noexcept : CArray() { CopyElementsFrom( src ); }
+	constexpr CArray( T ( &&src )[ N ] ) noexcept : CArray() { MoveElementsFrom( src ); }
+	constexpr CArray &operator=( const T ( &src )[ N ] ) noexcept { return CopyElementsFrom( src ); }
+	constexpr CArray &operator=( T ( &&src )[ N ] ) noexcept { MoveElementsFrom( src ); }
 
 	/// @brief Return a value-initialized array (zero for scalars).
 	constexpr CArray Init() noexcept
@@ -163,10 +162,20 @@ public:
 	}
 
 	/// @brief Copy from an N-sized C array.
-	constexpr void CopyFrom( const T ( &src )[ N ] ) noexcept
+	constexpr CArray &CopyElementsFrom( const T ( &src )[ N ] ) noexcept
 	{
 		for ( I i( 0 ); i < I( N ); ++i )
 			m_Elements[ i ] = src[ i ];
+
+		return *this;
+	}
+
+	constexpr CArray &MoveElementsFrom( const T ( &&src )[ N ] ) noexcept
+	{
+		for ( I i( 0 ); i < I( N ); ++i )
+			m_Elements[ i ] = Move( src[ i ] );
+
+		return *this;
 	}
 
 	/// @brief Find first occurrence; returns INVALID_INDEX when not found.

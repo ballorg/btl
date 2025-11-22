@@ -205,15 +205,18 @@ public:
 	using View_t =      Base_t::View_t;
 	using ConstView_t = Base_t::ConstView_t;
 
-	using Base_t::Base_t;
 	using Base_t::INVALID_INDEX;
 	using Base_t::Count;
 	using Base_t::Base;
 	using Base_t::Find;
 
+	constexpr CVectorImpl() noexcept : Base_t() {}
 	constexpr CVectorImpl( const View_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
 	constexpr CVectorImpl( const ConstView_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
 	constexpr CVectorImpl( View_t &&moveFrom ) noexcept { Base_t::MoveFrom( Move( moveFrom ) ); }
+	template < size_t CN > constexpr CVectorImpl( const T ( &elements )[ CN ] ) noexcept : Base_t() { AddToTail( I( CN ), elements ); }
+	template < size_t CN > constexpr CVectorImpl( T ( &&elements )[ CN ] ) noexcept : Base_t() { AddToTail( I( CN ), Move( elements ) ); }
+	constexpr CVectorImpl( T &element ) noexcept : Base_t() { AddToTail( element ); }
 	constexpr ~CVectorImpl() noexcept { Purge(); }
 
 	CVectorImpl &operator=( const View_t &copyFrom ) { return Base_t::CopyFrom( copyFrom ); }
@@ -316,10 +319,25 @@ public:
 	}
 
 	///-----------------------------------------------------------------------------
-	/// @brief Insert multiple elements at position @p index (copying arguments).
-	/// @return The index where the element was inserted.
+	/// @brief Insert multiple elements at position @p nIndex (copying/moving arguments).
+	/// @return The index just past the last inserted element.
 	///-----------------------------------------------------------------------------
-	template < typename ...Ts > I constexpr InsertMultiple( I nIndex, Ts &&...args ) { return Insert( nIndex, sizeof...(Ts), { Forward< Ts >( args )... } ); }
+	template < typename ...Ts >
+	constexpr I InsertMultiple( const I nIndex, Ts &&...args )
+	{
+		constexpr size_t COUNT = sizeof...( Ts );
+
+		static_assert( COUNT > 0, "InsertMultiple requires at least one element" );
+
+		const I nCount = I( COUNT );
+		I nOffset = 0;
+
+		T *pData = EnsureInsert( nIndex, nCount );
+
+		( ConstructElement( &pData[ nOffset++ ], Forward< Ts >( args ) ), ... );
+
+		return nIndex + nCount;
+	}
 
 	template < I N > constexpr I AddToHead( const I nCount, const T ( &arrElements )[ N ] ) { return Insert( 0, nCount, arrElements ); }
 	template < I N > constexpr I AddToHead( const I nCount, T ( &&arrElements )[ N ] ) { return Insert( 0, nCount, arrElements ); }
@@ -623,9 +641,10 @@ class CVector : public CVectorImpl< CVectorBase< CMemoryView< I, T >, I, T, A >,
 public:
 	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T >, I, T, A >, I, T >;
 	using Base_t::Base_t;
+	using Base_t::CopyFrom;
 
-	template < I N > constexpr CVector( const CBufferVector< I, N, T, A > &other ) : Base_t( other ) {}
-	template < I N > constexpr CVector &operator=( const CBufferVector< I, N, T, A > &other ) { Base_t::CopyFrom( other ); return *this; }
+	template < I N > constexpr CVector( const CBufferVector< I, N, T, A > &other ) { CopyFrom( other ); }
+	template < I N > constexpr CVector &operator=( const CBufferVector< I, N, T, A > &other ) { return CopyFrom( other ); }
 };
 
 template < typename I, I N, typename T, class A = CAllocator< I, T > >
@@ -634,9 +653,10 @@ class CBufferVector : public CVectorImpl< CVectorBase< CMemoryView< I, T, N >, I
 public:
 	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T, N >, I, T, A >, I, T >;
 	using Base_t::Base_t;
+	using Base_t::CopyFrom;
 
-	constexpr CBufferVector( const CVector< I, T, A > &other ) : Base_t( other ) {}
-	constexpr CBufferVector &operator=( const CVector< I, T, A > &other ) { Base_t::CopyFrom( other ); return *this; }
+	constexpr CBufferVector( const CVector< I, T, A > &other ) { CopyFrom( other ); }
+	constexpr CBufferVector &operator=( const CVector< I, T, A > &other ) { return CopyFrom( other ); }
 };
 
 template < typename T > using Vector_t =            CVector< size_t, T >;
