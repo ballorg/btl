@@ -9,7 +9,7 @@
 #	include "c/memoryaligned.h"
 #	include "meta/number.hpp"
 #	include "allocator.hpp"
-#	include "memoryview.hpp"
+#	include "view.hpp"
 #	include "bits.hpp"
 #	include "math.hpp"
 #	include "xvalue.hpp"

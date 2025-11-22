@@ -1,5 +1,5 @@
-#ifndef _INCLUDE_BALL_TYPES_MEMORYVIEWBASE_HPP_
-#	define _INCLUDE_BALL_TYPES_MEMORYVIEWBASE_HPP_
+#ifndef _INCLUDE_BALL_TYPES_VIEWBASE_HPP_
+#	define _INCLUDE_BALL_TYPES_VIEWBASE_HPP_
 
 #	include "base/arch.h"
 #	include "base/fixed.h"
@@ -305,4 +305,4 @@ private:
 	Pack_t  m_Elements;
 }; // class CViewBase
 
-#endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEWBASE_HPP_ )
+#endif // !defined( _INCLUDE_BALL_TYPES_VIEWBASE_HPP_ )

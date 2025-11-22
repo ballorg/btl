@@ -5,7 +5,7 @@
 #	include "base/fixed.h"
 #	include "meta/issame.hpp"
 #	include "meta/removecv.hpp"
-#	include "memoryview.hpp"
+#	include "view.hpp"
 #	include "elements.hpp"
 
 template < typename I, typename T, I N = 0 >

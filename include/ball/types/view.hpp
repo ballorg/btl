@@ -1,5 +1,5 @@
-#ifndef _INCLUDE_BALL_TYPES_MEMORYVIEW_HPP_
-#	define _INCLUDE_BALL_TYPES_MEMORYVIEW_HPP_
+#ifndef _INCLUDE_BALL_TYPES_VIEW_HPP_
+#	define _INCLUDE_BALL_TYPES_VIEW_HPP_
 
 #	include "base/arch.h"
 #	include "base/fixed.h"
@@ -7,7 +7,7 @@
 #	include "meta/number.hpp"
 #	include "math.hpp"
 
-#	include "memoryviewbase.hpp"
+#	include "viewbase.hpp"
 
 template < typename I, typename T, I N = 0 >
 class CView : public CViewBase< I, N, uint8_t, T >
@@ -387,4 +387,4 @@ template < typename T, size_t N > using BufferView16_t =    CView< uint16_t, con
 template < typename T, size_t N > using BufferView32_t =    CView< uint32_t, const T, N >;
 template < typename T, size_t N > using BufferView64_t =    CView< uint64_t, const T, N >;
 
-#endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEW_HPP_ )
+#endif // !defined( _INCLUDE_BALL_TYPES_VIEW_HPP_ )

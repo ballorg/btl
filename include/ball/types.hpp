@@ -10,7 +10,7 @@ BALL_EXPORT namespace BTL
 #	include "types/vector.hpp"
 #	include "types/elements.hpp"
 #	include "types/math.hpp"
-#	include "types/memoryview.hpp"
+#	include "types/view.hpp"
 #	include "types/string.hpp"
 #	include "types/stringview.hpp"
 #	include "types/xvalue.hpp"
