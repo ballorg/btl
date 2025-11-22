@@ -9,10 +9,10 @@
 #	include "elements.hpp"
 
 template < typename I, typename T, I N = 0 >
-class CStringView : public CMemoryView< I, T, N >
+class CStringView : public CView< I, T, N >
 {
 public:
-	using Base_t = CMemoryView< I, T, N >;
+	using Base_t = CView< I, T, N >;
 	using View_t = CStringView< I, T, 0 >;
 	using ConstView_t = CStringView< I, const T, 0 >;
 

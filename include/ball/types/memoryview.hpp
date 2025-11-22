@@ -10,14 +10,14 @@
 #	include "memoryviewbase.hpp"
 
 template < typename I, typename T, I N = 0 >
-class CMemoryView : public CMemoryViewBase< I, N, uint8_t, T >
+class CView : public CViewBase< I, N, uint8_t, T >
 {
 public:
-	using Base_t        = CMemoryViewBase< I, N, uint8_t, T >;
+	using Base_t        = CViewBase< I, N, uint8_t, T >;
 	using Element_t     = T;
 	using Index_t       = I;
-	using View_t        = CMemoryView< Index_t, Element_t >;
-	using ConstView_t   = CMemoryView< Index_t, const Element_t >;
+	using View_t        = CView< Index_t, Element_t >;
+	using ConstView_t   = CView< Index_t, const Element_t >;
 	using Number_t      = MNumber< Index_t >;
 
 	using Base_t::FIRST_INDEX;
@@ -37,11 +37,11 @@ public:
 	using const_iterator  = const T *;
 
 	// --------- ctors ----------
-	explicit constexpr CMemoryView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
-	constexpr CMemoryView() noexcept : CMemoryView( FIRST_INDEX, nullptr ) {}
-	template < size_t CN > constexpr CMemoryView( T ( &elements )[ CN ] ) noexcept : CMemoryView( I( CN ), static_cast< T * >( elements ) ) {}
-	constexpr CMemoryView( T &element ) noexcept : Base_t( { element } ) {}
-	constexpr CMemoryView( T *pBegin, const T *pEnd ) noexcept : CMemoryView( FIRST_INDEX, nullptr )
+	explicit constexpr CView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
+	constexpr CView() noexcept : CView( FIRST_INDEX, nullptr ) {}
+	template < size_t CN > constexpr CView( T ( &elements )[ CN ] ) noexcept : CView( I( CN ), static_cast< T * >( elements ) ) {}
+	constexpr CView( T &element ) noexcept : Base_t( { element } ) {}
+	constexpr CView( T *pBegin, const T *pEnd ) noexcept : CView( FIRST_INDEX, nullptr )
 	{
 		uintptr_t nBegin = reinterpret_cast< uintptr_t >( pBegin );
 		const uintptr_t nEnd = reinterpret_cast< const uintptr_t >( pEnd );
@@ -50,10 +50,10 @@ public:
 	}
 
 	// Copy / Move
-	constexpr CMemoryView( const CMemoryView &copyFrom ) noexcept { CopyFrom( copyFrom ); }
-	constexpr CMemoryView( CMemoryView &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
-	constexpr CMemoryView &operator=( const CMemoryView &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
-	constexpr CMemoryView &operator=( CMemoryView &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
+	constexpr CView( const CView &copyFrom ) noexcept { CopyFrom( copyFrom ); }
+	constexpr CView( CView &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
+	constexpr CView &operator=( const CView &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
+	constexpr CView &operator=( CView &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
 
 	// --------- sizes / count / base ----------
 	using Base_t::Size;
@@ -115,38 +115,38 @@ public:
 	}
 
 	// --------- slicing / subviews ----------
-	constexpr CMemoryView Subview( I nPos, I nCount ) const noexcept
+	constexpr CView Subview( I nPos, I nCount ) const noexcept
 	{
 		if ( nPos >= Count() )
-			return CMemoryView();
+			return CView();
 
 		I nMaxCount = static_cast< I >( Count() - nPos );
 		I nTake = ( nCount < nMaxCount ) ? nCount : nMaxCount;
 
-		return CMemoryView( nTake, Data() + nPos );
+		return CView( nTake, Data() + nPos );
 	}
 
-	constexpr CMemoryView First( I nCount ) const noexcept
+	constexpr CView First( I nCount ) const noexcept
 	{
-		return ( nCount >= Count() ) ? *this : CMemoryView( nCount, Base() );
+		return ( nCount >= Count() ) ? *this : CView( nCount, Base() );
 	}
 
-	constexpr CMemoryView Last( I nCount ) const noexcept
+	constexpr CView Last( I nCount ) const noexcept
 	{
 		return ( nCount >= Count() ) ? *this
-		                             : CMemoryView( nCount, Base() + ( Count() - nCount ) );
+		                             : CView( nCount, Base() + ( Count() - nCount ) );
 	}
 
-	constexpr CMemoryView DropFront( I nCount ) const noexcept
+	constexpr CView DropFront( I nCount ) const noexcept
 	{
-		return ( nCount >= Count() ) ? CMemoryView()
-		                             : CMemoryView( static_cast< I >( Count() - nCount ), Base() + nCount );
+		return ( nCount >= Count() ) ? CView()
+		                             : CView( static_cast< I >( Count() - nCount ), Base() + nCount );
 	}
 
-	constexpr CMemoryView DropBack( I nCount ) const noexcept
+	constexpr CView DropBack( I nCount ) const noexcept
 	{
-		return ( nCount >= Count() ) ? CMemoryView()
-		                             : CMemoryView( static_cast< I >( Count() - nCount ), Base() );
+		return ( nCount >= Count() ) ? CView()
+		                             : CView( static_cast< I >( Count() - nCount ), Base() );
 	}
 
 	// --------- prefix / suffix checks ----------
@@ -324,7 +324,7 @@ public:
 	}
 
 	// --------- comparisons ----------
-	friend constexpr bool operator==( const CMemoryView &a, const CMemoryView &b ) noexcept
+	friend constexpr bool operator==( const CView &a, const CView &b ) noexcept
 	{
 		if ( a.m_nCount != b.m_nCount )
 			return false;
@@ -336,12 +336,12 @@ public:
 		return true;
 	}
 
-	friend constexpr bool operator!=( const CMemoryView &a, const CMemoryView &b ) noexcept
+	friend constexpr bool operator!=( const CView &a, const CView &b ) noexcept
 	{
 		return !( a == b );
 	}
 
-	friend constexpr bool operator<( const CMemoryView &a, const CMemoryView &b ) noexcept
+	friend constexpr bool operator<( const CView &a, const CView &b ) noexcept
 	{
 		I n = ( a.m_nCount < b.m_nCount ) ? a.m_nCount : b.m_nCount;
 
@@ -360,9 +360,9 @@ public:
 		return a.m_nCount < b.m_nCount;
 	}
 
-	friend constexpr bool operator >( const CMemoryView &a, const CMemoryView &b ) noexcept { return b < a; }
-	friend constexpr bool operator<=( const CMemoryView &a, const CMemoryView &b ) noexcept { return !( b < a ); }
-	friend constexpr bool operator>=( const CMemoryView &a, const CMemoryView &b ) noexcept { return !( a < b ); }
+	friend constexpr bool operator >( const CView &a, const CView &b ) noexcept { return b < a; }
+	friend constexpr bool operator<=( const CView &a, const CView &b ) noexcept { return !( b < a ); }
+	friend constexpr bool operator>=( const CView &a, const CView &b ) noexcept { return !( a < b ); }
 
 protected:
 	constexpr void Set( I nCount, T *pElements ) noexcept
@@ -373,18 +373,18 @@ protected:
 	using Base_t::Swap;
 	using Base_t::CopyFrom;
 	using Base_t::MoveFrom;
-}; // class CMemoryView
+}; // class CView
 
-template < typename T > using View_t =      CMemoryView< size_t, const T >;
-template < typename T > using View8_t =     CMemoryView< uint8_t, const T >;
-template < typename T > using View16_t =    CMemoryView< uint16_t, const T >;
-template < typename T > using View32_t =    CMemoryView< uint32_t, const T >;
-template < typename T > using View64_t =    CMemoryView< uint64_t, const T >;
+template < typename T > using View_t =      CView< size_t, const T >;
+template < typename T > using View8_t =     CView< uint8_t, const T >;
+template < typename T > using View16_t =    CView< uint16_t, const T >;
+template < typename T > using View32_t =    CView< uint32_t, const T >;
+template < typename T > using View64_t =    CView< uint64_t, const T >;
 
-template < typename T, size_t N > using BufferView_t =      CMemoryView< size_t, const T, N >;
-template < typename T, size_t N > using BufferView8_t =     CMemoryView< uint8_t, const T, N >;
-template < typename T, size_t N > using BufferView16_t =    CMemoryView< uint16_t, const T, N >;
-template < typename T, size_t N > using BufferView32_t =    CMemoryView< uint32_t, const T, N >;
-template < typename T, size_t N > using BufferView64_t =    CMemoryView< uint64_t, const T, N >;
+template < typename T, size_t N > using BufferView_t =      CView< size_t, const T, N >;
+template < typename T, size_t N > using BufferView8_t =     CView< uint8_t, const T, N >;
+template < typename T, size_t N > using BufferView16_t =    CView< uint16_t, const T, N >;
+template < typename T, size_t N > using BufferView32_t =    CView< uint32_t, const T, N >;
+template < typename T, size_t N > using BufferView64_t =    CView< uint64_t, const T, N >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEW_HPP_ )

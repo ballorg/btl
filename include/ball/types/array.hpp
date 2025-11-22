@@ -27,7 +27,7 @@ CArray<I, TI, T, N> — fixed-size, owning AoS container for a single type T.
 Constraints:
 - No dynamic counters. Storage is exactly `T m_Elements[ N ]`.
 - Constexpr-friendly metadata and address computations (C++20).
-- Not derived from CMemoryViewBase; provides View()/ConstView() that return
+- Not derived from CViewBase; provides View()/ConstView() that return
   compatible non-owning views.
 
 Behavior:

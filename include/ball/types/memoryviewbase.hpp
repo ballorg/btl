@@ -15,11 +15,11 @@
 ///-----------------------------------------------------------------------------
 /// @brief View over multiple parallel arrays with different element types,
 ///        sharing the same element count (SoA-style).
-///        Example: CMemoryViewBase<I, float, int, char>
+///        Example: CViewBase<I, float, int, char>
 ///        holds { float*, int*, char* } with common Count().
 ///-----------------------------------------------------------------------------
 template < typename I, I N, typename TI, typename ...Ts >
-class CMemoryViewBase
+class CViewBase
 {
 public:
 	using Index_t       = I;
@@ -27,7 +27,7 @@ public:
 	using Number_t      = MNumber< Index_t >;
 	using TypeNumber_t  = MNumber< TypeIndex_t >;
 	using Pack_t        = CElementsPack< I, N, TI, Ts ... >;
-	using Const_t       = CMemoryViewBase< Index_t, 0, TypeIndex_t, const Ts... >;
+	using Const_t       = CViewBase< Index_t, 0, TypeIndex_t, const Ts... >;
 
 	static constexpr I FIRST_INDEX = I( 0 );
 	static constexpr I FIXED_COUNT = Pack_t::FIXED_COUNT;
@@ -49,12 +49,12 @@ protected:
 
 	// --------- state ----------
 public:
-	constexpr CMemoryViewBase() noexcept : m_nCount( FIRST_INDEX )
+	constexpr CViewBase() noexcept : m_nCount( FIRST_INDEX )
 	{
 	}
 
 	/// @brief Construct from count and per-type pointers in the same order as Ts...
-	explicit constexpr CMemoryViewBase( I nCount, Ts *...pElements ) noexcept :
+	explicit constexpr CViewBase( I nCount, Ts *...pElements ) noexcept :
 		m_nCount( nCount )
 	{
 		SetElements( pElements... );
@@ -62,14 +62,14 @@ public:
 
 	/// @brief Construct from fixed-size C-arrays (all N must match implicitly).
 	template < I CN >
-	explicit constexpr CMemoryViewBase( const Ts ( &...arrays )[ CN ] ) noexcept
-		: CMemoryViewBase( I( CN ), static_cast< Ts * >( arrays )... )
+	explicit constexpr CViewBase( const Ts ( &...arrays )[ CN ] ) noexcept
+		: CViewBase( I( CN ), static_cast< Ts * >( arrays )... )
 	{}
 
-	constexpr CMemoryViewBase( const CMemoryViewBase &copyFrom ) noexcept { CopyFrom( copyFrom ); }
-	constexpr CMemoryViewBase( CMemoryViewBase &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
-	constexpr CMemoryViewBase &operator=( const CMemoryViewBase &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
-	constexpr CMemoryViewBase &operator=( CMemoryViewBase &&moveFrom ) noexcept { return MoveFrom( Move( moveFrom ) ); }
+	constexpr CViewBase( const CViewBase &copyFrom ) noexcept { CopyFrom( copyFrom ); }
+	constexpr CViewBase( CViewBase &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
+	constexpr CViewBase &operator=( const CViewBase &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
+	constexpr CViewBase &operator=( CViewBase &&moveFrom ) noexcept { return MoveFrom( Move( moveFrom ) ); }
 
 	// --------- sizes / byte sizes ----------
 	static constexpr size_t Stride() noexcept { return ( size_t( 0 ) + ... + sizeof( Ts ) ); }
@@ -171,15 +171,15 @@ public:
 	}
 
 	// --------- slicing / subviews (typed pointers are advanced equally) ----------
-	constexpr CMemoryViewBase Subview( I nPos, I nCount ) const noexcept
+	constexpr CViewBase Subview( I nPos, I nCount ) const noexcept
 	{
 		if ( nPos >= m_nCount )
-			return CMemoryViewBase();
+			return CViewBase();
 
 		const I nMax = static_cast< I >( m_nCount - nPos );
 		const I nTake = ( nCount < nMax ) ? nCount : nMax;
 
-		CMemoryViewBase v;
+		CViewBase v;
 
 		v.m_nCount = nTake;
 		AdvanceAllInto( v, nPos );
@@ -187,12 +187,12 @@ public:
 		return v;
 	}
 
-	constexpr CMemoryViewBase First( I nCount ) const noexcept
+	constexpr CViewBase First( I nCount ) const noexcept
 	{
 		return ( nCount >= m_nCount ) ? *this : Subview( FIRST_INDEX, nCount );
 	}
 
-	constexpr CMemoryViewBase Last( I nCount ) const noexcept
+	constexpr CViewBase Last( I nCount ) const noexcept
 	{
 		if ( nCount >= m_nCount )
 			return *this;
@@ -200,18 +200,18 @@ public:
 		return Subview( start, nCount );
 	}
 
-	constexpr CMemoryViewBase DropFront( I nCount ) const noexcept
+	constexpr CViewBase DropFront( I nCount ) const noexcept
 	{
 		if ( nCount >= m_nCount )
-			return CMemoryViewBase();
+			return CViewBase();
 
 		return Subview( nCount, static_cast< I >( m_nCount - nCount ) );
 	}
 
-	constexpr CMemoryViewBase DropBack( I nCount ) const noexcept
+	constexpr CViewBase DropBack( I nCount ) const noexcept
 	{
 		if ( nCount >= m_nCount )
-			return CMemoryViewBase();
+			return CViewBase();
 
 		return First( static_cast< I >( m_nCount - nCount ) );
 	}
@@ -232,7 +232,7 @@ public:
 protected:
 	// --------- copying / moving ----------
 	/// @brief Replace this view with another view (shallow copy of pointer + length).
-	constexpr CMemoryViewBase &CopyFrom( const CMemoryViewBase &other ) noexcept
+	constexpr CViewBase &CopyFrom( const CViewBase &other ) noexcept
 	{
 		if ( this == &other )
 			return *this;
@@ -244,13 +244,13 @@ protected:
 	}
 
 	/// @brief Steal another view's data by swapping; leaves @p other empty.
-	constexpr CMemoryViewBase &MoveFrom( CMemoryViewBase &&other ) noexcept
+	constexpr CViewBase &MoveFrom( CViewBase &&other ) noexcept
 	{
 		if ( this == &other )
 			return *this;
 
 		Math_Swap( m_nCount, other.m_nCount );
-		SwapElements( static_cast< CMemoryViewBase & >( other ) );
+		SwapElements( static_cast< CViewBase & >( other ) );
 
 		return *this;
 	}
@@ -271,7 +271,7 @@ protected: // internal utils
 	}
 
 	template < TI K = 0 >
-	constexpr void CopyElements( const CMemoryViewBase &other ) noexcept
+	constexpr void CopyElements( const CViewBase &other ) noexcept
 	{
 		m_Elements.template CopyByIndex< K >( Count(), other.m_Elements );
 
@@ -280,7 +280,7 @@ protected: // internal utils
 	}
 
 	template < TI K = 0 >
-	constexpr void SwapElements( CMemoryViewBase &other ) noexcept
+	constexpr void SwapElements( CViewBase &other ) noexcept
 	{
 		m_Elements.template SwapByIndex< K >( Count(), other.m_Elements );
 
@@ -294,7 +294,7 @@ protected: // internal utils
 		SetElements( pElements... );
 	}
 
-	constexpr void Swap( CMemoryViewBase &other ) noexcept
+	constexpr void Swap( CViewBase &other ) noexcept
 	{
 		Math_Swap( m_nCount, other.m_nCount );
 		SwapElements( other );
@@ -303,6 +303,6 @@ protected: // internal utils
 private:
 	I       m_nCount;
 	Pack_t  m_Elements;
-}; // class CMemoryViewBase
+}; // class CViewBase
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MEMORYVIEWBASE_HPP_ )

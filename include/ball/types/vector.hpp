@@ -15,7 +15,7 @@
 #	include "xvalue.hpp"
 
 // ===============================
-// CVectorBase (now derives from CMemoryView)
+// CVectorBase (now derives from CView)
 // ===============================
 template < class B, typename I, typename T, class A = CAllocator< I, T > >
 class CVectorBase : public B
@@ -180,7 +180,7 @@ protected:
 		return *this;
 	}
 
-	template< I LN > constexpr CVectorBase &CopyFrom( const CMemoryView< I, T, LN > &other )
+	template< I LN > constexpr CVectorBase &CopyFrom( const CView< I, T, LN > &other )
 	{
 		const I nNewCount = other.Count();
 
@@ -636,10 +636,10 @@ protected:
 template < typename I, I N, typename T, class A > class CBufferVector;
 
 template < typename I, typename T, class A = CAllocator< I, T > >
-class CVector : public CVectorImpl< CVectorBase< CMemoryView< I, T >, I, T, A >, I, T >
+class CVector : public CVectorImpl< CVectorBase< CView< I, T >, I, T, A >, I, T >
 {
 public:
-	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T >, I, T, A >, I, T >;
+	using Base_t = CVectorImpl< CVectorBase< CView< I, T >, I, T, A >, I, T >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
@@ -648,10 +648,10 @@ public:
 };
 
 template < typename I, I N, typename T, class A = CAllocator< I, T > >
-class CBufferVector : public CVectorImpl< CVectorBase< CMemoryView< I, T, N >, I, T, A >, I, T >
+class CBufferVector : public CVectorImpl< CVectorBase< CView< I, T, N >, I, T, A >, I, T >
 {
 public:
-	using Base_t = CVectorImpl< CVectorBase< CMemoryView< I, T, N >, I, T, A >, I, T >;
+	using Base_t = CVectorImpl< CVectorBase< CView< I, T, N >, I, T, A >, I, T >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
