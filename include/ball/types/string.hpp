@@ -106,7 +106,6 @@ protected:
 		if ( x < F( 0 ) )
 		{
 			nIndex = Insert( nIndex, static_cast< T >( '-' ) );
-			nIndex++;
 
 			x = -x;
 		}
@@ -114,13 +113,11 @@ protected:
 		llong_t nBase = static_cast< llong_t >( x );
 
 		nIndex = InsertSigned10< llong_t >( nIndex, nBase );
-		nIndex++;
 
 		if constexpr ( P == 0 )
 			return nIndex;
 
 		nIndex = Insert( nIndex, static_cast< T >('.') );
-		nIndex++;
 
 		const ullong_t nScale = Math_Pow10< P >();
 
@@ -140,7 +137,6 @@ protected:
 			uint_t nDigit = static_cast< uint_t >( ( f / ( nDiv ? nDiv : 1ull ) ) % 10ull );
 
 			nIndex = Insert( nIndex, static_cast< T >( '0' + static_cast< int >( nDigit ) ) );
-			nIndex++;
 		}
 
 		return nIndex;
