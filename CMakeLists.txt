@@ -24,6 +24,7 @@ set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(SOURCES
 	${SOURCE_DIR}/ball/types/memory.c
+	${SOURCE_DIR}/ball/types/time.c
 	${SOURCE_DIR}/ball/types/c/assert.cpp
 )
 
@@ -64,6 +65,7 @@ if(BALL_ENABLE_MODULES)
 		BASE_DIRS ${INCLUDE_DIR}
 		FILES
 			${INCLUDE_DIR}/ball/new.cppm
+			${INCLUDE_DIR}/ball/time.cppm
 			${INCLUDE_DIR}/ball/types/base/arch.cppm
 			${INCLUDE_DIR}/ball/types/base/characters.cppm
 			${INCLUDE_DIR}/ball/types/base/fixed.cppm
