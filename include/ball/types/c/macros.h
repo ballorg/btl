@@ -38,4 +38,12 @@
 #		define BALL_NULL ( ( void * )0u )
 #	endif
 
+#	if defined( _MSC_VER )
+#		define BALL_WINAPI __stdcall
+#	elif defined( __GNUC__ )
+#		define BALL_WINAPI __attribute__( ( stdcall ) )
+#	else
+#		define BALL_WINAPI
+#	endif
+
 #endif // !defined( _INCLUDE_BALL_TYPES_C_MACROS_H_ )
