@@ -3,32 +3,7 @@
 
 #	include "base/arch.h"
 #	include "base/fixed.h"
-
-//-----------------------------------------------------------------------------
-// Helpers
-//-----------------------------------------------------------------------------
-
-///-----------------------------------------------------------------------------
-/// @brief Minimal bit-width (count of significant bits), 0 -> 0.
-///-----------------------------------------------------------------------------
-template < typename U, typename I = uint_t >
-constexpr I Num_BitWidth( U x ) noexcept
-{
-	I w = 0;
-
-	while ( x )
-	{
-		++w;
-		x >>= 1;
-	}
-
-	return w;
-}
-template < typename U, typename I = uint_t >
-consteval I Num_BitWidth_Const( U x ) noexcept
-{
-	return Num_BitWidth( x );
-}
+#	include "bits.hpp"
 
 ///-----------------------------------------------------------------------------
 /// @brief Count of base-NS digits required to represent unsigned @p u.
@@ -46,8 +21,8 @@ constexpr I Num_DigitsNS( U u ) noexcept
 	if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Power-of-two base: digits = ceil(bit_width / log2(NS)).
-		constexpr I k = Num_BitWidth_Const( NS );
-		const I bw = Num_BitWidth( u );
+		constexpr I k = BitWidth_Const( NS );
+		const I bw = BitWidth( u );
 
 		return I( ( bw + k - 1 ) / k );
 	}
@@ -119,7 +94,7 @@ constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 	else if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Any power-of-two base: use shifts & masks.
-		constexpr uint_t k = Num_BitWidth_Const( NS );
+		constexpr uint_t k = BitWidth_Const( NS );
 
 		constexpr U MASK = ( U( 1 ) << k ) - U( 1 );
 

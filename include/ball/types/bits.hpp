@@ -22,164 +22,127 @@
 ///       but saturates instead of overflowing/returning 0 on overflow.
 ///
 /// @return ceil_pow2(v) clamped to the type’s top power-of-two.
-template < typename T >
-constexpr T NextPowerOfTwo_Unified( T v ) noexcept
+/// @brief Floor(log2(x)) for unsigned integers. For x==0 returns 0.
+template < typename I >
+static constexpr I BitWidth_Unified( I x ) noexcept
 {
-	using N = MNumber< T >;
-	constexpr T NUM_BITS = N::BITS;
+	constexpr I NUM_BITS = MNumber< I >::BITS;
 
-	if ( v <= 1 )
-		return T( 1 );
+	if ( x <= 1 )
+		return I( 0 );
 
-	--v;
-	v |= ( v >> 1 );
-	v |= ( v >> 2 );
-	v |= ( v >> 4 );
+	--x;
+	x |= ( x >> 1 );
+	x |= ( x >> 2 );
+	x |= ( x >> 4 );
 
-	if constexpr ( NUM_BITS >  8 ) v |= ( v >> 8  );
-	if constexpr ( NUM_BITS > 16 ) v |= ( v >> 16 );
-	if constexpr ( NUM_BITS > 32 ) v |= ( v >> 32 );
+	if constexpr ( NUM_BITS >  8 ) x |= ( x >> 8  );
+	if constexpr ( NUM_BITS > 16 ) x |= ( x >> 16 );
+	if constexpr ( NUM_BITS > 32 ) x |= ( x >> 32 );
 
-	++v;
+	++x;
 
-	return v ? v : T( 1 ) << ( NUM_BITS - 1 );
+	return x ? x : I( 1 ) << ( NUM_BITS - 1 );
 }
 
-template < typename T >
-consteval T NextPowerOfTwo_Const( T v )
+template < typename I >
+consteval I BitWidth_Const( I x )
 {
-	return NextPowerOfTwo_Unified( v );
+	return BitWidth_Unified( x );
 }
 
-template < typename T, T N = 0 >
-constexpr T NextPowerOfTwo( T v ) noexcept
+template < typename I >
+constexpr I BitWidth( I x )
 {
-	using Number_t = MNumber< T >;
-	constexpr T NUM_BITS = Number_t::BITS;
-	constexpr T INVALID = Number_t::BITS;
+	using Number_t = MNumber< I >;
+	constexpr I NUM_BITS = Number_t::BITS;
+	constexpr I INVALID = Number_t::BITS;
 
-	if ( v <= BALL_MAX( 1, N ) )
+	if ( x <= 1 )
 	{
-		return NextPowerOfTwo_Unified( v );
+		return 0;
 	}
 #	if defined( _MSC_VER )
 	// MSVC (_BitScanReverse/_BitScanReverse64), supports to 64 bits
 	else if constexpr ( NUM_BITS <= 32 )
 	{
-		ulong_t idx;
-		uint_t x = static_cast< uint_t >( v - 1 );
+		ulong_t i;
+		uint_t nMask = static_cast< uint_t >( x - 1 );
 
-		_BitScanReverse( &idx, x );
+		_BitScanReverse( &i, nMask );
 
-		uint_t s = static_cast< uint_t >( idx ) + 1;
+		uint_t s = static_cast< uint_t >( i ) + 1;
 
-		return ( s >= NUM_BITS ) ? INVALID : ( T( 1 ) << s );
+		return ( s >= NUM_BITS ) ? INVALID : ( I( 1 ) << s );
+	}
+	else if constexpr ( NUM_BITS <= 64 )
+	{
+		ulong_t i;
+		ullong_t nMask = static_cast< ullong_t >( x - 1 );
+
+		_BitScanReverse64( &i, nMask );
+		uint_t s = static_cast< uint_t >( i ) + 1;
+
+		return ( s >= NUM_BITS ) ? INVALID : ( I( 1 ) << s );
 	}
 	else
-	{
-		ulong_t idx;
-		ullong_t x = static_cast< ullong_t >( v - 1 );
-
-		_BitScanReverse64( &idx, x );
-		uint_t s = static_cast< uint_t >( idx ) + 1;
-
-		return ( s >= NUM_BITS ) ? INVALID : ( T( 1 ) << s );
-	}
+		return INVALID;
 
 #	elif defined( __GNUC__ ) || defined( __clang__ )
 	// GCC/Clang: __builtin_clz*/__builtin_clzll, supports to 64 bits
 	else if constexpr ( NUM_BITS <= 32 )
 	{
-		uint_t x = static_cast< uint_t >( v - 1 );
 		// clz(0) — UB, но x != 0 т.к. v > 1
-		uint_t s = 32u - static_cast< uint_t >( __builtin_clz(x) );
+		uint_t s = 32u - static_cast< uint_t >( __builtin_clz( static_cast< uint_t >( x - 1 ) ) );
 
-		return ( s >= NUM_BITS ) ? INVALID : ( T( 1 ) << s );
+		return ( s >= NUM_BITS ) ? INVALID : ( I( 1 ) << s );
 	}
 	else if constexpr ( NUM_BITS <= 64 )
 	{
-		ullong_t x = static_cast< ullong_t >( v - 1 );
-		uint_t s = 64u - static_cast< uint_t >( __builtin_clzll(x) );
+		uint_t s = 64u - static_cast< uint_t >( __builtin_clzll( static_cast< ullong_t >( x - 1 ) ) );
 
-		return ( s >= NUM_BITS ) ? INVALID : ( T( 1 ) << s );
+		return ( s >= NUM_BITS ) ? INVALID : ( I( 1 ) << s );
 	}
 	else
-	{
-		return NextPowerOfTwo_Unified( v );
-	}
+		return INVALID;
 
 #	else
 #		error Unsupported platform!
 #	endif
 }
 
-/// @brief Computes the new count by repeatedly doubling old_count until it is
-///        at least requested_count, with the result clamped to [min_count, max_count].
-/// 
-/// @tparam T Any integral type (int_t or uint_t).
-/// 
-/// @details
-/// - If requested_count <= old_count, returns old_count (no clamping is applied in this case),
-///   matching the original loop semantics.
-/// - Otherwise, returns the smallest value of the form old_count * 2^k that is
-///   >= max(requested_count, min_count), but not exceeding max_count.
-/// - All intermediate calculations are performed in the uint_t counterpart of T to
-///   avoid undefined behavior on shifts and to reduce overflow risk.
-/// - Multiplication is checked: if old_count * growth would exceed max_count, the result
-///   is saturated to max_count.
-/// 
-/// @pre old_count > 0, 0 < min_count <= max_count (recommended invariants; enforce with asserts if needed).
-/// 
-/// @return The adjusted count as T, preserving the original function’s semantics.
-template < typename T, typename U = Unsigned_t< T > >
-constexpr T NextDoublingCapacityT( T nOldCount, T nRequestedCount, T nMinCount, T nMaxCount ) noexcept
+/// @brief Floor(log_NS(x)) for compile-time base NS ∈ [2, 36].
+/// @details Generic slow path uses integer division; fast-paths for 16/2.
+template < typename I = uint_t, uint8_t NS, typename U >
+constexpr I BitWidth( U x ) noexcept
 {
-	// Fast path: if request already satisfied, return old_count verbatim
-	// (original code does NOT clamp to [min,max] in this branch).
-	if ( nRequestedCount <= nOldCount )
-		return nOldCount;
+	static_assert( NS >= 2 && NS <= 36, "BitWidth: base must be in [2,36]" );
 
-	// Map inputs into uint_t domain for safe bit operations / divisions.
-	// Precondition is that counts are non-negative; if you can't guarantee it,
-	// add runtime checks or casts with defensive handling.
-	const U nOld = static_cast< U >( nOldCount );
-	const U nRequired = static_cast< U >( nRequestedCount );
-	const U nMin = static_cast< U >( nMinCount );
-	const U nMax = static_cast< U >( nMaxCount );
-	const U nMinRequired = BALL_MIN( nRequired, nMin );
+	if ( x == 0 )
+		return 0;
 
-	// If old_count is zero (violates the usual precondition), we cannot grow by doubling.
-	// Define behavior: jump directly to max(mn, min(rq, mx)).
-	if ( nOld == U{ 0 } )
-		return static_cast<T>( BALL_MIN( nMinRequired, nMax ) );
-
-	// Target we must reach by doubling (respect the lower bound).
-	const U nTarget = BALL_MAX( nRequired, nMin );
-
-	// Compute ratio = ceil(target / oc) without overflow: 1 + (target - 1) / oc
-	// (valid because target >= 1 and oc >= 1 here).
-	const U nRatio = U( 1 ) + ( nTarget - U( 1 ) ) / nOld;
-
-	// Minimal power-of-two multiplier >= ratio.
-	const U nGrow = NextPowerOfTwo< U >( nRatio ); // >= 1
-
-	// Checked multiply against mx to avoid overflow and to clamp like the original.
-	// If oc * growth would exceed mx, we saturate to mx.
-	// Use division to avoid intermediate overflow: if growth > mx / oc => clamp.
-	U nResult;
-
-	if ( nGrow > ( nMax / nOld ) )
+	if constexpr ( NS == 2 )
 	{
-		nResult = nMax;
+		return BitWidth_Floor( x );
+	}
+	else if constexpr ( NS == 16 )
+	{
+		const I bw = BitWidth< I >( x );
+
+		return ( bw - 1u ) / 4u;
 	}
 	else
 	{
-		const U nCandidate = nOld * nGrow;
+		I k = 0;
 
-		nResult = BALL_MIN( nMax, nCandidate );
+		while ( x >= U( NS ) )
+		{
+			x /= U( NS );
+			++k;
+		}
+
+		return k;
 	}
-
-	return static_cast< T >( nResult );
 }
 
 #endif // !defined( _INCLUDE_BALL_TYPES_BITS_HPP_ )

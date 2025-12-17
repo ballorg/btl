@@ -39,7 +39,7 @@ public:
 	using Base_t::Base;
 
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
-	static constexpr size_t ALIGNED_SIZE = NextPowerOfTwo_Const( 8 * sizeof( Element_t ) );
+	static constexpr size_t ALIGNED_SIZE = BitWidth_Const< I >( 8 * sizeof( Element_t ) );
 	static constexpr I INVALID_INDEX = Number_t::INVALID;
 
 	/// @brief Default / external ctor. Does not assume ownership semantics beyond this instance.
@@ -57,8 +57,7 @@ public:
 	// Basic queries / accessors.
 	// ---------------------------
 
-	/// @warning This returns next power-of-two of Count(), not a tracked internal capacity.
-	constexpr I Capacity() const noexcept { return NextPowerOfTwo< I, FIXED_COUNT >( Count() ); }
+	constexpr I Capacity() const noexcept { return BitWidth< I >( Count() ); }
 	constexpr size_t CapacitySize() const noexcept { return static_cast< size_t >( Capacity() ) * sizeof( Element_t ); }
 
 	constexpr I FixedCount() const noexcept { return FIXED_COUNT; }
@@ -69,17 +68,18 @@ public:
 
 protected:
 	///-----------------------------------------------------------------------------
-	/// @brief Ensures that heap storage can accommodate at least @p nRequestCapacity
-	///        elements, rounding up to the next power of two.
+	/// @brief Ensures that heap storage can accommodate at least @p nRequestedCount
+	///        elements, growing using NextDoublingCapacity().
 	///
 	/// Overview:
-	///   - Rounds @p nRequestCapacity up to the next power of two via NextPowerOfTwo().
+	///   - Computes growth from current capacity via NextDoublingCapacity(), clamped
+	///     to [MIN_CAPACITY_COUNT, Number_t::MAX].
 	///   - Expands capacity only; never shrinks unless migrating back to fixed storage.
 	///   - Uses Allocator_t::Realloc() for existing heap memory, otherwise Allocator_t::Alloc().
 	///
 	/// Behavior details:
-	///   - If @p nRequestCapacity exceeds the fixed inline buffer (N), capacity grows to the
-	///     next power of two >= nRequestCapacity.
+	///   - If @p nRequestedCount exceeds the fixed inline buffer (N), capacity grows to the
+	///     next doubled step sufficient for nRequestCapacity.
 	///   - If already on heap and new capacity equals the current derived capacity, this is a no-op.
 	///   - If still using fixed storage but overflow is detected, a new heap block is allocated,
 	///     and data is migrated via MoveToHeap() if IS_GROWABLE is enabled.
@@ -89,7 +89,7 @@ protected:
 	/// Invariants and assumptions:
 	///   - Capacity() is derived from Count() (rounded to power of two), not stored explicitly.
 	///   - NUM_ALIGNED / ALIGNED_SIZE act as allocator hints for alignment and bucket size.
-	///   - Overflow in NextPowerOfTwo() yields Number_t::INVALID — this is asserted defensively.
+	///   - Overflow is clamped defensively; invalid results are asserted.
 	///   - The function does *not* construct, move, or destroy elements — it only manages memory.
 	///   - Callers are responsible for element placement and internal state consistency.
 	///   - Not thread-safe; external synchronization is required for concurrent access.
@@ -103,28 +103,26 @@ protected:
 	///   - On allocation failure, nullptr may be returned; the caller must validate the pointer.
 	///   - Function never throws exceptions; caller must enforce safety policy.
 	///
-	/// @param nRequestCapacity  Minimum required number of elements before rounding.
+	/// @param nRequestedCount  Minimum required number of elements before rounding.
 	/// @return Pointer to valid element storage (possibly reallocated or migrated).
 	///-----------------------------------------------------------------------------
-	constexpr T *EnsureCapacity( I nRequestCapacity )
+	constexpr T *EnsureCapacity( I nRequestedCount )
 	{
 		T *pElements = Base();
 
 		// Case A: request exceeds inline storage
-		if ( IsOverflow( nRequestCapacity ) )
+		if ( IsOverflow( nRequestedCount ) )
 		{
 			const I nCapacity = Capacity();
-			const I nNewCapacity = NextPowerOfTwo< I, FIXED_COUNT >( nRequestCapacity );
+			const I nNewCapacity = BitWidth< I >( nRequestedCount );
 
-			BALL_ASSERT_MESSAGE( nNewCapacity != Number_t::INVALID, "Capacity overflow!" );
-
-			if ( nNewCapacity == Number_t::INVALID || nNewCapacity < nCapacity )
+			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Number_t::INVALID, "Capacity overflow!" )
 				return pElements;
 
 			// Subcase A1: already on heap
 			if ( IsOverflow() )
 			{
-				if ( pElements && nNewCapacity == nCapacity )
+				if ( nNewCapacity == nCapacity )
 					return pElements;
 
 				pElements = Allocator_t::Realloc( pElements, nNewCapacity, ALIGNED_SIZE );
