@@ -384,7 +384,7 @@ private:
 		T *p = EnsureCapacityBy< T >( nNew );
 
 		if ( i < nOld )
-			ShiftElements( &p[ i + nAdd ], &p[ i ], &p[ nOld ] );
+			ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nOld ] );
 
 		return p;
 	}
@@ -396,7 +396,7 @@ private:
 		const I nTailBegin = i + nRemove;
 
 		if ( nTailBegin < nOld )
-			ShiftElements( &p[ i ], &p[ nTailBegin ], &p[ nOld ] );
+			ShiftElementsLeft( &p[ i ], &p[ nTailBegin ], &p[ nOld ] );
 	}
 
 	void FreeAllHeaps()

@@ -361,7 +361,7 @@ public:
 		T *pData = Base();
 
 		DestructElement( &pData[ nIndex ] );
-		ShiftElements( &pData[ nIndex ], &pData[ nIndex + n ], &pData[ nCount ] );
+		ShiftElementsLeft( &pData[ nIndex ], &pData[ nIndex + n ], &pData[ nCount ] );
 		Grow( -n );
 
 		return nIndex;
@@ -407,7 +407,7 @@ public:
 			const I nSuffixBegin  = i + nRemove;
 			const I nOldCount     = nCount;
 
-			ShiftElements( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
+			ShiftElementsLeft( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
 
 			// 2.3 Commit new logical size.
 			Base_t::Set( nCount - nShrink, pData );
@@ -428,7 +428,7 @@ public:
 			const I nSuffixBegin  = i + nRemove;
 			const I nOldCount     = nCount;
 
-			ShiftElements( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
+			ShiftElementsRight( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
 
 			// 3.3 Commit new logical size before filling the gap.
 			Base_t::Set( nNew, pData );
@@ -548,7 +548,7 @@ public:
 		// Move tail if sizes differ.
 		if ( nTailCount > 0 && ( nInsertCount != nViewCount ) )
 		{
-			CopyElements( nTailCount, pElements + nIndex + nInsertCount, pElements + nTailStart );
+			ShiftElements( pElements + nIndex + nInsertCount, pElements + nTailStart, pElements + nCount );
 		}
 
 		// Copy inserted segment.
@@ -606,7 +606,7 @@ protected:
 		// 2) Make a hole: shift the suffix [nIndex, nOldCount) to the right.
 		if ( nIndex < nOldCount )
 		{
-			ShiftElements( &pData[ nIndex + nAddCount ], &pData[ nIndex ], &pData[ nOldCount ] );
+			ShiftElementsRight( &pData[ nIndex + nAddCount ], &pData[ nIndex ], &pData[ nOldCount ] );
 		}
 
 		// 3) Commit the new logical size; the gap [nIndex, nIndex + nAddCount)
