@@ -21,8 +21,8 @@ constexpr I Num_DigitsNS( U u ) noexcept
 	if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Power-of-two base: digits = ceil(bit_width / log2(NS)).
-		constexpr I k = BitWidth_Const( NS );
-		const I bw = BitWidth( u );
+		constexpr I k = BitCeil_Const( NS );
+		const I bw = BitCeil( u );
 
 		return I( ( bw + k - 1 ) / k );
 	}
@@ -94,7 +94,7 @@ constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 	else if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Any power-of-two base: use shifts & masks.
-		constexpr uint_t k = BitWidth_Const( NS );
+		constexpr uint_t k = BitCeil_Const( NS );
 
 		constexpr U MASK = ( U( 1 ) << k ) - U( 1 );
 

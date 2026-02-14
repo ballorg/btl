@@ -8,6 +8,7 @@ BALL_EXPORT namespace BTL
 #	include "types/base.h"
 #	include "types/allocator.hpp"
 #	include "types/vector.hpp"
+#	include "types/multivector.hpp"
 #	include "types/elements.hpp"
 #	include "types/math.hpp"
 #	include "types/view.hpp"

@@ -24,12 +24,12 @@
 /// @return ceil_pow2(v) clamped to the type’s top power-of-two.
 /// @brief Floor(log2(x)) for unsigned integers. For x==0 returns 0.
 template < typename I >
-static constexpr I BitWidth_Unified( I x ) noexcept
+static constexpr I BitCeil_Unified( I x ) noexcept
 {
 	constexpr I NUM_BITS = MNumber< I >::BITS;
 
 	if ( x <= 1 )
-		return I( 0 );
+		return I( 1 );
 
 	--x;
 	x |= ( x >> 1 );
@@ -46,13 +46,13 @@ static constexpr I BitWidth_Unified( I x ) noexcept
 }
 
 template < typename I >
-consteval I BitWidth_Const( I x )
+consteval I BitCeil_Const( I x )
 {
-	return BitWidth_Unified( x );
+	return BitCeil_Unified( x );
 }
 
 template < typename I >
-constexpr I BitWidth( I x )
+constexpr I BitCeil( I x )
 {
 	using Number_t = MNumber< I >;
 	constexpr I NUM_BITS = Number_t::BITS;
@@ -60,7 +60,7 @@ constexpr I BitWidth( I x )
 
 	if ( x <= 1 )
 	{
-		return 0;
+		return 1;
 	}
 #	if defined( _MSC_VER )
 	// MSVC (_BitScanReverse/_BitScanReverse64), supports to 64 bits
@@ -114,20 +114,20 @@ constexpr I BitWidth( I x )
 /// @brief Floor(log_NS(x)) for compile-time base NS ∈ [2, 36].
 /// @details Generic slow path uses integer division; fast-paths for 16/2.
 template < typename I = uint_t, uint8_t NS, typename U >
-constexpr I BitWidth( U x ) noexcept
+constexpr I BitCeil( U x ) noexcept
 {
-	static_assert( NS >= 2 && NS <= 36, "BitWidth: base must be in [2,36]" );
+	static_assert( NS >= 2 && NS <= 36, "BitCeil: base must be in [2,36]" );
 
 	if ( x == 0 )
 		return 0;
 
 	if constexpr ( NS == 2 )
 	{
-		return BitWidth_Floor( x );
+		return BitCeil_Floor( x );
 	}
 	else if constexpr ( NS == 16 )
 	{
-		const I bw = BitWidth< I >( x );
+		const I bw = BitCeil< I >( x );
 
 		return ( bw - 1u ) / 4u;
 	}

@@ -271,28 +271,28 @@ public:
 	}
 
 	// ---- pointer storage access (AoS of pointers), returns T* ----
-	template < typename T > constexpr Data_t &DataByType() noexcept
+	template < typename T > constexpr auto &DataByType() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_pData;
 		else
 			return m_Tail.template DataByType< T >();
 	}
-	template < typename T > constexpr const Data_t &DataByType() const noexcept
+	template < typename T > constexpr const auto &DataByType() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node.m_pData;
 		else
 			return m_Tail.template DataByType< T >();
 	}
-	template < TI K, typename T > constexpr Data_t &DataByIndex() noexcept
+	template < TI K, typename T > constexpr auto &DataByIndex() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_pData;
 		else
 			return m_Tail.template DataByIndex< K - 1, T >();
 	}
-	template < TI K, typename T > constexpr const Data_t &DataByIndex() const noexcept
+	template < TI K, typename T > constexpr const auto &DataByIndex() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node.m_pData;
@@ -305,14 +305,14 @@ public:
 		if constexpr ( IS_SAME< Type, T > )
 			return bOverflow ? DataByType< T >() : FixedByType< T >();
 		else
-			return m_Tail.template ByType< T >();
+			return m_Tail.template ByType< T >( bOverflow );
 	}
 	template < typename T > constexpr const T *ByType( bool bOverflow ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return bOverflow ? DataByType< T >() : FixedByType< T >();
 		else
-			return m_Tail.template ByType< T >();
+			return m_Tail.template ByType< T >( bOverflow );
 	}
 
 	template < TI K, typename T > constexpr T *ByIndex( bool bOverflow ) noexcept
@@ -320,14 +320,14 @@ public:
 		if constexpr ( K == 0 )
 			return bOverflow ? DataByIndex< K, T >() : FixedByIndex< K, T >();
 		else
-			return m_Tail.template ByIndex< K - 1, T >();
+			return m_Tail.template ByIndex< K - 1, T >( bOverflow );
 	}
 	template < TI K, typename T > constexpr const T *ByIndex( bool bOverflow ) const noexcept
 	{
 		if constexpr ( K == 0 )
 			return bOverflow ? DataByIndex< K, T >() : FixedByIndex< K, T >();
 		else
-			return m_Tail.template ByIndex< K - 1, T >();
+			return m_Tail.template ByIndex< K - 1, T >( bOverflow );
 	}
 
 	template < typename T > constexpr void CopyByType( I nCount, const CElementsPack &other ) noexcept
@@ -338,7 +338,7 @@ public:
 			else
 				CopyElements( nCount, m_Node.m_Fixed.Data(), other.FixedByType< T >() );
 		else
-			m_Tail.template CopyByType< T >( other.m_Tail );
+			m_Tail.template CopyByType< T >( nCount, other.m_Tail );
 	}
 
 	template < TI K > constexpr void CopyByIndex( I nCount, const CElementsPack &other ) noexcept
@@ -349,7 +349,7 @@ public:
 			else
 				CopyElements( nCount, m_Node.m_Fixed.Data(), other.FixedByIndex< K, Type >() );
 		else
-			m_Tail.template CopyByIndex< K - 1 >( other.m_Tail );
+			m_Tail.template CopyByIndex< K - 1 >( nCount, other.m_Tail );
 	}
 
 	template < typename T > constexpr void SwapByType( I nCount, CElementsPack &other ) noexcept
@@ -360,7 +360,7 @@ public:
 			else
 				Math_Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
 		else
-			m_Tail.template SwapByType< T >( other.m_Tail );
+			m_Tail.template SwapByType< T >( nCount, other.m_Tail );
 	}
 
 	template < TI K > constexpr void SwapByIndex( I nCount, CElementsPack &other ) noexcept
@@ -371,7 +371,7 @@ public:
 			else
 				Math_Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
 		else
-			m_Tail.template SwapByIndex< K - 1 >( other.m_Tail );
+			m_Tail.template SwapByIndex< K - 1 >( nCount, other.m_Tail );
 	}
 
 protected:

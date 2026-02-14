@@ -39,7 +39,7 @@ public:
 	using Base_t::Base;
 
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
-	static constexpr size_t ALIGNED_SIZE = BitWidth_Const< I >( 8 * sizeof( Element_t ) );
+	static constexpr size_t ALIGNED_SIZE = BitCeil_Const< I >( 8 * sizeof( Element_t ) );
 	static constexpr I INVALID_INDEX = Number_t::INVALID;
 
 	/// @brief Default / external ctor. Does not assume ownership semantics beyond this instance.
@@ -57,7 +57,7 @@ public:
 	// Basic queries / accessors.
 	// ---------------------------
 
-	constexpr I Capacity() const noexcept { return BitWidth< I >( Count() ); }
+	constexpr I Capacity() const noexcept { return BitCeil< I >( Count() ); }
 	constexpr size_t CapacitySize() const noexcept { return static_cast< size_t >( Capacity() ) * sizeof( Element_t ); }
 
 	constexpr I FixedCount() const noexcept { return FIXED_COUNT; }
@@ -114,7 +114,7 @@ protected:
 		if ( IsOverflow( nRequestedCount ) )
 		{
 			const I nCapacity = Capacity();
-			const I nNewCapacity = BitWidth< I >( nRequestedCount );
+			const I nNewCapacity = BitCeil< I >( nRequestedCount );
 
 			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Number_t::INVALID, "Capacity overflow!" )
 				return pElements;

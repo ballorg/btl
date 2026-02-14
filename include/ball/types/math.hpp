@@ -101,7 +101,7 @@ constexpr I Math_Log_Floor( U x ) noexcept
 	}
 	else if constexpr ( NS == 16 )
 	{
-		const I bw = Math_BitWidth< I, U >( x );
+		const I bw = Math_BitCeil< I, U >( x );
 
 		return ( bw - 1u ) / 4u;
 	}

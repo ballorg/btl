@@ -7,7 +7,7 @@
 template < typename TI, typename T, typename T0, typename ...Ts >
 struct MIndexOf
 {
-	static constexpr TI VALUE = IS_SAME< T, T0 > ? TI( 0 ) : ( TI( 1 ) + MIndexOf< T, Ts... >::VALUE );
+	static constexpr TI VALUE = IS_SAME< T, T0 > ? TI( 0 ) : ( TI( 1 ) + MIndexOf< TI, T, Ts... >::VALUE );
 };
 
 template < typename TI, typename T, typename T0 >
