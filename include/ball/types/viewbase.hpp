@@ -138,34 +138,54 @@ public:
 	template < typename T, Enable_t< T > = 0 > constexpr const T *cend() const noexcept { return Base< T >() + Count(); }
 
 	// --------- typed find helpers (optional, no memcmp/STL) ----------
+
+	///-----------------------------------------------------------------------------
+	/// @brief Find first occurrence of @p value in a single typed column T.
+	/// @return Row index or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
 	template < typename T, Enable_t< T > = 0 >
-	constexpr I Find( const T &value, const I iFrom = FIRST_INDEX ) const noexcept
+	constexpr I FindBy( const T &value, const I iFrom = FIRST_INDEX ) const noexcept
 	{
 		const I nCount = Count();
 		const T *p = Base< T >();
+		const I iStart = ( iFrom == INVALID_INDEX ) ? FIRST_INDEX : iFrom;
 
-		if ( !p || iFrom >= nCount )
+		if ( !p || iStart >= nCount )
 			return INVALID_INDEX;
 
-		for ( I i = iFrom; i < nCount; ++i )
+		for ( I i = iStart; i < nCount; ++i )
 			if ( p[ i ] == value )
 				return i;
 
 		return INVALID_INDEX;
 	}
 
+	///-----------------------------------------------------------------------------
+	/// @brief Find last occurrence of @p value in column T searching backward from @p iFrom.
+	/// @return Row index or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
 	template < typename T, Enable_t< T > = 0 >
-	constexpr I RFind( const T &value ) const noexcept
+	constexpr I RFindBy( const T &value, const I iFrom = INVALID_INDEX ) const noexcept
 	{
 		const I nCount = Count();
-		const T *p = Base< T >();
 
-		if ( !p || nCount == FIRST_INDEX )
+		if ( nCount == FIRST_INDEX )
 			return INVALID_INDEX;
 
-		for ( I i = nCount; i > FIRST_INDEX; --i )
-			if ( p[ i - 1 ] == value )
-				return i - 1;
+		const T *p = Base< T >();
+		I iStart = iFrom;
+
+		if ( iStart == INVALID_INDEX || iStart >= nCount )
+			iStart = nCount - I( 1 );
+
+		for ( I i = iStart; ; --i )
+		{
+			if ( p[ i ] == value )
+				return i;
+
+			if ( i == FIRST_INDEX )
+				break;
+		}
 
 		return INVALID_INDEX;
 	}

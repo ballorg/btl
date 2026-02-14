@@ -180,8 +180,8 @@ public:
 		return true;
 	}
 
-	constexpr I Find( const T &value, const I iFrom = FIRST_INDEX ) const noexcept { return Base_t::template Find< T >( value, iFrom ); }
-	constexpr I RFind( const T &value, const I iFrom = FIRST_INDEX ) const noexcept { return Base_t::template RFind< T >( value, iFrom ); }
+	constexpr I Find( const T &value, const I iFrom = FIRST_INDEX ) const noexcept { return Base_t::template FindBy< T >( value, iFrom ); }
+	constexpr I RFind( const T &value, const I iFrom = INVALID_INDEX ) const noexcept { return Base_t::template RFindBy< T >( value, iFrom ); }
 
 	/// @brief Find first occurrence of subelement @p needle starting at @p from.
 	///        Returns INVALID_INDEX if not found.

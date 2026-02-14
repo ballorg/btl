@@ -35,12 +35,16 @@ public:
 
 	template < typename T > using Allocator_t = CAllocator< I, T >;
 
-	static constexpr I FIXED_COUNT = Base_t::FIXED_COUNT;
-	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
-	static constexpr I INVALID_INDEX = Number_t::INVALID;
-
 	using Base_t::Base_t;
+
+	using Base_t::FIRST_INDEX;
+	using Base_t::FIXED_COUNT;
+	using Base_t::INVALID_INDEX;
+	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
+
 	using Base_t::Count;
+	using Base_t::FindBy;
+	using Base_t::RFindBy;
 
 	~CMultiVectorBase() noexcept
 	{
@@ -104,6 +108,76 @@ public:
 	{
 		BALL_ASSERT( I( 0 ) < Count() );
 		return Base< T >()[ Count() - 1 ];
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Find first row equal to (args...) starting from head.
+	/// @return Row index or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
+	template < typename... Us, EnableIf_t< ( 1 < sizeof...( Ts ) ) && ( sizeof...( Us ) == sizeof...( Ts ) ), int > = 0 >
+	constexpr I Find( const Us &...args ) const noexcept
+	{
+		return FindFrom( FIRST_INDEX, args... );
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Find first row equal to (args...) starting from @p iFrom.
+	/// @return Row index or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
+	template < typename... Us, EnableIf_t< ( 1 < sizeof...( Ts ) ) && ( sizeof...( Us ) == sizeof...( Ts ) ), int > = 0 >
+	constexpr I FindFrom( I iFrom, const Us &...args ) const noexcept
+	{
+		const I nCount = Count();
+
+		if ( iFrom >= nCount )
+			return INVALID_INDEX;
+
+		for ( I i = iFrom; i < nCount; ++i )
+		{
+			if ( RowEquals< Ts... >( i, args... ) )
+				return i;
+		}
+
+		return INVALID_INDEX;
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Find last row equal to (args...) searching from tail.
+	/// @return Row index or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
+	template < typename... Us, EnableIf_t< ( 1 < sizeof...( Ts ) ) && ( sizeof...( Us ) == sizeof...( Ts ) ), int > = 0 >
+	constexpr I RFind( const Us &...args ) const noexcept
+	{
+		return RFindFrom( INVALID_INDEX, args... );
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Find last row equal to (args...) searching backward from @p iFrom.
+	/// @return Row index or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
+	template < typename... Us, EnableIf_t< ( 1 < sizeof...( Ts ) ) && ( sizeof...( Us ) == sizeof...( Ts ) ), int > = 0 >
+	constexpr I RFindFrom( I iFrom, const Us &...args ) const noexcept
+	{
+		const I nCount = Count();
+
+		if ( nCount == FIRST_INDEX )
+			return INVALID_INDEX;
+
+		I iStart = iFrom;
+
+		if ( iStart == INVALID_INDEX || iStart >= nCount )
+			iStart = nCount - I( 1 );
+
+		for ( I i = iStart; ; --i )
+		{
+			if ( RowEquals< Ts... >( i, args... ) )
+				return i;
+
+			if ( i == FIRST_INDEX )
+				break;
+		}
+
+		return INVALID_INDEX;
 	}
 
 	// ---------------------------
@@ -258,6 +332,18 @@ protected:
 			if ( p )
 				Allocator_t< T >::Free( p );
 		}
+	}
+
+	template < typename T0, typename... TRest, typename U0, typename... URest >
+	constexpr bool RowEquals( I i, const U0 &u0, const URest &...urest ) const noexcept
+	{
+		if ( !( Base< T0 >()[ i ] == u0 ) )
+			return false;
+
+		if constexpr ( sizeof...( TRest ) > 0 )
+			return RowEquals< TRest... >( i, urest... );
+
+		return true;
 	}
 };
 
