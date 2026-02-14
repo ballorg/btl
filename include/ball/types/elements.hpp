@@ -4,7 +4,9 @@
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/assert.h"
+#	include "c/memory.h"
 #	include "meta/removereference.hpp"
+#	include "meta/traits.hpp"
 #	include "xvalue.hpp"
 
 template < typename T >
@@ -94,6 +96,38 @@ constexpr T *CopyElementsFromEnd( I nCount, T *pDest, const T *pSrc ) noexcept
 }
 
 ///-----------------------------------------------------------------------------
+/// @brief Shift range [pSrc, pSrcEnd) right by exactly one element into @p pDest.
+///        Forward algorithm (does not copy from end), overlap-safe for pDest==pSrc+1.
+/// @return pDest
+///-----------------------------------------------------------------------------
+template < typename T >
+constexpr T *ShiftElementsRightByOne( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
+{
+	BALL_ASSERT_MESSAGE( pSrc <= pSrcEnd, "Invalid source range" );
+	BALL_ASSERT_MESSAGE( pDest == pSrc + 1, "ShiftElementsRightByOne expects +1 shift" );
+
+	using Diff_t = decltype( pSrcEnd - pSrc );
+	const Diff_t nCount = pSrcEnd - pSrc;
+
+	if ( nCount <= Diff_t( 0 ) )
+		return pDest;
+
+	T carry = pSrc[ 0 ];
+
+	for ( Diff_t i = Diff_t( 1 ); i < nCount; ++i )
+	{
+		const T next = pSrc[ i ];
+
+		pDest[ i - 1 ] = carry;
+		carry = next;
+	}
+
+	pDest[ nCount - 1 ] = carry;
+
+	return pDest;
+}
+
+///-----------------------------------------------------------------------------
 /// @brief Shift elements in range [pSrc, pSrcEnd) to the left into @p pDest.
 ///        Copies left-to-right.
 /// @return pDest
@@ -108,7 +142,12 @@ constexpr T *ShiftElementsLeft( T *pDest, const T *pSrc, const T *pSrcEnd ) noex
 
 	const Diff_t nCount = pSrcEnd - pSrc;
 
-	return CopyElements( nCount, pDest, pSrc );
+	if ( nCount <= Diff_t( 0 ) || pDest == pSrc )
+		return pDest;
+
+	memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) );
+
+	return pDest;
 }
 
 ///-----------------------------------------------------------------------------
@@ -125,8 +164,14 @@ constexpr T *ShiftElementsRight( T *pDest, const T *pSrc, const T *pSrcEnd ) noe
 	using Diff_t = decltype( pSrcEnd - pSrc );
 
 	const Diff_t nCount = pSrcEnd - pSrc;
+	const Diff_t nShift = pDest - pSrc;
 
-	return CopyElementsFromEnd( nCount, pDest, pSrc );
+	if ( nCount <= Diff_t( 0 ) || nShift <= Diff_t( 0 ) )
+		return pDest;
+
+	memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) );
+
+	return pDest;
 }
 
 ///-----------------------------------------------------------------------------

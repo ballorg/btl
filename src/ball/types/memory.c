@@ -245,7 +245,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	const size_t nToCopy = ( pHeader->nSize < nNewSize ) ? pHeader->nSize : nNewSize;
 
 	if ( nToCopy )
-		__builtin_memcpy( pNew, pMem, nToCopy );
+		memcpy( pNew, pMem, nToCopy );
 
 	Ball_FreeAlign( pMem );
 
