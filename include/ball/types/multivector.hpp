@@ -151,162 +151,6 @@ public:
 	CMultiVectorBase &operator=( const ConstView_t &rhs ) { return CopyFrom( rhs ); }
 	CMultiVectorBase &operator=( const View_t &rhs ) { return CopyFrom( rhs ); }
 
-	// ---------------------------
-	// Size management
-	// ---------------------------
-	void SetCount( I nNew )
-	{
-		Base_t::Set( nNew, EnsureCapacityBy< Ts >( nNew )... );
-	}
-
-	void Grow( I delta )
-	{
-		const I nNew = Count() + delta;
-
-		BALL_ASSERT( nNew >= I( 0 ) );
-		SetCount( nNew );
-	}
-
-	// ---------------------------
-	// Insert / remove
-	// ---------------------------
-	///-----------------------------------------------------------------------------
-	/// @brief Insert a multi-row view at position @p i.
-	/// @details
-	///  - The view must carry the same type pack Ts... as this container.
-	///  - All columns are inserted in SoA form; tail [i, Count()) is shifted right.
-	///  - Returns the index right after the inserted block.
-	/// @example
-	/// @code
-	/// // row type: <int, float>
-	/// MultiVector_t<int, float> dst;
-	/// MultiVector_t<int, float> src;
-	/// // ... fill src ...
-	/// dst.Insert(0, src.Const()); // prepend all rows from src
-	/// @endcode
-	///-----------------------------------------------------------------------------
-	constexpr I Insert( I i, const ConstView_t &v )
-	{
-		const I nAdd = v.Count();
-
-		BALL_ASSERT( nAdd > I( 0 ) );
-		EnsureInsert( i, nAdd );
-		( CopyElements( nAdd, Base< Ts >() + i, v.template Base< Ts >() ), ... );
-
-		return i + nAdd;
-	}
-
-	constexpr I Insert( I i, const View_t &v )
-	{
-		return Insert( i, v.Const() );
-	}
-
-	///-----------------------------------------------------------------------------
-	/// @brief Insert a single row at @p i (one value per column type).
-	/// @tparam Us Must match Ts... in count and assignment-compatibility.
-	/// @return Index right after the inserted row.
-	/// @example
-	/// @code
-	/// MultiVector_t<int, float> v;
-	/// v.Insert(0, 42, 3.14f); // inserts one row: {int=42, float=3.14}
-	/// @endcode
-	///-----------------------------------------------------------------------------
-	template < typename... Us >
-	constexpr I Insert( I i, Us &&...args )
-	{
-		static_assert( sizeof...( Us ) == sizeof...( Ts ), "Insert requires exactly one value per type" );
-
-		EnsureInsert( i, I( 1 ) );
-		AssignRow< Ts... >( i, Forward< Us >( args )... );
-
-		return i + I( 1 );
-	}
-
-	///-----------------------------------------------------------------------------
-	/// @brief Insert @p nCount identical rows at @p i.
-	/// @tparam Us One value per column type Ts...
-	/// @return Index right after the inserted block.
-	/// @example
-	/// @code
-	/// MultiVector_t<int, float> v;
-	/// v.InsertMultiple(2, 3, 7, 1.0f); // inserts 3 rows {7, 1.0f} starting at index 2
-	/// @endcode
-	///-----------------------------------------------------------------------------
-	template < typename... Us >
-	constexpr I InsertMultiple( I i, I nCount, const Us &...args )
-	{
-		static_assert( sizeof...( Us ) == sizeof...( Ts ), "InsertMultiple requires exactly one value per type" );
-
-		BALL_ASSERT( nCount > I( 0 ) );
-		EnsureInsert( i, nCount );
-
-		for ( I n = I( 0 ); n < nCount; ++n )
-			AssignRow< Ts... >( i + n, args... );
-
-		return i + nCount;
-	}
-
-	///-----------------------------------------------------------------------------
-	/// @brief Add rows to the head (index 0).
-	/// @example
-	/// @code
-	/// v.AddToHead(10, 0.5f);         // one row
-	/// v.AddMultipleToHead(4, 1, 2.f); // four identical rows
-	/// @endcode
-	///-----------------------------------------------------------------------------
-	constexpr I AddToHead( const ConstView_t &v ) { return Insert( I( 0 ), v ); }
-	constexpr I AddToHead( const View_t &v ) { return Insert( I( 0 ), v ); }
-	template < typename... Us > constexpr I AddToHead( Us &&...args ) { return Insert( I( 0 ), Forward< Us >( args )... ); }
-	template < typename... Us > constexpr I AddMultipleToHead( I nCount, const Us &...args ) { return InsertMultiple( I( 0 ), nCount, args... ); }
-
-	///-----------------------------------------------------------------------------
-	/// @brief Add rows to the tail (index Count()).
-	/// @example
-	/// @code
-	/// v.AddToTail( 99, 0.25f );         // append one row
-	/// v.AddMultipleToTail( 2, 0, 0.f ); // append two identical rows
-	/// @endcode
-	///-----------------------------------------------------------------------------
-	constexpr I AddToTail( const ConstView_t &v ) { return Insert( Count(), v ); }
-	constexpr I AddToTail( const View_t &v ) { return Insert( Count(), v ); }
-	template < typename... Us > constexpr I AddToTail( Us &&...args ) { return Insert( Count(), Forward< Us >( args )... ); }
-	template < typename... Us > constexpr I AddMultipleToTail( I nCount, const Us &...args ) { return InsertMultiple( Count(), nCount, args... ); }
-
-	///-----------------------------------------------------------------------------
-	/// @brief Reserve and open a gap of @p nAdd rows at index @p i.
-	/// @details
-	///  - Reallocates/migrates column storages if required.
-	///  - Shifts the existing suffix right.
-	///  - Commits new logical size.
-	///  - Does not initialize values in the created gap.
-	/// @example
-	/// @code
-	/// v.EnsureInsert( 5, 2 ); // rows [5,6] are now reserved and must be assigned by caller
-	/// @endcode
-	///-----------------------------------------------------------------------------
-	void EnsureInsert( I i, I nAdd )
-	{
-		BALL_ASSERT( nAdd > I( 0 ) );
-		BALL_ASSERT( I( 0 ) <= i && i <= Count() );
-
-		const I nOld = Count();
-		const I nNew = nOld + nAdd;
-
-		Base_t::Set( nNew, InsertBy< Ts >( i, nAdd, nOld, nNew )... );
-	}
-
-	void Remove( I i, I nRemove = I( 1 ) )
-	{
-		BALL_ASSERT( nRemove > I( 0 ) );
-		BALL_ASSERT( I( 0 ) <= i && i + nRemove <= Count() );
-
-		const I nOld = Count();
-		const I nNew = nOld - nRemove;
-
-		( ShiftLeftByType< Ts >( i, nRemove, nOld ), ... );
-		Base_t::Set( nNew, EnsureCapacityBy< Ts >( nNew )... );
-	}
-
 protected:
 	// ---------------------------
 	// Raw pointer helpers
@@ -314,7 +158,7 @@ protected:
 	template < typename T > constexpr T *Writable() { return Base< T >(); }
 	template < typename T > constexpr const T *Readable() const { return Base< T >(); }
 
-private:
+protected:
 	template < typename T > static constexpr size_t AlignedSize() { return BitCeil_Const< I >( 8 * sizeof( T ) ); }
 
 	template < typename T >
@@ -415,11 +259,144 @@ private:
 				Allocator_t< T >::Free( p );
 		}
 	}
+};
 
+template < class B, typename I, typename TI, typename... Ts >
+class CMultiVectorImpl : public B
+{
+public:
+	using Base_t = B;
+	using Index_t = I;
+	using TypeIndex_t = TI;
+	using View_t = typename Base_t::View_t;
+	using ConstView_t = typename Base_t::ConstView_t;
+
+	using Base_t::Base_t;
+	using Base_t::Count;
+
+	constexpr CMultiVectorImpl() noexcept : Base_t() {}
+	constexpr CMultiVectorImpl( const View_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
+	constexpr CMultiVectorImpl( const ConstView_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
+	constexpr CMultiVectorImpl( View_t &&moveFrom ) noexcept { Base_t::MoveFrom( Move( moveFrom ) ); }
+
+	CMultiVectorImpl &operator=( const View_t &copyFrom ) { Base_t::CopyFrom( copyFrom ); return *this; }
+	CMultiVectorImpl &operator=( const ConstView_t &copyFrom ) { Base_t::CopyFrom( copyFrom ); return *this; }
+	CMultiVectorImpl &operator=( CMultiVectorImpl &&moveFrom ) { Base_t::MoveFrom( Move( moveFrom ) ); return *this; }
+
+	// ---------------------------
+	// Size management
+	// ---------------------------
+	void SetCount( I nNew )
+	{
+		Base_t::Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
+	}
+
+	void Grow( I delta )
+	{
+		const I nNew = Count() + delta;
+
+		BALL_ASSERT( nNew >= I( 0 ) );
+		SetCount( nNew );
+	}
+
+	// ---------------------------
+	// Insert / remove
+	// ---------------------------
+	///-----------------------------------------------------------------------------
+	/// @brief Insert a multi-row view at position @p i.
+	/// @return Index right after the inserted block.
+	///-----------------------------------------------------------------------------
+	constexpr I Insert( I i, const ConstView_t &v )
+	{
+		const I nAdd = v.Count();
+
+		BALL_ASSERT( nAdd > I( 0 ) );
+		EnsureInsert( i, nAdd );
+		( CopyElements( nAdd, Base_t::template Base< Ts >() + i, v.template Base< Ts >() ), ... );
+
+		return i + nAdd;
+	}
+
+	constexpr I Insert( I i, const View_t &v )
+	{
+		return Insert( i, v.Const() );
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Insert a single row at @p i (one value per column type).
+	/// @return Index right after the inserted row.
+	///-----------------------------------------------------------------------------
+	template < typename... Us >
+	constexpr I Insert( I i, Us &&...args )
+	{
+		static_assert( sizeof...( Us ) == sizeof...( Ts ), "Insert requires exactly one value per type" );
+
+		EnsureInsert( i, I( 1 ) );
+		AssignRow< Ts... >( i, Forward< Us >( args )... );
+
+		return i + I( 1 );
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Insert @p nCount identical rows at @p i.
+	/// @return Index right after the inserted block.
+	///-----------------------------------------------------------------------------
+	template < typename... Us >
+	constexpr I InsertMultiple( I i, I nCount, const Us &...args )
+	{
+		static_assert( sizeof...( Us ) == sizeof...( Ts ), "InsertMultiple requires exactly one value per type" );
+
+		BALL_ASSERT( nCount > I( 0 ) );
+		EnsureInsert( i, nCount );
+
+		for ( I n = I( 0 ); n < nCount; ++n )
+			AssignRow< Ts... >( i + n, args... );
+
+		return i + nCount;
+	}
+
+	constexpr I AddToHead( const ConstView_t &v ) { return Insert( I( 0 ), v ); }
+	constexpr I AddToHead( const View_t &v ) { return Insert( I( 0 ), v ); }
+	template < typename... Us > constexpr I AddToHead( Us &&...args ) { return Insert( I( 0 ), Forward< Us >( args )... ); }
+	template < typename... Us > constexpr I AddMultipleToHead( I nCount, const Us &...args ) { return InsertMultiple( I( 0 ), nCount, args... ); }
+
+	constexpr I AddToTail( const ConstView_t &v ) { return Insert( Count(), v ); }
+	constexpr I AddToTail( const View_t &v ) { return Insert( Count(), v ); }
+	template < typename... Us > constexpr I AddToTail( Us &&...args ) { return Insert( Count(), Forward< Us >( args )... ); }
+	template < typename... Us > constexpr I AddMultipleToTail( I nCount, const Us &...args ) { return InsertMultiple( Count(), nCount, args... ); }
+
+	void Remove( I i, I nRemove = I( 1 ) )
+	{
+		BALL_ASSERT( nRemove > I( 0 ) );
+		BALL_ASSERT( I( 0 ) <= i && i + nRemove <= Count() );
+
+		const I nOld = Count();
+		const I nNew = nOld - nRemove;
+
+		( Base_t::template ShiftLeftByType< Ts >( i, nRemove, nOld ), ... );
+		Base_t::Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
+	}
+
+protected:
+	///-----------------------------------------------------------------------------
+	/// @brief Reserve and open a gap of @p nAdd rows at index @p i.
+	///-----------------------------------------------------------------------------
+	void EnsureInsert( I i, I nAdd )
+	{
+		BALL_ASSERT( nAdd > I( 0 ) );
+		BALL_ASSERT( I( 0 ) <= i && i <= Count() );
+
+		const I nOld = Count();
+		const I nNew = nOld + nAdd;
+
+		Base_t::Set( nNew, Base_t::template InsertBy< Ts >( i, nAdd, nOld, nNew )... );
+	}
+
+private:
 	template < typename T0, typename... TRest, typename U0, typename... URest >
 	constexpr void AssignRow( I i, U0 &&u0, URest &&...urest )
 	{
-		Base< T0 >()[ i ] = Forward< U0 >( u0 );
+		Base_t::template Base< T0 >()[ i ] = Forward< U0 >( u0 );
 
 		if constexpr ( sizeof...( TRest ) > 0 )
 			AssignRow< TRest... >( i, Forward< URest >( urest )... );
@@ -429,10 +406,10 @@ private:
 template < typename I, I N, typename TI, typename... Ts > class CBufferMultiVector;
 
 template < typename I, typename TI, typename... Ts >
-class CMultiVector : public CMultiVectorBase< I, 0, TI, Ts... >
+class CMultiVector : public CMultiVectorImpl< CMultiVectorBase< I, 0, TI, Ts... >, I, TI, Ts... >
 {
 public:
-	using Base_t = CMultiVectorBase< I, 0, TI, Ts... >;
+	using Base_t = CMultiVectorImpl< CMultiVectorBase< I, 0, TI, Ts... >, I, TI, Ts... >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
@@ -441,10 +418,10 @@ public:
 };
 
 template < typename I, I N, typename TI, typename... Ts >
-class CBufferMultiVector : public CMultiVectorBase< I, N, TI, Ts... >
+class CBufferMultiVector : public CMultiVectorImpl< CMultiVectorBase< I, N, TI, Ts... >, I, TI, Ts... >
 {
 public:
-	using Base_t = CMultiVectorBase< I, N, TI, Ts... >;
+	using Base_t = CMultiVectorImpl< CMultiVectorBase< I, N, TI, Ts... >, I, TI, Ts... >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
