@@ -5,21 +5,8 @@
 #	include "base/fixed.h"
 #	include "c/memory.h"
 
-#	if defined( _MSC_VER )
-#		define BALL_STACK_ALLOCA( nSize ) _alloca( nSize )
-#	else
-#		define BALL_STACK_ALLOCA( nSize ) __builtin_alloca( nSize )
-#	endif
-
-#	define Ball_STACKALLOC_BEGIN( nSize ) BALL_STACK_ALLOCA( nSize )
-#	define Ball_STACKALLOC_END( pMem )
-
 #	if defined( _WIN32 )
 #		include "c/memoryaligned.h"
-
-#		if defined( _MSC_VER )
-BALL_EXTERN_C void *_alloca( size_t nSize );
-#		endif
 
 inline ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign ) { return _aligned_malloc( nSize, nAlign ); }
 inline void Ball_FreeAlign( ptr_t pMem ) { return _aligned_free( pMem ); }
