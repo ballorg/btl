@@ -256,7 +256,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 /// @brief  Return logical size recorded for a user pointer.
 /// @note   Alignment/offset parameters are ignored; kept for API symmetry.
 ///-----------------------------------------------------------------------------
-size_t Ball_MemSize( ptr_t pMem, size_t nAlign, size_t nOffset )
+size_t Ball_SizeAlign( ptr_t pMem, size_t nAlign, size_t nOffset )
 {
 	( void )nAlign;
 	( void )nOffset;

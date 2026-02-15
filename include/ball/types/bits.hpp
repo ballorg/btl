@@ -2,6 +2,7 @@
 #	define _INCLUDE_BALL_TYPES_BITS_HPP_
 
 #	include "base/arch.h"
+#	include "base/fixed.h"
 #	include "meta/number.hpp"
 #	include "c/bits.h"
 

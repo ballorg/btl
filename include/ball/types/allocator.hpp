@@ -28,7 +28,7 @@ public:
 
 	static size_t Size( ptr_t pMem, size_t nAligned, size_t nOffset = 0 )
 	{
-		return Ball_MemSize( pMem, nAligned, nOffset );
+		return Ball_SizeAlign( pMem, nAligned, nOffset );
 	}
 }; // class CAllocatorBase
 
