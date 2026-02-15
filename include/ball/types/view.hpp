@@ -208,25 +208,29 @@ public:
 		if ( iFrom > nCount || nViewCount > nCount - iFrom )
 			return INVALID_INDEX;
 
-		const I nLast = static_cast< I >( nCount - nViewCount );
+		const T *itStart = pData + iFrom;
+		const T *itLastStart = pData + ( nCount - nViewCount );
+		const T needleFirst = pViewBase[ 0 ];
 
-		for ( I n = iFrom; n <= nLast; ++n )
+		for ( const T *it = itStart; it <= itLastStart; ++it )
 		{
 			// Quick check on the first element.
-			if ( !( pData[ n ] == pViewBase[ 0 ] ) )
+			if ( !( *it == needleFirst ) )
 				continue;
 
 			// Verify the rest of the needle.
-			I j = I( 1 );
+			const T *h = it + I( 1 );
+			const T *n = pViewBase + I( 1 );
+			const T *nEnd = pViewBase + nViewCount;
 
-			for ( ; j < nViewCount; ++j )
+			for ( ; n < nEnd; ++n, ++h )
 			{
-				if ( !( pData[ n + j ] == pViewBase[ j ] ) )
+				if ( !( *h == *n ) )
 					break;
 			}
 
-			if ( j == nViewCount )
-				return n;
+			if ( n == nEnd )
+				return static_cast< I >( it - pData );
 		}
 
 		return INVALID_INDEX;
@@ -296,30 +300,34 @@ public:
 			iStart = iFrom;
 		}
 
+		const T *itBegin = pData;
+		const T *it = pData + iStart;
+		const T needleFirst = pViewBase[ 0 ];
+
 		// Backward scan: iStart .. 0
-		for ( I n = iStart; ; )
+		for ( ; ; --it )
 		{
 			// Quick check on the first element at this start.
-			if ( pData[ n ] == pViewBase[ 0 ] )
+			if ( *it == needleFirst )
 			{
 				// Verify the rest of the needle forward from i.
-				I j = I( 1 );
+				const T *h = it + I( 1 );
+				const T *n = pViewBase + I( 1 );
+				const T *nEnd = pViewBase + nViewCount;
 
-				for ( ; j < nViewCount; ++j )
+				for ( ; n < nEnd; ++n, ++h )
 				{
-					if ( !( pData[ n + j ] == pViewBase[ j ] ) )
+					if ( !( *h == *n ) )
 						break;
 				}
 
-				if ( j == nViewCount )
-					return n;
+				if ( n == nEnd )
+					return static_cast< I >( it - pData );
 			}
 
 			// Stop when i == 0 to avoid unsigned underflow.
-			if ( n == FIRST_INDEX )
+			if ( it == itBegin )
 				break;
-
-			--n;
 		}
 
 		return INVALID_INDEX;

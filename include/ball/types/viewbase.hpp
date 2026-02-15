@@ -147,15 +147,16 @@ public:
 	constexpr I FindBy( const T &value, const I iFrom = FIRST_INDEX ) const noexcept
 	{
 		const I nCount = Count();
-		const T *p = Base< T >();
-		const I iStart = ( iFrom == INVALID_INDEX ) ? FIRST_INDEX : iFrom;
+		const T *pBase = Base< T >();
 
-		if ( !p || iStart >= nCount )
+		if ( !pBase || !nCount || iFrom >= nCount )
 			return INVALID_INDEX;
 
-		for ( I i = iStart; i < nCount; ++i )
-			if ( p[ i ] == value )
-				return i;
+		for ( const T *it = pBase + iFrom, *itEnd = pBase + nCount; it < itEnd; ++it )
+		{
+			if ( *it == value )
+				return static_cast< I >( it - pBase );
+		}
 
 		return INVALID_INDEX;
 	}
@@ -165,25 +166,23 @@ public:
 	/// @return Row index or INVALID_INDEX.
 	///-----------------------------------------------------------------------------
 	template < typename T, Enable_t< T > = 0 >
-	constexpr I RFindBy( const T &value, const I iFrom = INVALID_INDEX ) const noexcept
+	constexpr I RFindBy( const T &value, I iFrom = INVALID_INDEX ) const noexcept
 	{
 		const I nCount = Count();
+		const T *pBase = Base< T >();
 
-		if ( nCount == FIRST_INDEX )
+		if ( !pBase || !nCount || iFrom >= nCount )
 			return INVALID_INDEX;
 
-		const T *p = Base< T >();
-		I iStart = iFrom;
+		if ( iFrom >= nCount )
+			iFrom = nCount - I( 1 );
 
-		if ( iStart == INVALID_INDEX || iStart >= nCount )
-			iStart = nCount - I( 1 );
-
-		for ( I i = iStart; ; --i )
+		for ( const T *it = pBase + iFrom, *itBegin = pBase; ; --it )
 		{
-			if ( p[ i ] == value )
-				return i;
+			if ( *it == value )
+				return static_cast< I >( it - pBase );
 
-			if ( i == FIRST_INDEX )
+			if ( it == itBegin )
 				break;
 		}
 
