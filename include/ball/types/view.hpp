@@ -16,8 +16,10 @@ public:
 	using Base_t        = CViewBase< I, N, uint8_t, T >;
 	using Element_t     = T;
 	using Index_t       = I;
-	using View_t        = CView< Index_t, Element_t >;
-	using ConstView_t   = CView< Index_t, const Element_t >;
+	using View_t        = CView< Index_t, Element_t, N >;
+	using ConstView_t   = CView< Index_t, const Element_t, N >;
+	template< I GN > using GrowableView_t = CView< Index_t, Element_t, GN >;
+	template< I GN > using ConstGrowableView_t = CView< Index_t, const Element_t, GN >;
 	using Number_t      = MNumber< Index_t >;
 
 	using Base_t::FIRST_INDEX;

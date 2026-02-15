@@ -5,8 +5,8 @@
 #	include "base/fixed.h"
 #	include "c/assert.h"
 #	include "c/memory.h"
-#	include "meta/removereference.hpp"
 #	include "meta/traits.hpp"
+#	include "meta/removereference.hpp"
 #	include "xvalue.hpp"
 
 template < typename T >
@@ -66,13 +66,19 @@ constexpr T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 {
 	BALL_ASSERT( I( 0 ) <= nCount );
 	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
-	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || pDest <= pSrc || pSrc + nCount <= pDest,
-		"Unsafe overlap for forward copy" );
+	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || pDest <= pSrc || pSrc + nCount <= pDest, "Unsafe overlap for forward copy" );
 
-	for ( I n = 0; n < nCount; ++n )
-		pDest[ n ] = pSrc[ n ];
+	if constexpr ( MTraits< T >::IS_TRIVIAL )
+	{
+		return static_cast< T * >( memcpy( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
+	}
+	else
+	{
+		for ( I n = 0; n < nCount; ++n )
+			pDest[ n ] = pSrc[ n ];
 
-	return pDest;
+		return pDest;
+	}
 }
 
 
@@ -145,9 +151,7 @@ constexpr T *ShiftElementsLeft( T *pDest, const T *pSrc, const T *pSrcEnd ) noex
 	if ( nCount <= Diff_t( 0 ) || pDest == pSrc )
 		return pDest;
 
-	memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) );
-
-	return pDest;
+	return CopyElements( nCount, pDest, pSrc );
 }
 
 ///-----------------------------------------------------------------------------
@@ -169,9 +173,22 @@ constexpr T *ShiftElementsRight( T *pDest, const T *pSrc, const T *pSrcEnd ) noe
 	if ( nCount <= Diff_t( 0 ) || nShift <= Diff_t( 0 ) )
 		return pDest;
 
-	memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) );
+	if constexpr ( MTraits< T >::IS_MEMMOVE_SAFE )
+	{
+		return static_cast< T *>( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
+	}
+	else
+	{
+		// Non-overlapping right move: regular forward copy is safe.
+		if ( nShift >= nCount )
+			return CopyElements( nCount, pDest, pSrc );
 
-	return pDest;
+		// Common insert case: shift by one without reverse copy.
+		if ( nShift == Diff_t( 1 ) )
+			return ShiftElementsRightByOne( pDest, pSrc, pSrcEnd );
+
+		return CopyElementsFromEnd( nCount, pDest, pSrc );
+	}
 }
 
 ///-----------------------------------------------------------------------------

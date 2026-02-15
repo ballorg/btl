@@ -1,6 +1,7 @@
 #ifndef _INCLUDE_BALL_TYPES_VECTOR_HPP_
 #	define _INCLUDE_BALL_TYPES_VECTOR_HPP_
 
+#include "elements.hpp"
 #	pragma once
 
 #	include "base/arch.h"
@@ -27,8 +28,10 @@ public:
 	using Allocator_t = A;
 	using Number_t    = MNumber< Index_t >;
 	using Unsigned_t  = typename Number_t::U;
-	using View_t      = Base_t::View_t;
-	using ConstView_t = Base_t::ConstView_t;
+	using typename Base_t::View_t;
+	using typename Base_t::ConstView_t;
+	template < I GN > using GrowableView_t = typename Base_t::template GrowableView_t< GN >;
+	template < I GN > using ConstGrowableView_t = typename Base_t::template ConstGrowableView_t< GN >;
 
 	using Base_t::Base_t;
 	using Base_t::FIXED_COUNT;
@@ -197,11 +200,13 @@ template < class B, typename I, typename T >
 class CVectorImpl : public B
 {
 public:
-	using Base_t =      B;
-	using Index_t =     typename Base_t::Index_t;
-	using Unsigned_t =  typename Base_t::Unsigned_t;
-	using View_t =      Base_t::View_t;
-	using ConstView_t = Base_t::ConstView_t;
+	using Base_t = B;
+	using typename Base_t::Index_t;
+	using typename Base_t::Unsigned_t;
+	using typename Base_t::View_t;
+	using typename Base_t::ConstView_t;
+	template < I GN > using GrowableView_t = typename Base_t::template GrowableView_t< GN >;
+	template < I GN > using ConstGrowableView_t = typename Base_t::template ConstGrowableView_t< GN >;
 
 	using Base_t::INVALID_INDEX;
 	using Base_t::Count;
@@ -235,7 +240,7 @@ public:
 	/// @brief Inserts nCount elements from a C-array at position @p index (copy).
 	/// @return The index where the first element was inserted.
 	///-----------------------------------------------------------------------------
-	constexpr I Insert( const I nIndex, ConstView_t v )
+	constexpr I Insert( const I nIndex, const ConstView_t &v )
 	{
 		BALL_ASSERT( !v.Empty() );
 
@@ -244,15 +249,39 @@ public:
 
 		T *pData = EnsureInsert( nIndex, nViewCount );
 
-		// Construct each new element
-		for ( I n = 0; n < nViewCount; ++n )
-		{
-			ConstructElement( &pData[ n ], pViewData[ n ] );
-		}
+		CopyElements( nViewCount, pData, pViewData );
 
 		return nIndex + nViewCount;
 	}
-	constexpr I Insert( View_t v ) { return Insert( v.Const() ); }
+	template < I N >
+	constexpr I Insert( const I nIndex, const GrowableView_t< N > &v )
+	{
+		BALL_ASSERT( !v.Empty() );
+
+		const T *pViewData = v.Base();
+		I nViewCount = v.Count();
+
+		T *pData = EnsureInsert( nIndex, nViewCount );
+
+		CopyElements( nViewCount, pData, pViewData );
+
+		return nIndex + nViewCount;
+	}
+	template < I N >
+	constexpr I Insert( const I nIndex, const ConstGrowableView_t< N > &v )
+	{
+		BALL_ASSERT( !v.Empty() );
+
+		const T *pViewData = v.Base();
+		I nViewCount = v.Count();
+
+		T *pData = EnsureInsert( nIndex, nViewCount );
+
+		CopyElements( nViewCount, pData, pViewData );
+
+		return nIndex + nViewCount;
+	}
+	constexpr I Insert( const I nIndex, const View_t &v ) { return Insert( nIndex, v.Const() ); }
 
 	///-----------------------------------------------------------------------------
 	/// @brief Inserts R elements from a C-array at position @p index (copy).
