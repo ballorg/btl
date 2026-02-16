@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_BALL_TYPES_MATH_HPP_
 #	define _INCLUDE_BALL_TYPES_MATH_HPP_
 
+#	pragma once
+
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/math.h"

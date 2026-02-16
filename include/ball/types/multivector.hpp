@@ -5,7 +5,7 @@
 
 #	include "base/arch.h"
 #	include "c/assert.h"
-#	include "meta/number.hpp"
+#	include "meta/fixed.hpp"
 #	include "allocator.hpp"
 #	include "bits.hpp"
 #	include "elements.hpp"
@@ -29,7 +29,7 @@ public:
 	using Base_t      = CViewBase< I, N, TI, Ts... >;
 	using Index_t     = I;
 	using TypeIndex_t = TI;
-	using Number_t    = MNumber< Index_t >;
+	using Fixed_t     = MFixed< Index_t >;
 	using View_t      = Base_t;
 	using ConstView_t = typename Base_t::Const_t;
 
@@ -249,7 +249,7 @@ protected:
 			const I nCapacity = BitCeil< I >( nOld );
 			const I nNewCapacity = BitCeil< I >( nRequest );
 
-			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Number_t::INVALID, "Capacity overflow!" )
+			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
 				return pElements;
 
 			if ( bWasOverflow )

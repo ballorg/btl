@@ -1,10 +1,12 @@
 #ifndef _INCLUDE_BALL_TYPES_ARRAY_HPP_
 #	define _INCLUDE_BALL_TYPES_ARRAY_HPP_
 
+#	pragma once
+
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/assert.h"
-#	include "meta/number.hpp"
+#	include "meta/fixed.hpp"
 #	include "math.hpp"
 
 template < typename I, typename T >
@@ -45,10 +47,10 @@ class CArray
 {
 public:
 	using Index_t       = I;
-	using Number_t      = MNumber< Index_t >;
+	using Fixed_t       = MFixed< Index_t >;
 
 	static constexpr I FIRST_INDEX   =  I( 0 );
-	static constexpr I INVALID_INDEX =  Number_t::INVALID;
+	static constexpr I INVALID_INDEX =  Fixed_t::INVALID;
 
 public:
 	// --------- ctors / assignment ----------

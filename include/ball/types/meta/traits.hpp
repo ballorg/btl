@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_BALL_TYPES_META_TRAITS_HPP_
 #	define _INCLUDE_BALL_TYPES_META_TRAITS_HPP_
 
+#	pragma once
+
 #	include "removecv.hpp"
 #	include "removereference.hpp"
 

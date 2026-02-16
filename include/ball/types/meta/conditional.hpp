@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_BALL_META_CONDITIONAL_HPP_
 #	define _INCLUDE_BALL_META_CONDITIONAL_HPP_
 
+#	pragma once
+
 // MConditional is a minimal, dependency-free replacement for std::conditional.
 // If B is true, MConditional<B, T, F>::type == T; otherwise == F.
 // The alias Conditional_t<B, T, F> is a convenient shorthand.

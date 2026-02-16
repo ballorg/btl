@@ -5,7 +5,7 @@
 
 #	include "base/arch/unsigned.h"
 #	include "c/assert.h"
-#	include "meta/number.hpp"
+#	include "meta/fixed.hpp"
 #	include "memoryaligned.h"
 
 class CAllocatorBase

@@ -1,9 +1,39 @@
 #ifndef _INCLUDE_BALL_TYPES_NUMBER_HPP_
 #	define _INCLUDE_BALL_TYPES_NUMBER_HPP_
 
+#	pragma once
+
 #	include "base/arch.h"
 #	include "base/fixed.h"
-#	include "bits.hpp"
+#	include "meta/fixed.hpp"
+
+template < typename I = uint_t, typename U >
+constexpr I Num_BitWidth( U u ) noexcept
+{
+	I n = I( 0 );
+
+	do { ++n; u >>= 1u; } while ( u );
+
+	return n;
+}
+
+template < typename I = uint_t, uint8_t NS >
+constexpr I Num_Log2Pow2() noexcept
+{
+	static_assert( NS >= 2, "Base must be >= 2" );
+	static_assert( ( NS & ( NS - 1 ) ) == 0, "Base must be power-of-two" );
+
+	uint_t n = static_cast< uint_t >( NS );
+	I k = I( 0 );
+
+	while ( n > 1u )
+	{
+		n >>= 1u;
+		++k;
+	}
+
+	return k;
+}
 
 ///-----------------------------------------------------------------------------
 /// @brief Count of base-NS digits required to represent unsigned @p u.
@@ -21,8 +51,8 @@ constexpr I Num_DigitsNS( U u ) noexcept
 	if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Power-of-two base: digits = ceil(bit_width / log2(NS)).
-		constexpr I k = BitCeil_Const( NS );
-		const I bw = BitCeil( u );
+		constexpr I k = Num_Log2Pow2< I, NS >();
+		const I bw = Num_BitWidth< I >( u );
 
 		return I( ( bw + k - 1 ) / k );
 	}
@@ -94,7 +124,7 @@ constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 	else if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Any power-of-two base: use shifts & masks.
-		constexpr uint_t k = BitCeil_Const( NS );
+		constexpr uint_t k = Num_Log2Pow2< uint_t, NS >();
 
 		constexpr U MASK = ( U( 1 ) << k ) - U( 1 );
 

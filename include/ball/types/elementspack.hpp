@@ -1,13 +1,15 @@
 #ifndef _INCLUDE_BALL_TYPES_ELEMENTSPACK_HPP_
 #	define _INCLUDE_BALL_TYPES_ELEMENTSPACK_HPP_
 
-#include "elements.hpp"
+#	pragma once
+
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "meta/pack.hpp"
 #	include "meta/removecv.hpp"
 #	include "meta/select.hpp"
 #	include "array.hpp"
+#	include "elements.hpp"
 
 template < typename I, typename T >
 struct MElementsPack

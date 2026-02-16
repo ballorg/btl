@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_BALL_TYPES_STRINGVIEW_HPP_
 #	define _INCLUDE_BALL_TYPES_STRINGVIEW_HPP_
 
+#	pragma once
+
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "meta/issame.hpp"

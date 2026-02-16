@@ -1,11 +1,13 @@
 #ifndef _INCLUDE_BALL_TYPES_STRING_HPP_
 #	define _INCLUDE_BALL_TYPES_STRING_HPP_
 
+#	pragma once
+
 #	include "base/arch.h"
-#	include "vector.hpp"
 #	include "math.hpp"
 #	include "number.hpp"
 #	include "stringview.hpp"
+#	include "vector.hpp"
 #	include "xvalue.hpp"
 
 template < class B, typename I, typename T >

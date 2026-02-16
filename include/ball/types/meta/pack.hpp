@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_BALL_TYPES_META_PACK_HPP_
 #	define _INCLUDE_BALL_TYPES_META_PACK_HPP_
 
+#	pragma once
+
 #	include "issame.hpp"
 
 ///-----------------------------------------------------------------------------

@@ -1,57 +1,40 @@
-#ifndef _INCLUDE_BALL_TYPES_META_NUMBER_HPP_
-#	define _INCLUDE_BALL_TYPES_META_NUMBER_HPP_
+#ifndef _INCLUDE_BALL_TYPES_META_FIXED_HPP_
+#	define _INCLUDE_BALL_TYPES_META_FIXED_HPP_
 
+#	pragma once
+
+#	include "fixed/signed.hpp"
+#	include "fixed/uncertain.hpp"
+#	include "fixed/unsigned.hpp"
 #	include "issame.hpp"
-#	include "select.hpp"
 #	include "removecv.hpp"
+#	include "select.hpp"
+#	include "signed.hpp"
+#	include "unsigned.hpp"
 
-// Specializations by size.
-#	define BALL_MUNSIGNEDSELECT_DECLARE( size, ... ) \
-	template <> struct MUnsignedSelect< size > \
-	{ \
-		template < typename T > using Apply_t = __VA_ARGS__; \
-	}
-
-// Choose make_unsigned strategy by type size
-template < unsigned long int > struct MUnsignedSelect;
-BALL_MUNSIGNEDSELECT_DECLARE( 1, unsigned char );
-BALL_MUNSIGNEDSELECT_DECLARE( 2, unsigned short );
-BALL_MUNSIGNEDSELECT_DECLARE( 4, typename MSelect< IS_SAME< T, long int > || IS_SAME< T, unsigned long int > >::template Apply_t< unsigned long int, unsigned int > );
-BALL_MUNSIGNEDSELECT_DECLARE( 8, typename MSelect< IS_SAME< T, long int > || IS_SAME< T, unsigned long int > >::template Apply_t< unsigned long int, unsigned long long int > );
-
-// unsigned partner to cv-unqualified _Ty
-template < class T > using UnsignedSelect_t = typename MUnsignedSelect< sizeof( T ) >::template Apply_t<T>;
-
-// Unsigned number.
+// Any fixed integer.
 template < typename T >
-struct MUnsigned
+struct MFixed
 {
-	using Type = typename MRemoveCV< T >::template Apply_t< UnsignedSelect_t >;
-};
-template < typename T >
-using Unsigned_t = typename MUnsigned< T >::Type;
+	using Type = T;
+	using Singed_t = Signed_t< Type >;
+	using Unsigned_t = Unsigned_t< Type >;
 
-// Any integer number.
-template < typename T >
-struct MNumber
-{
-	using U = Unsigned_t< T >;
-
-	static constexpr T SIZE = sizeof( T );
-	static constexpr T BYTES = SIZE;
-	static constexpr T BITS = BYTES * 8;
-
-	static constexpr bool IS_UNSIGNED = IS_SAME< T, U >;
+	static constexpr Type SIZE = sizeof( Type );
+	static constexpr bool IS_BOOL = IS_SAME< Type, bool >;
+	static constexpr Type BYTES = SIZE;
+	static constexpr bits_t BITS = IS_BOOL ? bits_t( 1ull ) : bits_t( BYTES * 8ull );
+	static constexpr bool IS_UNSIGNED = IS_SAME< Type, Unsigned_t >;
 	static constexpr bool IS_SIGNED = !IS_UNSIGNED;
 
-	static constexpr U MIN_UNSIGNED = 0;
-	static constexpr U MAX_UNSIGNED = static_cast< U >( ~0ull );
-	static constexpr T MIN_SIGNED = static_cast< T >( 1u ) << ( BITS - 1 );
-	static constexpr T ALL_BITS = static_cast< T >( ~0ull );
-	static constexpr T INVALID = ALL_BITS;
-	static constexpr T MAX_SIGNED = static_cast< T >( ~MIN_SIGNED );
-	static constexpr U MIN = IS_SIGNED ? MIN_SIGNED : MIN_UNSIGNED;
-	static constexpr U MAX = IS_SIGNED ? MAX_SIGNED : MAX_UNSIGNED;
+	static constexpr Unsigned_t MIN_UNSIGNED = 0;
+	static constexpr Unsigned_t MAX_UNSIGNED = static_cast< Unsigned_t >( ~0ull );
+	static constexpr Type MIN_SIGNED = static_cast< Type >( 1ull ) << ( BITS - 1 );
+	static constexpr Type ALL_BITS = static_cast< Type >( ~0ull );
+	static constexpr Type INVALID = ALL_BITS;
+	static constexpr Type MAX_SIGNED = static_cast< Type >( ~MIN_SIGNED );
+	static constexpr Unsigned_t MIN = IS_SIGNED ? MIN_SIGNED : MIN_UNSIGNED;
+	static constexpr Unsigned_t MAX = IS_SIGNED ? MAX_SIGNED : MAX_UNSIGNED;
 };
 
-#endif // !defined( _INCLUDE_BALL_TYPES_META_NUMBER_HPP_ )
+#endif // !defined( _INCLUDE_BALL_TYPES_META_FIXED_HPP_ )

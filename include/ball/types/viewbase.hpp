@@ -7,10 +7,10 @@
 #	include "meta/enableif.hpp"
 #	include "meta/indexof.hpp"
 #	include "meta/issame.hpp"
-#	include "meta/number.hpp"
 #	include "elements.hpp"
 #	include "elementspack.hpp"
 #	include "math.hpp"
+#	include "number.hpp"
 
 ///-----------------------------------------------------------------------------
 /// @brief View over multiple parallel arrays with different element types,
@@ -24,8 +24,8 @@ class CViewBase
 public:
 	using Index_t       = I;
 	using TypeIndex_t   = TI;
-	using Number_t      = MNumber< Index_t >;
-	using TypeNumber_t  = MNumber< TypeIndex_t >;
+	using Fixed_t       = MFixed< Index_t >;
+	using TypeNumber_t  = MFixed< TypeIndex_t >;
 	using Pack_t        = CElementsPack< I, N, TI, Ts ... >;
 	using Const_t       = CViewBase< Index_t, 0, TypeIndex_t, const Ts... >;
 
@@ -33,7 +33,7 @@ public:
 	static constexpr I FIXED_COUNT = Pack_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
-	static constexpr I INVALID_INDEX = Number_t::INVALID;
+	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
 	static constexpr I INVALID_TYPE_INDEX = TypeNumber_t::INVALID;
 
 	// --------- meta helpers ----------

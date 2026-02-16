@@ -1,10 +1,12 @@
 #ifndef _INCLUDE_BALL_TYPES_BITS_HPP_
 #	define _INCLUDE_BALL_TYPES_BITS_HPP_
 
+#	pragma once
+
+#	include "c/bits.h"
 #	include "base/arch.h"
 #	include "base/fixed.h"
-#	include "meta/number.hpp"
-#	include "c/bits.h"
+#	include "meta/fixed.hpp"
 
 /// @brief Returns the smallest power of two greater than or equal to @p v,
 ///        saturating to the highest power-of-two representable in T.
@@ -27,7 +29,7 @@
 template < typename I >
 static constexpr I BitCeil_Unified( I x ) noexcept
 {
-	constexpr I NUM_BITS = MNumber< I >::BITS;
+	constexpr I NUM_BITS = MFixed< I >::BITS;
 
 	if ( x <= 1 )
 		return I( 1 );
@@ -55,9 +57,9 @@ consteval I BitCeil_Const( I x )
 template < typename I >
 constexpr I BitCeil( I x )
 {
-	using Number_t = MNumber< I >;
-	constexpr I NUM_BITS = Number_t::BITS;
-	constexpr I INVALID = Number_t::BITS;
+	using Fixed_t = MFixed< I >;
+	constexpr I NUM_BITS = Fixed_t::BITS;
+	constexpr I INVALID = Fixed_t::BITS;
 
 	if ( x <= 1 )
 	{

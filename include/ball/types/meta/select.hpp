@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_BALL_TYPES_META_SELECT_HPP_
 #	define _INCLUDE_BALL_TYPES_META_SELECT_HPP_
 
+#	pragma once
+
 // Select between aliases that extract either their first or second parameter
 template < bool >
 struct MSelect

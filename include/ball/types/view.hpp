@@ -1,10 +1,12 @@
 #ifndef _INCLUDE_BALL_TYPES_VIEW_HPP_
 #	define _INCLUDE_BALL_TYPES_VIEW_HPP_
 
+#	pragma once
+
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/assert.h"
-#	include "meta/number.hpp"
+#	include "meta/fixed.hpp"
 #	include "math.hpp"
 
 #	include "viewbase.hpp"
@@ -20,13 +22,13 @@ public:
 	using ConstView_t   = CView< Index_t, const Element_t, N >;
 	template< I GN > using GrowableView_t = CView< Index_t, Element_t, GN >;
 	template< I GN > using ConstGrowableView_t = CView< Index_t, const Element_t, GN >;
-	using Number_t      = MNumber< Index_t >;
+	using Fixed_t       = MFixed< Index_t >;
 
 	using Base_t::FIRST_INDEX;
 	using Base_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
-	static constexpr I INVALID_INDEX = Number_t::INVALID;
+	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
 
 	// --------- basic associated types ----------
 	using value_type      = T;

@@ -1,18 +1,18 @@
 #ifndef _INCLUDE_BALL_TYPES_VECTOR_HPP_
 #	define _INCLUDE_BALL_TYPES_VECTOR_HPP_
 
-#include "elements.hpp"
 #	pragma once
 
 #	include "base/arch.h"
 #	include "c/assert.h"
 #	include "c/memory.h"
 #	include "c/memoryaligned.h"
-#	include "meta/number.hpp"
+#	include "meta/fixed.hpp"
 #	include "allocator.hpp"
-#	include "view.hpp"
 #	include "bits.hpp"
+#	include "elements.hpp"
 #	include "math.hpp"
+#	include "view.hpp"
 #	include "xvalue.hpp"
 
 // ===============================
@@ -26,8 +26,8 @@ public:
 	using Index_t     = I;
 	using Element_t   = T;
 	using Allocator_t = A;
-	using Number_t    = MNumber< Index_t >;
-	using Unsigned_t  = typename Number_t::U;
+	using Fixed_t     = MFixed< Index_t >;
+	using Unsigned_t  = typename Fixed_t::Unsigned_t;
 	using typename Base_t::View_t;
 	using typename Base_t::ConstView_t;
 	template < I GN > using GrowableView_t = typename Base_t::template GrowableView_t< GN >;
@@ -43,7 +43,7 @@ public:
 
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
 	static constexpr size_t ALIGNED_SIZE = BitCeil_Const< I >( 8 * sizeof( Element_t ) );
-	static constexpr I INVALID_INDEX = Number_t::INVALID;
+	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
 
 	/// @brief Default / external ctor. Does not assume ownership semantics beyond this instance.
 	constexpr ~CVectorBase() noexcept
@@ -76,7 +76,7 @@ protected:
 	///
 	/// Overview:
 	///   - Computes growth from current capacity via NextDoublingCapacity(), clamped
-	///     to [MIN_CAPACITY_COUNT, Number_t::MAX].
+	///     to [MIN_CAPACITY_COUNT, Fixed_t::MAX].
 	///   - Expands capacity only; never shrinks unless migrating back to fixed storage.
 	///   - Uses Allocator_t::Realloc() for existing heap memory, otherwise Allocator_t::Alloc().
 	///
@@ -106,7 +106,7 @@ protected:
 	///   - On allocation failure, nullptr may be returned; the caller must validate the pointer.
 	///   - Function never throws exceptions; caller must enforce safety policy.
 	///
-	/// @param nRequestedCount  Minimum required number of elements before rounding.
+	/// @param nRequestedCount  Minimum required integer of elements before rounding.
 	/// @return Pointer to valid element storage (possibly reallocated or migrated).
 	///-----------------------------------------------------------------------------
 	constexpr T *EnsureCapacity( I nRequestedCount )
@@ -119,7 +119,7 @@ protected:
 			const I nCapacity = Capacity();
 			const I nNewCapacity = BitCeil< I >( nRequestedCount );
 
-			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Number_t::INVALID, "Capacity overflow!" )
+			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
 				return pElements;
 
 			// Subcase A1: already on heap
