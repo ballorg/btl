@@ -171,10 +171,10 @@ public:
 		const I nCount = Count();
 		const T *pBase = Base< T >();
 
-		if ( !pBase || !nCount || iFrom >= nCount )
+		if ( !pBase || !nCount )
 			return INVALID_INDEX;
 
-		if ( iFrom >= nCount )
+		if ( iFrom == INVALID_INDEX || iFrom >= nCount )
 			iFrom = nCount - I( 1 );
 
 		for ( const T *it = pBase + iFrom, *itBegin = pBase; ; --it )
