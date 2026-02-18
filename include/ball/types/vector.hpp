@@ -30,8 +30,8 @@ public:
 	using Unsigned_t  = typename Fixed_t::Unsigned_t;
 	using typename Base_t::View_t;
 	using typename Base_t::ConstView_t;
-	template < I GN > using GrowableView_t = typename Base_t::template GrowableView_t< GN >;
-	template < I GN > using ConstGrowableView_t = typename Base_t::template ConstGrowableView_t< GN >;
+	template < I N > using GrowableView_t = typename Base_t::template GrowableView_t< N >;
+	template < I N > using ConstGrowableView_t = typename Base_t::template ConstGrowableView_t< N >;
 
 	using Base_t::Base_t;
 	using Base_t::FIXED_COUNT;
@@ -40,6 +40,7 @@ public:
 	using Base_t::FixedData;
 	using Base_t::Data;
 	using Base_t::Base;
+	using Base_t::Set;
 
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
 	static constexpr size_t ALIGNED_SIZE = BitCeil_Const< I >( 8 * sizeof( Element_t ) );
@@ -53,7 +54,7 @@ public:
 			Allocator_t::Free( Data() );
 		}
 
-		Base_t::Set( 0, nullptr );
+		Set( 0, nullptr );
 	}
 
 	// ---------------------------
@@ -169,6 +170,7 @@ protected:
 	}
 
 	/// @brief Copy contents from another CVectorBase.
+	constexpr CVectorBase &CopyFrom( const View_t &other ) { return CopyFrom( other.Const() ); }
 	constexpr CVectorBase &CopyFrom( const ConstView_t &other )
 	{
 		const I nNewCount = other.Count();
@@ -176,23 +178,23 @@ protected:
 		T *pElements = EnsureCapacity( nNewCount );
 
 		CopyElements( other.Count(), pElements, other.Base() );
-		Base_t::Set( nNewCount, pElements );
+		Set( nNewCount, pElements );
 
 		return *this;
 	}
 
-	template< I LN > constexpr CVectorBase &CopyFrom( const CView< I, T, LN > &other )
+	template< I N > constexpr CVectorBase &CopyFrom( const GrowableView_t< N > &other ) { return CopyFrom( other.Const() ); }
+	template< I N > constexpr CVectorBase &CopyFrom( const ConstGrowableView_t< N > &other )
 	{
 		const I nNewCount = other.Count();
 
 		T *pElements = EnsureCapacity( nNewCount );
 
 		CopyElements( other.Count(), pElements, other.Base() );
-		Base_t::Set( nNewCount, pElements );
+		Set( nNewCount, pElements );
 
 		return *this;
 	}
-
 	using Base_t::MoveFrom;
 };
 
@@ -212,19 +214,25 @@ public:
 	using Base_t::Count;
 	using Base_t::Base;
 	using Base_t::Find;
+	using Base_t::CopyFrom;
+	using Base_t::MoveFrom;
 
 	constexpr CVectorImpl() noexcept : Base_t() {}
-	constexpr CVectorImpl( const View_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
-	constexpr CVectorImpl( const ConstView_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
-	constexpr CVectorImpl( View_t &&moveFrom ) noexcept { Base_t::MoveFrom( Move( moveFrom ) ); }
-	template < size_t CN > constexpr CVectorImpl( const T ( &elements )[ CN ] ) noexcept : Base_t() { AddToTail( I( CN ), elements ); }
-	template < size_t CN > constexpr CVectorImpl( T ( &&elements )[ CN ] ) noexcept : Base_t() { AddToTail( I( CN ), Move( elements ) ); }
+	constexpr CVectorImpl( const View_t &other ) noexcept { CopyFrom( other ); }
+	constexpr CVectorImpl( const ConstView_t &other ) noexcept { CopyFrom( other ); }
+	template < I N > constexpr CVectorImpl( const GrowableView_t< N > &other ) noexcept { CopyFrom( other ); }
+	template < I N > constexpr CVectorImpl( const ConstGrowableView_t< N > &other ) noexcept { CopyFrom( other ); }
+	constexpr CVectorImpl( View_t &&other ) noexcept { MoveFrom( Move( other ) ); }
+	template < I N > constexpr CVectorImpl( const T ( &elements )[ N ] ) noexcept : Base_t() { AddToTail( I( N ), elements ); }
+	template < I N > constexpr CVectorImpl( T ( &&elements )[ N ] ) noexcept : Base_t() { AddToTail( I( N ), Move( elements ) ); }
 	constexpr CVectorImpl( T &element ) noexcept : Base_t() { AddToTail( element ); }
 	constexpr ~CVectorImpl() noexcept { Purge(); }
 
-	CVectorImpl &operator=( const View_t &copyFrom ) { return Base_t::CopyFrom( copyFrom ); }
-	CVectorImpl &operator=( const ConstView_t &copyFrom ) { return Base_t::CopyFrom( copyFrom ); }
-	CVectorImpl &operator=( CVectorImpl &&moveFrom ) { return Base_t::MoveFrom( Move( moveFrom ) ); }
+	constexpr CVectorImpl &operator=( const View_t &other ) { return CopyFrom( other ); }
+	constexpr CVectorImpl &operator=( const ConstView_t &other ) { return CopyFrom( other ); }
+	template < I N > constexpr CVectorImpl &operator=( const GrowableView_t< N > &other ) noexcept { CopyFrom( other ); }
+	template < I N > constexpr CVectorImpl &operator=( const ConstGrowableView_t< N > &other ) noexcept { CopyFrom( other ); }
+	constexpr CVectorImpl &operator=( CVectorImpl &&other ) { return MoveFrom( Move( other ) ); }
 
 	// Returns new count.
 	constexpr I Grow( const I n = 1 )
@@ -304,6 +312,7 @@ public:
 
 		return nIndex + nCount;
 	}
+	template < I N > constexpr I Insert( const I nIndex, const T ( &arrElements )[ N ] ) { return Insert( nIndex, arrElements ); }
 
 	///-----------------------------------------------------------------------------
 	/// @brief Inserts R elements from an rvalue C-array at position @p index (move).
@@ -326,6 +335,7 @@ public:
 
 		return nIndex + nCount;
 	}
+	template < I N > constexpr I Insert( const I nIndex, T ( &&arrElements )[ N ] ) { return Insert( nIndex, Move( arrElements ) ); }
 
 	///-----------------------------------------------------------------------------
 	/// @brief Insert a single element at position @p nIndex (copy).
@@ -366,18 +376,24 @@ public:
 		return nIndex + nCount;
 	}
 
-	template < I N > constexpr I AddToHead( const I nCount, const T ( &arrElements )[ N ] ) { return Insert( 0, nCount, arrElements ); }
-	template < I N > constexpr I AddToHead( const I nCount, T ( &&arrElements )[ N ] ) { return Insert( 0, nCount, arrElements ); }
 	constexpr I AddToHead( const T &element ) { return Insert( 0, element ); }
 	constexpr I AddToHead( T &&element ) { return Insert( 0, Move( element ) ); }
 	constexpr I AddToHead( ConstView_t v ) { return Insert( 0, v ); }
+	template < I N > constexpr I AddToHead( const I nCount, const T ( &arrElements )[ N ] ) { return Insert( 0, ConstGrowableView_t< N >( nCount, arrElements ) ); }
+	template < I N > constexpr I AddToHead( const I nCount, T ( &&arrElements )[ N ] ) { return Insert( 0, ConstGrowableView_t< N >( nCount, Move( arrElements ) ) ); }
+	// template < I N > constexpr I AddToHead( const T ( &arrElements )[ N ] ) { return Insert( 0, arrElements ); }
+	// template < I N > constexpr I AddToHead( T ( &&arrElements )[ N ] ) { return Insert( 0, Move( arrElements ) ); }
 	template < typename ...Ts > constexpr I AddMultipleToHead( Ts &&...args ) { return InsertMultiple( 0, Forward< Ts >( args )... ); }
 
-	template < I N > constexpr I AddToTail( const I nCount, const T ( &arrElements )[ N ] ) { return Insert( Count(), nCount, arrElements ); }
-	template < I N > constexpr I AddToTail( const I nCount, T ( &&arrElements )[ N ] ) { return Insert( Count(), nCount, Move( arrElements ) ); }
 	constexpr I AddToTail( const T &element ) { return Insert( Count(), element ); }
 	constexpr I AddToTail( T &&element ) { return Insert( Count(), Move( element ) ); }
 	constexpr I AddToTail( ConstView_t v ) { return Insert( Count(), v ); }
+	template < I N > constexpr I AddToTail( GrowableView_t< N > v ) { return Insert( Count(), v ); }
+	template < I N > constexpr I AddToTail( ConstGrowableView_t< N > v ) { return Insert( Count(), v ); }
+	template < I N > constexpr I AddToTail( const I nCount, const T ( &arrElements )[ N ] ) { return Insert( Count(), ConstGrowableView_t< N >( nCount, arrElements ) ); }
+	template < I N > constexpr I AddToTail( const I nCount, T ( &&arrElements )[ N ] ) { return Insert( Count(), ConstGrowableView_t< N >( nCount, Move( arrElements ) ) ); }
+	// template < I N > constexpr I AddToTail( const T ( &arrElements )[ N ] ) { return Insert( Count(), arrElements ); }
+	// template < I N > constexpr I AddToTail( T ( &&arrElements )[ N ] ) { return Insert( Count(), Move( arrElements ) ); }
 	template < typename ...Ts > constexpr I AddMultipleToTail( Ts &&...args ) { return InsertMultiple( Count(), Forward< Ts >( args )... ); }
 
 	constexpr I Remove( const I nIndex, const I n = 1 )
@@ -670,8 +686,8 @@ public:
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
-	template < I N > constexpr CVector( const CBufferVector< I, N, T, A > &other ) { CopyFrom( other ); }
-	template < I N > constexpr CVector &operator=( const CBufferVector< I, N, T, A > &other ) { return CopyFrom( other ); }
+	template < I N > constexpr CVector( const CBufferVector< I, N, T, A > &other ) { CopyFrom< N >( other ); }
+	template < I N > constexpr CVector &operator=( const CBufferVector< I, N, T, A > &other ) { return CopyFrom< N >( other ); }
 };
 
 template < typename I, I N, typename T, class A = CAllocator< I, T > >

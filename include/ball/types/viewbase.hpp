@@ -27,7 +27,8 @@ public:
 	using Fixed_t       = MFixed< Index_t >;
 	using TypeNumber_t  = MFixed< TypeIndex_t >;
 	using Pack_t        = CElementsPack< I, N, TI, Ts ... >;
-	using Const_t       = CViewBase< Index_t, 0, TypeIndex_t, const Ts... >;
+	using Const_t       = CViewBase< Index_t, N, TypeIndex_t, const Ts... >;
+	template< I GN = N > using Growable_t = CViewBase< Index_t, GN, TypeIndex_t, Ts ... >;
 
 	static constexpr I FIRST_INDEX = I( 0 );
 	static constexpr I FIXED_COUNT = Pack_t::FIXED_COUNT;
@@ -262,6 +263,14 @@ protected:
 		return *this;
 	}
 
+	template< I GN > constexpr CViewBase &CopyFrom( const Growable_t< GN > &other ) noexcept
+	{
+		m_nCount = other.Count();
+		CopyElements< GN >( other );
+
+		return *this;
+	}
+
 	/// @brief Steal another view's data by swapping; leaves @p other empty.
 	constexpr CViewBase &MoveFrom( CViewBase &&other ) noexcept
 	{
@@ -291,6 +300,15 @@ protected: // internal utils
 
 	template < TI K = 0 >
 	constexpr void CopyElements( const CViewBase &other ) noexcept
+	{
+		m_Elements.template CopyByIndex< K >( Count(), other.m_Elements );
+
+		if constexpr ( K + 1 < NUM_TYPES )
+			CopyElements< K + 1 >( other );
+	}
+
+	template < I GN, TI K = 0 >
+	constexpr void CopyElements( const Growable_t< GN > &other ) noexcept
 	{
 		m_Elements.template CopyByIndex< K >( Count(), other.m_Elements );
 

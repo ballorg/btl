@@ -17,8 +17,8 @@ template < typename T >
 struct MFixed
 {
 	using Type = T;
-	using Singed_t = Signed_t< Type >;
-	using Unsigned_t = Unsigned_t< Type >;
+	using Singed_t = MSigned< Type >::Type;
+	using Unsigned_t = MUnsigned< Type >::Type;
 
 	static constexpr Type SIZE = sizeof( Type );
 	static constexpr bool IS_BOOL = IS_SAME< Type, bool >;

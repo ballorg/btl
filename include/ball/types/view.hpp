@@ -44,6 +44,7 @@ public:
 	explicit constexpr CView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
 	constexpr CView() noexcept : CView( FIRST_INDEX, nullptr ) {}
 	template < size_t CN > constexpr CView( T ( &elements )[ CN ] ) noexcept : CView( I( CN ), static_cast< T * >( elements ) ) {}
+	template < size_t CN > constexpr CView( T ( &&elements )[ CN ] ) noexcept : CView( I( CN ), static_cast< T * >( elements ) ) {}
 	constexpr CView( T &element ) noexcept : Base_t( { element } ) {}
 	constexpr CView( T *pBegin, const T *pEnd ) noexcept : CView( FIRST_INDEX, nullptr )
 	{

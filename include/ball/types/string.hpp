@@ -150,10 +150,8 @@ public:
 	constexpr I Insert( I i, T character )                                          { return Base_t::Insert( i, character ); }
 	constexpr I Insert( I i, const View_t &sv )                                     { return Base_t::Insert( i, sv ); }
 	constexpr I Insert( I i, const ConstView_t &sv )                                { return Base_t::Insert( i, sv ); }
-	template < I N > constexpr I Insert( I i, const GrowableView_t< N > &sv )       { return Base_t::Insert( i, sv ); }
-	template < I N > constexpr I Insert( I i, const ConstGrowableView_t< N > &sv )  { return Base_t::Insert( i, sv ); }
-	template < I N > constexpr I Insert( I i, const T ( &str )[ N ] )               { return Insert( i, ConstGrowableView_t< N - 1 >( N - 1, str ) ); }
-	template < I N > constexpr I Insert( I i, T ( &&str )[ N ] )                    { return Insert( i, ConstGrowableView_t< N - 1 >( N - 1, Move( str ) ) ); }
+	template < I N > constexpr I Insert( I i, const T ( &str )[ N ] )               { return Base_t::template Insert< N - 1 >( i, ConstGrowableView_t< N - 1 >( N - 1, str ) ); }
+	template < I N > constexpr I Insert( I i, T ( &&str )[ N ] )                    { return Base_t::template Insert< N - 1 >( i, ConstGrowableView_t< N - 1 >( N - 1, Move( str ) ) ); }
 	constexpr I Insert( I i, I nLength, const T *pString )                          { return Insert( i, ConstView_t( nLength, pString ) ); }
 	constexpr I Insert( I i, bool_t b )                                             { return b ? Insert( i, "true" ) : Insert( i, "false" ); }
 	constexpr I Insert( I i, int_t v )                                              { return InsertSigned10( i, v ); }
@@ -162,8 +160,8 @@ public:
 	constexpr I Insert( I i, uint_t v )                                             { return InsertUnsigned10( i, v ); }
 	constexpr I Insert( I i, ulong_t v )                                            { return InsertUnsigned10( i, v ); }
 	constexpr I Insert( I i, ullong_t v )                                           { return InsertUnsigned10( i, v ); }
-	template < I P = 6 > constexpr I Insert( I i, float_t x )                  { return InsertFloatFixed< P >( i, x ); }
-	template < I P = 6 > constexpr I Insert( I i, double_t x )                 { return InsertFloatFixed< P >( i, x ); }
+	template < I P = 6 > constexpr I Insert( I i, float_t x )                       { return InsertFloatFixed< P >( i, x ); }
+	template < I P = 6 > constexpr I Insert( I i, double_t x )                      { return InsertFloatFixed< P >( i, x ); }
 	constexpr I Insert( I i, const void *p )                                        { return InsertUnsigned16( Insert( i, "0x" ), reinterpret_cast< uintptr_t >( p ) ); }
 	template < typename ...Ts > constexpr I InsertMultiple( I i, Ts &&...args )     { ( ( i = Insert( i, Forward< Ts >( args ) ) ), ... ); return i; }
 
@@ -250,8 +248,8 @@ public:
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
-	template < I N > constexpr CString( const CBufferString< I, T, N > &other ) { CopyFrom( other ); }
-	template < I N > constexpr CString &operator=( const CBufferString< I, T, N > &other ) { return CopyFrom( other ); }
+	template < I N > constexpr CString( const CBufferString< I, T, N > &other ) { CopyFrom< N >( other ); }
+	template < I N > constexpr CString &operator=( const CBufferString< I, T, N > &other ) { return CopyFrom< N >( other ); }
 };
 
 template < typename I, typename T, I N >
