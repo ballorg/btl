@@ -28,6 +28,18 @@ constexpr T *ConstructElement( T *pMemory, Ts &&...args )
 }
 
 template < typename T >
+constexpr void ConstructElements( T *pElement, const T *pEnd ) noexcept
+{
+	BALL_ASSERT_MESSAGE( pElement <= pEnd, "Invalid range" );
+
+	while( pElement < pEnd )
+	{
+		ConstructElement( pElement );
+		pElement++;
+	}
+}
+
+template < typename T >
 constexpr void DestructElement( T *pMemory )
 {
 	BALL_ASSERT( pMemory != nullptr );
@@ -58,8 +70,17 @@ constexpr void DestructElements( T *pElement, const T *pEnd ) noexcept
 	}
 }
 
+template < typename I, typename T >
+constexpr T *CopyElements_Unified( const I nCount, T *pDest, const T *pSrc ) noexcept
+{
+	for ( I n = 0; n < nCount; ++n )
+		pDest[ n ] = pSrc[ n ];
+
+	return pDest;
+}
+
 ///-----------------------------------------------------------------------------
-/// @brief Copy elements from [pSrc, pSrcEnd) into destination starting at pDest.
+/// @brief Copy raw elements from [pSrc, pSrcEnd) into destination starting at pDest.
 ///        Overlap-safe, memmove-like (byte-wise for trivially copyable types).
 /// @return pDest
 ///-----------------------------------------------------------------------------
@@ -70,19 +91,17 @@ constexpr T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
 	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || pDest <= pSrc || pSrc + nCount <= pDest, "Unsafe overlap for forward copy" );
 
-	if constexpr ( MTraits< T >::IS_TRIVIAL )
-	{
-		return static_cast< T * >( memcpy( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
-	}
-	else
-	{
-		for ( I n = 0; n < nCount; ++n )
-			pDest[ n ] = pSrc[ n ];
-
-		return pDest;
-	}
+	return static_cast< T * >( memcpy( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
 
+template < typename I, typename T >
+constexpr T *CopyElementsFromEnd_Unified( I nCount, T *pDest, const T *pSrc ) noexcept
+{
+	for ( I n = nCount; n-- > 0; )
+		pDest[ n ] = pSrc[ n ];
+
+	return pDest;
+}
 
 ///-----------------------------------------------------------------------------
 /// @brief Copy elements right-to-left: copy nLength elements from pSrc to pDest,
@@ -91,16 +110,13 @@ constexpr T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 /// @return pDest
 ///-----------------------------------------------------------------------------
 template < typename I, typename T >
-constexpr T *CopyElementsFromEnd( I nCount, T *pDest, const T *pSrc ) noexcept
+constexpr T *CopyElementsFromEnd( const I nCount, T *pDest, const T *pSrc ) noexcept
 {
 	BALL_ASSERT( I( 0 ) <= nCount );
 	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
 	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || pDest >= pSrc || pDest + nCount <= pSrc, "Unsafe overlap for backward copy" );
 
-	for ( I n = nCount; n-- > 0; )
-		pDest[ n ] = pSrc[ n ];
-
-	return pDest;
+	return static_cast< T * >( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
 
 ///-----------------------------------------------------------------------------
@@ -109,7 +125,7 @@ constexpr T *CopyElementsFromEnd( I nCount, T *pDest, const T *pSrc ) noexcept
 /// @return pDest
 ///-----------------------------------------------------------------------------
 template < typename T >
-constexpr T *ShiftElementsRightByOne( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
+constexpr T *ShiftElementsRight_ByOne( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
 {
 	BALL_ASSERT_MESSAGE( pSrc <= pSrcEnd, "Invalid source range" );
 	BALL_ASSERT_MESSAGE( pDest == pSrc + 1, "ShiftElementsRightByOne expects +1 shift" );
@@ -156,6 +172,28 @@ constexpr T *ShiftElementsLeft( T *pDest, const T *pSrc, const T *pSrcEnd ) noex
 	return CopyElements( nCount, pDest, pSrc );
 }
 
+template < typename T >
+constexpr T *ShiftElementsRight_Unified( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
+{
+	using Diff_t = decltype( pSrcEnd - pSrc );
+
+	const Diff_t nCount = pSrcEnd - pSrc;
+	const Diff_t nShift = pDest - pSrc;
+
+	if ( nCount <= Diff_t( 0 ) || nShift <= Diff_t( 0 ) )
+		return pDest;
+
+	// Non-overlapping right move: regular forward copy is safe.
+	if ( nShift >= nCount )
+		return CopyElements_Unified( nCount, pDest, pSrc );
+
+	// Common insert case: shift by one without reverse copy.
+	if ( nShift == Diff_t( 1 ) )
+		return ShiftElementsRight_ByOne( pDest, pSrc, pSrcEnd );
+
+	return CopyElementsFromEnd_Unified( nCount, pDest, pSrc );
+}
+
 ///-----------------------------------------------------------------------------
 /// @brief Shift elements in range [pSrc, pSrcEnd) to the right into @p pDest.
 ///        Copies right-to-left.
@@ -175,22 +213,7 @@ constexpr T *ShiftElementsRight( T *pDest, const T *pSrc, const T *pSrcEnd ) noe
 	if ( nCount <= Diff_t( 0 ) || nShift <= Diff_t( 0 ) )
 		return pDest;
 
-	if constexpr ( MTraits< T >::IS_MEMMOVE_SAFE )
-	{
-		return static_cast< T *>( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
-	}
-	else
-	{
-		// Non-overlapping right move: regular forward copy is safe.
-		if ( nShift >= nCount )
-			return CopyElements( nCount, pDest, pSrc );
-
-		// Common insert case: shift by one without reverse copy.
-		if ( nShift == Diff_t( 1 ) )
-			return ShiftElementsRightByOne( pDest, pSrc, pSrcEnd );
-
-		return CopyElementsFromEnd( nCount, pDest, pSrc );
-	}
+	return static_cast< T *>( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
 
 ///-----------------------------------------------------------------------------
@@ -209,18 +232,6 @@ constexpr T *ShiftElements( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
 		return ShiftElementsRight( pDest, pSrc, pSrcEnd );
 	else
 		return pDest;
-}
-
-template < typename T >
-constexpr void ConstructElements( T *pElement, const T *pEnd ) noexcept
-{
-	BALL_ASSERT_MESSAGE( pElement <= pEnd, "Invalid range" );
-
-	while( pElement < pEnd )
-	{
-		ConstructElement( pElement );
-		pElement++;
-	}
 }
 
 /// @brief Byte-wise compare of @p nCount elements of T (memcmp semantics).
