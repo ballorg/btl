@@ -7,7 +7,9 @@
 #	include "c/assert.h"
 #	include "c/memory.h"
 #	include "c/memoryaligned.h"
+#	include "fixed.hpp"
 #	include "meta/fixed.hpp"
+#	include "meta/isintegral.hpp"
 #	include "allocator.hpp"
 #	include "bits.hpp"
 #	include "elements.hpp"
@@ -25,6 +27,7 @@ public:
 	using Base_t      = B;
 	using Index_t     = I;
 	using Element_t   = T;
+	using BaseAllocator_t = A::Base_t;
 	using Allocator_t = A;
 	using Fixed_t     = MFixed< Index_t >;
 	using Unsigned_t  = typename Fixed_t::Unsigned_t;
@@ -35,23 +38,32 @@ public:
 
 	using Base_t::Base_t;
 	using Base_t::FIXED_COUNT;
+	using Base_t::IS_PACKED_STORAGE;
 	using Base_t::Count;
 	using Base_t::IsOverflow;
+	using Base_t::IsPackedOverflow;
 	using Base_t::FixedData;
 	using Base_t::Data;
 	using Base_t::Base;
+	using Base_t::PackedData;
+	using Base_t::PackedBase;
+	using Base_t::PackedFixedData;
+	using Base_t::PackedBytesForCount;
 	using Base_t::Set;
 
+	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
 	static constexpr size_t ALIGNED_SIZE = BitCeil_Const< I >( 8 * sizeof( Element_t ) );
-	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
 
 	/// @brief Default / external ctor. Does not assume ownership semantics beyond this instance.
 	constexpr ~CVectorBase() noexcept
 	{
 		if ( IsOverflow() )
 		{
-			Allocator_t::Free( Data() );
+			if constexpr ( IS_PACKED_STORAGE )
+				BaseAllocator_t::Free( PackedData() );
+			else
+				Allocator_t::Free( Data() );
 		}
 
 		Set( 0, nullptr );
@@ -62,13 +74,43 @@ public:
 	// ---------------------------
 
 	constexpr I Capacity() const noexcept { return BitCeil< I >( Count() ); }
-	constexpr size_t CapacitySize() const noexcept { return static_cast< size_t >( Capacity() ) * sizeof( Element_t ); }
+	constexpr size_t CapacitySize() const noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return PackedBytesForCount( Capacity() );
+		else
+			return static_cast< size_t >( Capacity() ) * sizeof( Element_t );
+	}
 
-	constexpr I FixedCount() const noexcept { return FIXED_COUNT; }
-	constexpr size_t FixedSize() const noexcept { return FixedCount() * sizeof( Element_t ); }
+	constexpr I FixedCount() const noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return I( 0 );
+		else
+			return FIXED_COUNT;
+	}
+	constexpr size_t FixedSize() const noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return size_t( 0 );
+		else
+			return FixedCount() * sizeof( Element_t );
+	}
 
-	constexpr I FixedCapacity() const noexcept { return NextPowerOfTwo_Unified( FixedCount() ); } 
-	constexpr size_t FixedCapacitySize() const noexcept { return FixedCapacity() * sizeof( Element_t ); }
+	constexpr I FixedCapacity() const noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return I( 0 );
+		else
+			return NextPowerOfTwo_Unified( FixedCount() );
+	}
+	constexpr size_t FixedCapacitySize() const noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return size_t( 0 );
+		else
+			return FixedCapacity() * sizeof( Element_t );
+	}
 
 protected:
 	///-----------------------------------------------------------------------------
@@ -112,47 +154,120 @@ protected:
 	///-----------------------------------------------------------------------------
 	constexpr T *EnsureCapacity( I nRequestedCount )
 	{
-		T *pElements = Base();
+		const I nCount = Count();
+		const I nCapacity = BitCeil< I >( nCount );
+		const I nNewCapacity = BitCeil< I >( nRequestedCount );
 
-		// Case A: request exceeds inline storage
-		if ( IsOverflow( nRequestedCount ) )
+		if ( IS_PACKED_STORAGE )
 		{
-			const I nCapacity = Capacity();
-			const I nNewCapacity = BitCeil< I >( nRequestedCount );
+			const bool bWillOverflow = IsPackedOverflow( nRequestedCount );
+			const bool bWasOverflow = IsPackedOverflow( nCount );
+			uchar_t *pData = PackedBase();
+			uchar_t *pCurrent = pData;
 
 			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
-				return pElements;
+				return reinterpret_cast< T * >( pCurrent );
 
-			// Subcase A1: already on heap
-			if ( IsOverflow() )
+			const size_t nOldBytes = PackedBytesForCount( nCapacity );
+			const size_t nNewBytes = PackedBytesForCount( nNewCapacity );
+			const size_t nLiveBytes = PackedBytesForCount( nCount );
+
+			if ( bWillOverflow )
 			{
-				if ( nNewCapacity == nCapacity )
+				if ( bWasOverflow )
+				{
+					if ( nNewBytes == nOldBytes && pData != nullptr )
+						return reinterpret_cast< T * >( pData );
+
+					pData = reinterpret_cast< uchar_t * >( BaseAllocator_t::Realloc( pData, static_cast< I >( nNewBytes ), 8u ) );
+					BALL_ASSERT_MESSAGE( pData != nullptr, "Failed to reallocate packed storage" );
+
+					if ( pData == nullptr )
+						return reinterpret_cast< T * >( pCurrent );
+
+					if ( nOldBytes < nNewBytes )
+						memset( pData + nOldBytes, 0, nNewBytes - nOldBytes );
+				}
+				else
+				{
+					pData = reinterpret_cast< uchar_t * >( BaseAllocator_t::Alloc( static_cast< I >( nNewBytes ), 8u ) );
+					BALL_ASSERT_MESSAGE( pData != nullptr, "Failed to allocate packed storage" );
+
+					if ( pData == nullptr )
+						return reinterpret_cast< T * >( pCurrent );
+
+					if ( nLiveBytes > size_t( 0 ) )
+						memmove( pData, PackedFixedData(), nLiveBytes );
+
+					if ( nLiveBytes < nNewBytes )
+						memset( pData + nLiveBytes, 0, nNewBytes - nLiveBytes );
+				}
+
+				T *pNew = reinterpret_cast< T * >( pData );
+
+				Base_t::Set( nCount, pNew );
+
+				return pNew;
+			}
+
+			T *pNew = reinterpret_cast< T * >( PackedFixedData() );
+
+			if ( bWasOverflow )
+			{
+				if ( nLiveBytes > size_t( 0 ) )
+					memmove( PackedFixedData(), pNew, nLiveBytes );
+
+				BaseAllocator_t::Free( pData );
+			}
+
+			Base_t::Set( nCount, pNew );
+
+			return pNew;
+		}
+		else
+		{
+			T *pElements = Base();
+
+			// Case A: request exceeds inline storage
+			if ( IsOverflow( nRequestedCount ) )
+			{
+				BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
 					return pElements;
 
-				pElements = Allocator_t::Realloc( pElements, nNewCapacity, ALIGNED_SIZE );
-				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
+				// Subcase A1: already on heap
+				if ( IsOverflow() )
+				{
+					if ( nNewCapacity == nCapacity )
+						return pElements;
+
+					pElements = Allocator_t::Realloc( pElements, nNewCapacity, ALIGNED_SIZE );
+					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
+				}
+				else // Subcase A2: currently inline — migrate to heap
+				{
+					pElements = Allocator_t::Alloc( nNewCapacity, ALIGNED_SIZE );
+					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
+
+					if constexpr ( IS_GROWABLE )
+						MoveToHeap( pElements );
+				}
 			}
-			else // Subcase A2: currently inline — migrate to heap
+			// Case B: fits into inline storage, but currently on heap — migrate back
+			else if ( IsOverflow() )
 			{
-				pElements = Allocator_t::Alloc( nNewCapacity, ALIGNED_SIZE );
-				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
-
 				if constexpr ( IS_GROWABLE )
-					MoveToHeap( pElements );
+					MoveToFixed( pElements );
 			}
-		}
-		// Case B: fits into inline storage, but currently on heap — migrate back
-		else if ( IsOverflow() )
-		{
-			if constexpr ( IS_GROWABLE )
-				MoveToFixed( pElements );
-		}
 
-		return pElements;
+			return pElements;
+		}
 	}
 
 	constexpr void MoveToFixed( const T *pElements )
 	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return;
+
 		T *pFixedElements = FixedData();
 
 		BALL_ASSERT( pFixedElements != nullptr );
@@ -162,6 +277,9 @@ protected:
 
 	constexpr void MoveToHeap( T *pElements )
 	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return;
+
 		const T *pFixedElements = FixedData();
 
 		BALL_ASSERT( pElements != nullptr );
@@ -174,11 +292,21 @@ protected:
 	constexpr CVectorBase &CopyFrom( const ConstView_t &other )
 	{
 		const I nNewCount = other.Count();
-
 		T *pElements = EnsureCapacity( nNewCount );
 
-		CopyElements( other.Count(), pElements, other.Base() );
-		Set( nNewCount, pElements );
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			Base_t::Set( nNewCount, pElements );
+			const size_t nBytes = PackedBytesForCount( nNewCount );
+
+			if ( nBytes > size_t( 0 ) )
+				memmove( PackedBase(), other.PackedBase(), nBytes );
+		}
+		else
+		{
+			CopyElements( other.Count(), pElements, other.Base() );
+			Base_t::Set( nNewCount, pElements );
+		}
 
 		return *this;
 	}
@@ -187,11 +315,21 @@ protected:
 	template< I N > constexpr CVectorBase &CopyFrom( const ConstGrowableView_t< N > &other )
 	{
 		const I nNewCount = other.Count();
-
 		T *pElements = EnsureCapacity( nNewCount );
 
-		CopyElements( other.Count(), pElements, other.Base() );
-		Set( nNewCount, pElements );
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			Base_t::Set( nNewCount, pElements );
+			const size_t nBytes = PackedBytesForCount( nNewCount );
+
+			if ( nBytes > size_t( 0 ) )
+				memmove( PackedBase(), other.PackedBase(), nBytes );
+		}
+		else
+		{
+			CopyElements( other.Count(), pElements, other.Base() );
+			Base_t::Set( nNewCount, pElements );
+		}
 
 		return *this;
 	}
@@ -211,11 +349,18 @@ public:
 	template < I GN > using ConstGrowableView_t = typename Base_t::template ConstGrowableView_t< GN >;
 
 	using Base_t::INVALID_INDEX;
+	using Base_t::IS_PACKED_STORAGE;
 	using Base_t::Count;
 	using Base_t::Base;
 	using Base_t::Find;
 	using Base_t::CopyFrom;
 	using Base_t::MoveFrom;
+	using Base_t::PackedBase;
+	using Base_t::PackedBytesForCount;
+	using Base_t::PackedSetValue;
+	using Base_t::PackedShiftRowsLeft;
+	using Base_t::PackedShiftRowsRight;
+	using Base_t::PackedClearRows;
 
 	constexpr CVectorImpl() noexcept : Base_t() {}
 	constexpr CVectorImpl( const View_t &other ) noexcept { CopyFrom( other ); }
@@ -252,12 +397,19 @@ public:
 	{
 		BALL_ASSERT( !v.Empty() );
 
-		const T *pViewData = v.Base();
 		I nViewCount = v.Count();
 
 		T *pData = EnsureInsert( nIndex, nViewCount );
 
-		CopyElements( nViewCount, pData, pViewData );
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			for ( I n = 0; n < nViewCount; ++n )
+				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
+		}
+		else
+		{
+			CopyElements( nViewCount, pData, v.Base() );
+		}
 
 		return nIndex + nViewCount;
 	}
@@ -266,12 +418,19 @@ public:
 	{
 		BALL_ASSERT( !v.Empty() );
 
-		const T *pViewData = v.Base();
 		I nViewCount = v.Count();
 
 		T *pData = EnsureInsert( nIndex, nViewCount );
 
-		CopyElements( nViewCount, pData, pViewData );
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			for ( I n = 0; n < nViewCount; ++n )
+				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
+		}
+		else
+		{
+			CopyElements( nViewCount, pData, v.Base() );
+		}
 
 		return nIndex + nViewCount;
 	}
@@ -280,12 +439,19 @@ public:
 	{
 		BALL_ASSERT( !v.Empty() );
 
-		const T *pViewData = v.Base();
 		I nViewCount = v.Count();
 
 		T *pData = EnsureInsert( nIndex, nViewCount );
 
-		CopyElements( nViewCount, pData, pViewData );
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			for ( I n = 0; n < nViewCount; ++n )
+				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
+		}
+		else
+		{
+			CopyElements( nViewCount, pData, v.Base() );
+		}
 
 		return nIndex + nViewCount;
 	}
@@ -304,10 +470,18 @@ public:
 
 		T *pData = EnsureInsert( nIndex, nCount );
 
-		// Construct each new element
-		for ( I n = 0; n < nCount; ++n )
+		if constexpr ( IS_PACKED_STORAGE )
 		{
-			ConstructElement( &pData[ n ], arrElements[ n ] );
+			for ( I n = 0; n < nCount; ++n )
+				PackedSetValue( nIndex + n, arrElements[ n ] );
+		}
+		else
+		{
+			// Construct each new element
+			for ( I n = 0; n < nCount; ++n )
+			{
+				ConstructElement( &pData[ n ], arrElements[ n ] );
+			}
 		}
 
 		return nIndex + nCount;
@@ -327,10 +501,18 @@ public:
 
 		T *pData = EnsureInsert( nIndex, nCount );
 
-		// Construct each new element
-		for ( I n = 0; n < nCount; ++n )
+		if constexpr ( IS_PACKED_STORAGE )
 		{
-			ConstructElement( &pData[ n ], Move( arrElements[ n ] ) );
+			for ( I n = 0; n < nCount; ++n )
+				PackedSetValue( nIndex + n, Move( arrElements[ n ] ) );
+		}
+		else
+		{
+			// Construct each new element
+			for ( I n = 0; n < nCount; ++n )
+			{
+				ConstructElement( &pData[ n ], Move( arrElements[ n ] ) );
+			}
 		}
 
 		return nIndex + nCount;
@@ -371,7 +553,14 @@ public:
 
 		T *pData = EnsureInsert( nIndex, nCount );
 
-		( ConstructElement( &pData[ nOffset++ ], Forward< Ts >( args ) ), ... );
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			( PackedSetValue( nIndex + nOffset++, static_cast< T >( Forward< Ts >( args ) ) ), ... );
+		}
+		else
+		{
+			( ConstructElement( &pData[ nOffset++ ], Forward< Ts >( args ) ), ... );
+		}
 
 		return nIndex + nCount;
 	}
@@ -401,13 +590,27 @@ public:
 		I nCount = Count();
 
 		BALL_ASSERT( 0 < nCount );
-		BALL_ASSERT( 0 <= nIndex && nIndex <= nCount );
+		BALL_ASSERT( 0 <= nIndex && nIndex + n <= nCount );
 
-		T *pData = Base();
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			const I nTailCount = nCount - ( nIndex + n );
 
-		DestructElement( &pData[ nIndex ] );
-		ShiftElementsLeft( &pData[ nIndex ], &pData[ nIndex + n ], &pData[ nCount ] );
-		Grow( -n );
+			if ( nTailCount > I( 0 ) )
+				PackedShiftRowsLeft( nIndex, nTailCount, n );
+			else
+				PackedClearRows( nIndex, n );
+
+			SetCount( nCount - n );
+		}
+		else
+		{
+			T *pData = Base();
+
+			DestructElement( &pData[ nIndex ] );
+			ShiftElementsLeft( &pData[ nIndex ], &pData[ nIndex + n ], &pData[ nCount ] );
+			Grow( -n );
+		}
 
 		return nIndex;
 	}
@@ -421,6 +624,19 @@ public:
 	///-----------------------------------------------------------------------------
 	constexpr I Replace( I i, I nRemove, ConstView_t svRepl )
 	{
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			const I nWith = svRepl.Count();
+			Remove( i, nRemove );
+
+			if ( nWith > I( 0 ) )
+				Insert( i, svRepl );
+
+			return ( nWith == I( 0 ) )
+				? ( ( i == I( 0 ) ) ? INVALID_INDEX : ( i - I( 1 ) ) )
+				: ( i + nWith - I( 1 ) );
+		}
+
 		const I nCount = Count();
 
 		BALL_ASSERT( i <= nCount );
@@ -553,16 +769,17 @@ public:
 	///-----------------------------------------------------------------------------
 	constexpr I Replace( const T &from, const T &to )
 	{
-		T *p = const_cast< T * >( Base() );
 		const I nCount = Count();
 
 		I n = 0;
 
 		for ( I k = 0; k < nCount; ++k )
 		{
-			if ( p[ k ] == from )
+			const T nValue = Base_t::GetValue( k );
+
+			if ( nValue == from )
 			{
-				p[ k ] = to;
+				Base_t::SetValue( k, to );
 				++n;
 			}
 		}
@@ -573,6 +790,11 @@ public:
 	/// @brief Replace [index, index + len) with src (shifts tail if needed).
 	constexpr I ReplaceRange( const I nIndex, ConstView_t src )
 	{
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			return Replace( nIndex, src.Count(), src );
+		}
+
 		I nCount = Count();
 		I nViewCount = src.Length();
 
@@ -609,8 +831,7 @@ public:
 
 	constexpr void RemoveAll()
 	{
-		for ( auto &it : *this )
-			DestructElement( &it );
+		SetCount( I( 0 ) );
 	}
 
 	constexpr void Purge()
@@ -651,7 +872,10 @@ protected:
 		// 2) Make a hole: shift the suffix [nIndex, nOldCount) to the right.
 		if ( nIndex < nOldCount )
 		{
-			ShiftElementsRight( &pData[ nIndex + nAddCount ], &pData[ nIndex ], &pData[ nOldCount ] );
+			if ( IS_PACKED_STORAGE )
+				PackedShiftRowsRight( nIndex, nOldCount - nIndex, nAddCount );
+			else
+				ShiftElementsRight( &pData[ nIndex + nAddCount ], &pData[ nIndex ], &pData[ nOldCount ] );
 		}
 
 		// 3) Commit the new logical size; the gap [nIndex, nIndex + nAddCount)
@@ -667,12 +891,22 @@ protected:
 
 		Set( nNew, EnsureCapacity( nNew ) );
 
-		T *pData = Base();
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			if ( nOld < nNew )
+				PackedClearRows( nOld, nNew - nOld );
+			else if ( nOld > nNew )
+				PackedClearRows( nNew, nOld - nNew );
+		}
+		else
+		{
+			T *pData = Base();
 
-		if ( nOld < nNew )
-			ConstructElements( &pData[ nOld ], &pData[ nNew ] );
-		else if ( nOld > nNew )
-			DestructElements( &pData[ nNew ], &pData[ nOld ] );
+			if ( nOld < nNew )
+				ConstructElements( &pData[ nOld ], &pData[ nNew ] );
+			else if ( nOld > nNew )
+				DestructElements( &pData[ nNew ], &pData[ nOld ] );
+		}
 	}
 }; // class CVectorImpl
 

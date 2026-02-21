@@ -57,17 +57,17 @@ public:
 		if ( pString == nullptr )
 			return I( 0 );
 
-		using RCV_T = RemoveCV_t<T>;
+		using Raw_t = RemoveCV_t<T>;
 
-		if constexpr ( IS_SAME< RCV_T, char8_t > )
+		if constexpr ( IS_SAME< Raw_t, char8_t > )
 		{
 			return static_cast< I >( __builtin_u8strlen( pString ) );
 		}
-		else if constexpr ( IS_SAME< RCV_T, char > )
+		else if constexpr ( IS_SAME< Raw_t, char > )
 		{
 			return static_cast< I >( __builtin_strlen( pString ) );
 		}
-		else if constexpr ( IS_SAME< RCV_T, wchar_t > )
+		else if constexpr ( IS_SAME< Raw_t, wchar_t > )
 		{
 			return static_cast< I >( __builtin_wcslen( pString ) );
 		}

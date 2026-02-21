@@ -3,6 +3,7 @@
 
 #	pragma once
 
+#	include "isintegral.hpp"
 #	include "issame.hpp"
 #	include "select.hpp"
 #	include "removecv.hpp"
@@ -22,15 +23,27 @@ BALL_SIGNED_DECLARE( 4, typename MSelect< IS_SAME< T, long int > || IS_SAME< T, 
 BALL_SIGNED_DECLARE( 8, typename MSelect< IS_SAME< T, long int > || IS_SAME< T, unsigned long int > >::template Apply_t< signed long int, signed long long int > );
 
 // Signed partner to cv-unqualified T
-template < class T > using SignedSelect_t = typename MSignedSelect< sizeof( T ) >::template Apply_t<T>;
+template < class T > using SignedSelect_t = typename MSignedSelect< sizeof( T ) >::template Apply_t< T >;
+
+template < typename T, bool = IS_INTEGRAL< RemoveCV_t< T > > >
+struct MSignedImpl
+{
+	using Type = RemoveCV_t< T >;
+};
+
+template < typename T >
+struct MSignedImpl< T, true >
+{
+	using Type = typename MRemoveCV< T >::template Apply_t< SignedSelect_t >;
+};
 
 template < typename T >
 struct MSigned
 {
-	using Type = typename MRemoveCV< T >::template Apply_t< SignedSelect_t >;
+	using Type = typename MSignedImpl< T >::Type;
 };
-template < typename T >
-using Signed_t = typename MSigned< T >::Type;
+
+template < typename T > using Signed_t = typename MSigned< T >::Type;
 
 #	undef BALL_SIGNED_DECLARE
 

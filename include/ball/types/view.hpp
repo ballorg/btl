@@ -7,6 +7,7 @@
 #	include "base/fixed.h"
 #	include "c/assert.h"
 #	include "meta/fixed.hpp"
+#	include "meta/isconst.hpp"
 #	include "math.hpp"
 
 #	include "viewbase.hpp"
@@ -23,12 +24,16 @@ public:
 	template< I GN > using GrowableView_t = CView< Index_t, Element_t, GN >;
 	template< I GN > using ConstGrowableView_t = CView< Index_t, const Element_t, GN >;
 	using Fixed_t       = MFixed< Index_t >;
+	using PackedTraits_t = typename Base_t::template PackedTraits_t< Element_t >;
 
+	using Base_t::Base_t;
+	using Base_t::operator=;
 	using Base_t::FIRST_INDEX;
 	using Base_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
 	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
+	static constexpr bool IS_PACKED_STORAGE = Base_t::template TYPE_HAS_PACKED_BITS< Element_t >;
 
 	// --------- basic associated types ----------
 	using value_type      = T;
@@ -44,7 +49,6 @@ public:
 	explicit constexpr CView( I nCount, T *pElements ) noexcept : Base_t( nCount, pElements ) {}
 	constexpr CView() noexcept : CView( FIRST_INDEX, nullptr ) {}
 	template < size_t CN > constexpr CView( T ( &elements )[ CN ] ) noexcept : CView( I( CN ), static_cast< T * >( elements ) ) {}
-	template < size_t CN > constexpr CView( T ( &&elements )[ CN ] ) noexcept : CView( I( CN ), static_cast< T * >( elements ) ) {}
 	constexpr CView( T &element ) noexcept : Base_t( { element } ) {}
 	constexpr CView( T *pBegin, const T *pEnd ) noexcept : CView( FIRST_INDEX, nullptr )
 	{
@@ -54,28 +58,63 @@ public:
 		Base_t::Set( static_cast< I >( ( nEnd - nBegin ) / sizeof( T ) ), pBegin );
 	}
 
-	// Copy / Move
-	constexpr CView( const CView &copyFrom ) noexcept { CopyFrom( copyFrom ); }
-	constexpr CView( CView &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
-	constexpr CView &operator=( const CView &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
-	constexpr CView &operator=( CView &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
-
 	// --------- sizes / count / base ----------
 	using Base_t::Size;
 	using Base_t::Count;
-	constexpr const bool IsOverflow( I nCount ) const { return Base_t::template IsOverflow< T >( nCount ); }
-	constexpr const bool IsOverflow() const           { return IsOverflow( Count() ); }
+	constexpr const bool IsOverflow( I nCount ) const           { return Base_t::template IsOverflow< T >( nCount ); }
+	constexpr const bool IsOverflow() const                     { return IsOverflow( Count() ); }
+	constexpr const bool IsPackedOverflow( I nCount ) const     { return Base_t::template IsPackedOverflow< T >( nCount ); }
+	constexpr const bool IsPackedOverflow() const               { return IsPackedOverflow( Count() ); }
 
-	constexpr T        *FixedData() noexcept          { return Base_t::template FixedData< T >(); }
-	constexpr const T  *FixedData() const noexcept    { return Base_t::template FixedData< T >(); }
-	constexpr T        *Data() noexcept               { return Base_t::template Data< T >(); }
-	constexpr const T  *Data() const noexcept         { return Base_t::template Data< T >(); }
-	constexpr T        *Base() noexcept               { return Base_t::template Base< T >(); }
-	constexpr const T  *Base() const noexcept         { return Base_t::template Base< T >(); }
+	constexpr T *FixedData() noexcept                           { return Base_t::template FixedData< T >(); }
+	constexpr const T *FixedData() const noexcept               { return Base_t::template FixedData< T >(); }
+	constexpr uchar_t *PackedFixedData() noexcept               { return Base_t::template PackedFixedData< T >(); }
+	constexpr const uchar_t *PackedFixedData() const noexcept   { return Base_t::template PackedFixedData< T >(); }
+	constexpr T *Data() noexcept                                { return Base_t::template Data< T >(); }
+	constexpr const T *Data() const noexcept                    { return Base_t::template Data< T >(); }
+	constexpr uchar_t *PackedData() noexcept                    { return Base_t::template PackedData< T >(); }
+	constexpr const uchar_t *PackedData() const noexcept        { return Base_t::template PackedData< T >(); }
+	constexpr T *Base() noexcept                                { return Base_t::template Base< T >(); }
+	constexpr const T *Base() const noexcept                    { return Base_t::template Base< T >(); }
+	constexpr uchar_t *PackedBase() noexcept                    { return Base_t::template PackedBase< T >(); }
+	constexpr const uchar_t *PackedBase() const noexcept        { return Base_t::template PackedBase< T >(); }
+
+	static constexpr bits_t PackedBits() noexcept               { return Base_t::template PackedBits< T >(); }
+	static constexpr size_t PackedBytesForCount( I nCount ) noexcept { return Base_t::template PackedBytesForCount< T >( nCount ); }
+	constexpr void PackedClearRows( I iFrom, I nRows ) noexcept { return Base_t::template PackedClearRows< T >( iFrom, nRows ); }
+	constexpr void PackedShiftRowsLeft( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsLeft< T >( iFrom, nRows, nShiftRows ); }
+	constexpr void PackedShiftRowsRight( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsRight< T >( iFrom, nRows, nShiftRows ); }
+	constexpr T PackedGetValue( I i ) const noexcept { return Base_t::template PackedGetValue< T >( i ); }
+	constexpr void PackedSetValue( I i, const T &value ) noexcept { return Base_t::template PackedSetValue< T >( i, value ); }
 
 	// --------- basic access ----------
 	using Base_t::Empty;
-	constexpr const T *Get() const noexcept       { return Base_t::template Get< T >(); }
+	constexpr const T *Get() const noexcept       { return Base(); }
+
+	class Ref_t
+	{
+	public:
+		constexpr Ref_t( CView *pOwner, I i ) noexcept : m_pOwner( pOwner ), m_i( i ) {}
+		constexpr operator T() const noexcept { return m_pOwner->GetValue( m_i ); }
+
+		template < typename Q = T, EnableIf_t< !IS_CONST< Q >, int > = 0 >
+		constexpr Ref_t &operator=( const T &value ) noexcept { m_pOwner->SetValue( m_i, value ); return *this; }
+
+		template < typename Q = T, EnableIf_t< !IS_CONST< Q >, int > = 0 >
+		constexpr Ref_t &operator=( const Ref_t &other ) noexcept { return operator=( static_cast< T >( other ) ); }
+
+	private:
+		CView *m_pOwner;
+		I m_i;
+	};
+
+	constexpr decltype( auto ) GetValue( I i ) const noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE )
+			return Base_t::template PackedGetValue< T >( i );
+		else
+			return Base_t::template At< T >( i );
+	}
 
 	// --------- iterators ----------
 	constexpr iterator begin()                        { return Base(); }
@@ -93,30 +132,52 @@ public:
 
 	constexpr bool IsValidIndex( I i ) const { return i != INVALID_INDEX; }
 
-	constexpr const T &At( I i ) const
+	constexpr decltype( auto ) At( I i )
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( 0 <= i && i < Count() );
 
-		return Base()[ i ];
+		if constexpr ( IS_PACKED_STORAGE && !IS_CONST< T > )
+			return Ref_t( this, i );
+		else if constexpr ( IS_PACKED_STORAGE )
+			return GetValue( i );
+		else
+			return Base_t::template At< T >( i );
+	}
+
+	constexpr decltype( auto ) At( I i ) const
+	{
+		BALL_ASSERT( IsValidIndex( i ) );
+		BALL_ASSERT( 0 <= i && i < Count() );
+
+		if constexpr ( IS_PACKED_STORAGE )
+			return GetValue( i );
+		else
+			return Base_t::template At< T >( i );
 	}
 
 	// --------- element access ----------
-	constexpr T &operator[]( I i ) { return At( i ); }
-	constexpr const T &operator[]( I i ) const { return At( i ); }
+	constexpr decltype( auto ) operator[]( I i ) { return At( i ); }
+	constexpr decltype( auto ) operator[]( I i ) const { return At( i ); }
 
-	constexpr const T &Front() const
+	constexpr decltype( auto ) Front() const
 	{
 		BALL_ASSERT( 0 < Count() );
 
-		return Base()[ 0 ];
+		if constexpr ( IS_PACKED_STORAGE )
+			return GetValue( 0 );
+		else
+			return Base_t::template Front< T >();
 	}
 
-	constexpr const T &Back() const
+	constexpr decltype( auto ) Back() const
 	{
 		BALL_ASSERT( 0 < Count() );
 
-		return Base()[ Count() - 1 ];
+		if constexpr ( IS_PACKED_STORAGE )
+			return GetValue( Count() - 1 );
+		else
+			return Base_t::template Back< T >();
 	}
 
 	// --------- slicing / subviews ----------
@@ -163,7 +224,7 @@ public:
 			return false;
 
 		for ( I i = 0; i < nPrefixCount; ++i )
-			if ( !( Base()[ i ] == vPrefix.Base()[ i ] ) )
+			if ( !( GetValue( i ) == vPrefix.GetValue( i ) ) )
 				return false;
 
 		return true;
@@ -179,7 +240,7 @@ public:
 		I nOffset = static_cast< I >( nCount - nSuffixCount );
 
 		for ( I i = 0; i < nSuffixCount; ++i )
-			if ( !( Base()[ nOffset + i ] == vSuffix.Base()[ i ] ) )
+			if ( !( GetValue( nOffset + i ) == vSuffix.GetValue( i ) ) )
 				return false;
 
 		return true;
@@ -196,44 +257,36 @@ public:
 	{
 		const I nCount     = Count();
 		const I nViewCount = v.Count();
-		const T *pData     = Base();
-		const T *pViewBase = v.Base();
-
-		// Empty haystack: nothing to find.
-		if ( !pData )
-			return INVALID_INDEX;
+		const I nStart = ( iFrom < FIRST_INDEX ) ? FIRST_INDEX : iFrom;
 
 		// Empty needle: by convention return clamped start position.
 		if ( nViewCount == FIRST_INDEX )
-			return iFrom;
+			return nStart;
 
 		// Out-of-range or needle longer than the remaining span.
-		if ( iFrom > nCount || nViewCount > nCount - iFrom )
+		if ( nStart > nCount || nViewCount > nCount - nStart )
 			return INVALID_INDEX;
 
-		const T *itStart = pData + iFrom;
-		const T *itLastStart = pData + ( nCount - nViewCount );
-		const T needleFirst = pViewBase[ 0 ];
+		const I iLastStart = nCount - nViewCount;
+		const T needleFirst = v.GetValue( 0 );
 
-		for ( const T *it = itStart; it <= itLastStart; ++it )
+		for ( I i = nStart; i <= iLastStart; ++i )
 		{
 			// Quick check on the first element.
-			if ( !( *it == needleFirst ) )
+			if ( !( GetValue( i ) == needleFirst ) )
 				continue;
 
 			// Verify the rest of the needle.
-			const T *h = it + I( 1 );
-			const T *n = pViewBase + I( 1 );
-			const T *nEnd = pViewBase + nViewCount;
+			I k = I( 1 );
 
-			for ( ; n < nEnd; ++n, ++h )
+			for ( ; k < nViewCount; ++k )
 			{
-				if ( !( *h == *n ) )
+				if ( !( GetValue( i + k ) == v.GetValue( k ) ) )
 					break;
 			}
 
-			if ( n == nEnd )
-				return static_cast< I >( it - pData );
+			if ( k == nViewCount )
+				return i;
 		}
 
 		return INVALID_INDEX;
@@ -260,13 +313,6 @@ public:
 	{
 		const I nCount     = Count();
 		const I nViewCount = v.Count();
-		const T *pData     = Base();
-		const T *pViewBase = v.Base();
-
-		// Empty haystack: nothing to find.
-		if ( !pData )
-			return INVALID_INDEX;
-
 		// Handle empty needle: by convention return the clamped start position.
 		// Start position for empty needle is:
 		//   - last element + 1 when nFrom == INVALID_INDEX  -> nCount
@@ -297,39 +343,35 @@ public:
 		else
 		{
 			// Out of range start index makes matching impossible.
-			if ( iFrom > nLastStart )
+			if ( iFrom < FIRST_INDEX || iFrom > nLastStart )
 				return INVALID_INDEX;
 
 			iStart = iFrom;
 		}
 
-		const T *itBegin = pData;
-		const T *it = pData + iStart;
-		const T needleFirst = pViewBase[ 0 ];
+		const T needleFirst = v.GetValue( 0 );
 
 		// Backward scan: iStart .. 0
-		for ( ; ; --it )
+		for ( I i = iStart; ; --i )
 		{
 			// Quick check on the first element at this start.
-			if ( *it == needleFirst )
+			if ( GetValue( i ) == needleFirst )
 			{
 				// Verify the rest of the needle forward from i.
-				const T *h = it + I( 1 );
-				const T *n = pViewBase + I( 1 );
-				const T *nEnd = pViewBase + nViewCount;
+				I k = I( 1 );
 
-				for ( ; n < nEnd; ++n, ++h )
+				for ( ; k < nViewCount; ++k )
 				{
-					if ( !( *h == *n ) )
+					if ( !( GetValue( i + k ) == v.GetValue( k ) ) )
 						break;
 				}
 
-				if ( n == nEnd )
-					return static_cast< I >( it - pData );
+				if ( k == nViewCount )
+					return i;
 			}
 
 			// Stop when i == 0 to avoid unsigned underflow.
-			if ( it == itBegin )
+			if ( i == FIRST_INDEX )
 				break;
 		}
 
@@ -339,11 +381,11 @@ public:
 	// --------- comparisons ----------
 	friend constexpr bool operator==( const CView &a, const CView &b ) noexcept
 	{
-		if ( a.m_nCount != b.m_nCount )
+		if ( a.Count() != b.Count() )
 			return false;
 
-		for ( I i = 0; i < a.m_nCount; ++i )
-			if ( !( a.m_pElements[ i ] == b.m_pElements[ i ] ) )
+		for ( I i = FIRST_INDEX; i < a.Count(); ++i )
+			if ( !( a.GetValue( i ) == b.GetValue( i ) ) )
 				return false;
 
 		return true;
@@ -356,12 +398,12 @@ public:
 
 	friend constexpr bool operator<( const CView &a, const CView &b ) noexcept
 	{
-		I n = ( a.m_nCount < b.m_nCount ) ? a.m_nCount : b.m_nCount;
+		I n = ( a.Count() < b.Count() ) ? a.Count() : b.Count();
 
-		for ( I i = 0; i < n; ++i )
-		{
-			const T &va = a.m_pElements[ i ];
-			const T &vb = b.m_pElements[ i ];
+			for ( I i = FIRST_INDEX; i < n; ++i )
+			{
+				const auto &va = a.GetValue( i );
+				const auto &vb = b.GetValue( i );
 
 			if ( va < vb )
 				return true;
@@ -370,7 +412,7 @@ public:
 				return false;
 		}
 
-		return a.m_nCount < b.m_nCount;
+		return a.Count() < b.Count();
 	}
 
 	friend constexpr bool operator >( const CView &a, const CView &b ) noexcept { return b < a; }
@@ -378,6 +420,14 @@ public:
 	friend constexpr bool operator>=( const CView &a, const CView &b ) noexcept { return !( a < b ); }
 
 protected:
+	constexpr void SetValue( I i, const T &value ) noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE )
+			Base_t::template PackedSetValue< T >( i, value );
+		else
+			Base_t::template Base< T >()[ i ] = value;
+	}
+
 	constexpr void Set( I nCount, T *pElements ) noexcept
 	{
 		Base_t::Set( nCount, pElements );

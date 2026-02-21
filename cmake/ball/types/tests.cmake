@@ -8,7 +8,14 @@ set(PROJECT_TESTS_NAME ${PROJECT_NAME}-tests)
 set(PROJECT_BASE_TESTS_OUTPUT_NAME ${PROJECT_OUTPUT_NAME}-tests)
 
 add_executable(${PROJECT_TESTS_NAME}
-	${SOURCE_DIR}/ball/types/tests.cpp
+	${SOURCE_DIR}/ball/types/tests/main.cpp
+	${SOURCE_DIR}/ball/types/tests/case01_stlvector.cpp
+	${SOURCE_DIR}/ball/types/tests/case02_vector.cpp
+	${SOURCE_DIR}/ball/types/tests/case03_multivector.cpp
+	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed/signed.cpp
+	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed/uncertain.cpp
+	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed/unsiged.cpp
+	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed.cpp
 )
 
 target_link_libraries(${PROJECT_TESTS_NAME} PRIVATE ${PROJECT_NAME})

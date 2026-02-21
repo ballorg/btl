@@ -10,8 +10,8 @@
 ///        MPack< A, B, C >  stores: A, B, C
 ///
 /// API:
-///   - ByType< T >()     -> pointer by type (T must be unique in Ts...)
-///   - ByIndex< K >()    -> pointer by index (0..N-1)
+///   - BaseBy< T >()     -> pointer by type (T must be unique in Ts...)
+///   - BaseBy< K >()    -> pointer by index (0..N-1)
 ///   - Reset()              -> null all pointers
 ///   - Swap( other )        -> swap pointers
 ///   - CopyFrom( other )    -> shallow copy of pointers
@@ -35,14 +35,14 @@ public:
 	constexpr MPack &operator=( MPack &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
 
 	// type access (T must be unique within Ts...)
-	template < typename T > constexpr T &ByType() noexcept
+	template < typename T > constexpr T &BaseBy() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
 			static_assert( IS_SAME< Type, T >, "MPack: typed OOB for empty pack" );
 	}
-	template < typename T > constexpr const T &ByType() const noexcept
+	template < typename T > constexpr const T &BaseBy() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
@@ -51,14 +51,14 @@ public:
 	}
 
 	// index access
-	template < TI K, typename T > constexpr T &ByIndex() noexcept
+	template < TI K, typename T > constexpr T &BaseBy() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
 			static_assert( K == 0 , "MPack: index OOB for empty pack" );
 	}
-	template < TI K, typename T > constexpr const T &ByIndex() const noexcept
+	template < TI K, typename T > constexpr const T &BaseBy() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
@@ -112,35 +112,35 @@ public:
 	constexpr MPack &operator=( MPack &&moveFrom ) noexcept { return MoveFrom( moveFrom ); }
 
 	// type access (T must be unique within Ts...)
-	template < typename T > constexpr T &ByType() noexcept
+	template < typename T > constexpr T &BaseBy() noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
-			return m_Tail.template ByType< T >();
+			return m_Tail.template BaseBy< T >();
 	}
-	template < typename T > constexpr const T &ByType() const noexcept
+	template < typename T > constexpr const T &BaseBy() const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			return m_Node;
 		else
-			return m_Tail.template ByType< T >();
+			return m_Tail.template BaseBy< T >();
 	}
 
 	// index access
-	template < TI K, typename T > constexpr T &ByIndex() noexcept
+	template < TI K, typename T > constexpr T &BaseBy() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			return m_Tail.template ByIndex< K - 1 >();
+			return m_Tail.template BaseBy< K - 1 >();
 	}
-	template < TI K, typename T > constexpr const T &ByIndex() const noexcept
+	template < TI K, typename T > constexpr const T &BaseBy() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			return m_Tail.template ByIndex< K - 1 >();
+			return m_Tail.template BaseBy< K - 1 >();
 	}
 
 	// utilities

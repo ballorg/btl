@@ -3,6 +3,7 @@
 
 #	pragma once
 
+#	include "isintegral.hpp"
 #	include "issame.hpp"
 #	include "select.hpp"
 #	include "removecv.hpp"
@@ -22,15 +23,26 @@ BALL_UNSIGNED_SELECTOR( 4, typename MSelect< IS_SAME< T, long int > || IS_SAME< 
 BALL_UNSIGNED_SELECTOR( 8, typename MSelect< IS_SAME< T, long int > || IS_SAME< T, unsigned long int > >::template Apply_t< unsigned long int, unsigned long long int > );
 
 // Unsigned partner to cv-unqualified T
-template < class T > using UnsignedSelect_t = typename MUnsignedSelect< sizeof( T ) >::template Apply_t<T>;
+template < class T > using UnsignedSelect_t = typename MUnsignedSelect< sizeof( T ) >::template Apply_t< T >;
+
+template < typename T, bool = IS_INTEGRAL< RemoveCV_t< T > > >
+struct MUnsignedImpl
+{
+	using Type = RemoveCV_t< T >;
+};
+
+template < typename T >
+struct MUnsignedImpl< T, true >
+{
+	using Type = typename MRemoveCV< T >::template Apply_t< UnsignedSelect_t >;
+};
 
 template < typename T >
 struct MUnsigned
 {
-	using Type = typename MRemoveCV< T >::template Apply_t< UnsignedSelect_t >;
+	using Type = typename MUnsignedImpl< T >::Type;
 };
-template < typename T >
-using Unsigned_t = typename MUnsigned< T >::Type;
+template < typename T > using Unsigned_t = typename MUnsigned< T >::Type;
 
 #	undef BALL_UNSIGNED_SELECTOR
 

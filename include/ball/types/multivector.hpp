@@ -34,6 +34,7 @@ public:
 	using ConstView_t = typename Base_t::Const_t;
 
 	template < typename T > using Allocator_t = CAllocator< I, T >;
+	template < typename T > using BaseAllocator_t = CAllocator< I, T >::Base_t;
 
 	using Base_t::Base_t;
 
@@ -41,10 +42,9 @@ public:
 	using Base_t::FIXED_COUNT;
 	using Base_t::INVALID_INDEX;
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
+	template < typename T > static constexpr bool IS_PACKED_STORAGE = Base_t::template TYPE_HAS_PACKED_BITS< T >;
 
 	using Base_t::Count;
-	using Base_t::FindBy;
-	using Base_t::RFindBy;
 
 	~CMultiVectorBase() noexcept
 	{
@@ -60,65 +60,7 @@ public:
 	// ---------------------------
 	// Typed storage access
 	// ---------------------------
-	template < typename T > constexpr bool IsOverflow( I nCount ) const noexcept { return Base_t::template IsOverflow< T >( nCount ); }
-	template < typename T > constexpr bool IsOverflow() const noexcept { return IsOverflow< T >( Count() ); }
-
-	template < typename T > constexpr T       *FixedData() noexcept { return Base_t::template FixedData< T >(); }
-	template < typename T > constexpr const T *FixedData() const noexcept { return Base_t::template FixedData< T >(); }
-	template < typename T > constexpr T       *Data() noexcept { return Base_t::template Data< T >(); }
-	template < typename T > constexpr const T *Data() const noexcept { return Base_t::template Data< T >(); }
-	template < typename T > constexpr T       *Base() noexcept { return Base_t::template Base< T >(); }
-	template < typename T > constexpr const T *Base() const noexcept { return Base_t::template Base< T >(); }
-
-	// ---------------------------
-	// Typed element access (style from CVector/CView)
-	// ---------------------------
-	constexpr bool IsValidIndex( I i ) const noexcept { return i != INVALID_INDEX; }
-
-	template < typename T >
-	constexpr T &At( I i )
-	{
-		BALL_ASSERT( IsValidIndex( i ) );
-		BALL_ASSERT( I( 0 ) <= i && i < Count() );
-
-		return Base< T >()[ i ];
-	}
-
-	template < typename T >
-	constexpr const T &At( I i ) const
-	{
-		BALL_ASSERT( IsValidIndex( i ) );
-		BALL_ASSERT( I( 0 ) <= i && i < Count() );
-
-		return Base< T >()[ i ];
-	}
-
-	template < typename T > constexpr T &operator[]( I i ) { return At< T >( i ); }
-	template < typename T > constexpr const T &operator[]( I i ) const { return At< T >( i ); }
-
-	template < typename T >
-	constexpr const T &Front() const
-	{
-		BALL_ASSERT( I( 0 ) < Count() );
-		return Base< T >()[ 0 ];
-	}
-
-	template < typename T >
-	constexpr const T &Back() const
-	{
-		BALL_ASSERT( I( 0 ) < Count() );
-		return Base< T >()[ Count() - 1 ];
-	}
-
-	///-----------------------------------------------------------------------------
-	/// @brief Find first row equal to (args...) starting from head.
-	/// @return Row index or INVALID_INDEX.
-	///-----------------------------------------------------------------------------
-	template < typename... Us, EnableIf_t< ( 1 < sizeof...( Ts ) ) && ( sizeof...( Us ) == sizeof...( Ts ) ), int > = 0 >
-	constexpr I Find( const Us &...args ) const noexcept
-	{
-		return FindFrom( FIRST_INDEX, args... );
-	}
+	// Typed element access is inherited from CViewBase.
 
 	///-----------------------------------------------------------------------------
 	/// @brief Find first row equal to (args...) starting from @p iFrom.
@@ -142,13 +84,13 @@ public:
 	}
 
 	///-----------------------------------------------------------------------------
-	/// @brief Find last row equal to (args...) searching from tail.
+	/// @brief Find first row equal to (args...) starting from head.
 	/// @return Row index or INVALID_INDEX.
 	///-----------------------------------------------------------------------------
 	template < typename... Us, EnableIf_t< ( 1 < sizeof...( Ts ) ) && ( sizeof...( Us ) == sizeof...( Ts ) ), int > = 0 >
-	constexpr I RFind( const Us &...args ) const noexcept
+	constexpr I Find( const Us &...args ) const noexcept
 	{
-		return RFindFrom( INVALID_INDEX, args... );
+		return FindFrom( FIRST_INDEX, args... );
 	}
 
 	///-----------------------------------------------------------------------------
@@ -178,6 +120,16 @@ public:
 		}
 
 		return INVALID_INDEX;
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Find last row equal to (args...) searching from tail.
+	/// @return Row index or INVALID_INDEX.
+	///-----------------------------------------------------------------------------
+	template < typename... Us, EnableIf_t< ( 1 < sizeof...( Ts ) ) && ( sizeof...( Us ) == sizeof...( Ts ) ), int > = 0 >
+	constexpr I RFind( const Us &...args ) const noexcept
+	{
+		return RFindFrom( INVALID_INDEX, args... );
 	}
 
 	// ---------------------------
@@ -224,13 +176,7 @@ public:
 
 	CMultiVectorBase &operator=( const ConstView_t &rhs ) { return CopyFrom( rhs ); }
 	CMultiVectorBase &operator=( const View_t &rhs ) { return CopyFrom( rhs ); }
-
 protected:
-	// ---------------------------
-	// Raw pointer helpers
-	// ---------------------------
-	template < typename T > constexpr T *Writable() { return Base< T >(); }
-	template < typename T > constexpr const T *Readable() const { return Base< T >(); }
 
 protected:
 	template < typename T > static constexpr size_t AlignedSize() { return BitCeil_Const< I >( 8 * sizeof( T ) ); }
@@ -239,95 +185,206 @@ protected:
 	T *EnsureCapacityBy( I nRequest )
 	{
 		const I nOld = Count();
-		const bool bWasOverflow = IsOverflow< T >( nOld );
-		const bool bWillOverflow = IsOverflow< T >( nRequest );
 
-		T *pElements = Base< T >();
-
-		if ( bWillOverflow )
+		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			const I nCapacity = BitCeil< I >( nOld );
-			const I nNewCapacity = BitCeil< I >( nRequest );
+			const bool bWasOverflow = Base_t::template IsPackedOverflow< T >( nOld );
+			const bool bWillOverflow = Base_t::template IsPackedOverflow< T >( nRequest );
+			uchar_t *pElements = Base_t::template PackedBase< T >();
 
-			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
-				return pElements;
+			if ( bWillOverflow )
+			{
+				const I nCapacity = BitCeil< I >( nOld );
+				const I nNewCapacity = BitCeil< I >( nRequest );
+				const size_t nCapacityBytes = Base_t::template PackedBytesForCount< T >( nCapacity );
+				const size_t nNewCapacityBytes = Base_t::template PackedBytesForCount< T >( nNewCapacity );
+
+				BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
+					return reinterpret_cast< T * >( pElements );
+
+				if ( bWasOverflow )
+				{
+					if ( nNewCapacityBytes == nCapacityBytes )
+						return reinterpret_cast< T * >( pElements );
+
+					pElements = reinterpret_cast< uchar_t * >( BaseAllocator_t< T >::Realloc( pElements, nNewCapacityBytes, AlignedSize< uchar_t >() ) );
+					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate packed elements" );
+				}
+				else
+				{
+					pElements = reinterpret_cast< uchar_t * >( BaseAllocator_t< T >::Alloc( nNewCapacityBytes, AlignedSize< uchar_t >() ) );
+					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate packed elements" );
+
+					if constexpr ( IS_GROWABLE )
+					{
+						const size_t nBytes = Base_t::template PackedBytesForCount< T >( nOld );
+
+						if ( nBytes > size_t( 0 ) )
+							CopyElements( nBytes, pElements, Base_t::template PackedFixedData< T >() );
+					}
+				}
+
+				return reinterpret_cast< T * >( pElements );
+			}
 
 			if ( bWasOverflow )
 			{
-				if ( nNewCapacity == nCapacity )
+				if constexpr ( IS_GROWABLE )
+				{
+					const size_t nBytes = Base_t::template PackedBytesForCount< T >( nRequest );
+
+					if ( nBytes > size_t( 0 ) )
+						memcpy( Base_t::template PackedFixedData< T >(), pElements, nBytes );
+				}
+
+				BaseAllocator_t< T >::Free( pElements );
+				return reinterpret_cast< T * >( Base_t::template PackedFixedData< T >() );
+			}
+
+			return reinterpret_cast< T * >( Base_t::template PackedFixedData< T >() );
+		}
+		else
+		{
+			const bool bWasOverflow = Base_t::template IsOverflow< T >( nOld );
+			const bool bWillOverflow = Base_t::template IsOverflow< T >( nRequest );
+
+			T *pElements = Base_t::template Base< T >();
+
+			if ( bWillOverflow )
+			{
+				const I nCapacity = BitCeil< I >( nOld );
+				const I nNewCapacity = BitCeil< I >( nRequest );
+
+				BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
 					return pElements;
 
-				pElements = Allocator_t< T >::Realloc( pElements, nNewCapacity, AlignedSize< T >() );
-				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
+				if ( bWasOverflow )
+				{
+					if ( nNewCapacity == nCapacity )
+						return pElements;
+
+					pElements = Allocator_t< T >::Realloc( pElements, nNewCapacity, AlignedSize< T >() );
+					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
+				}
+				else
+				{
+					pElements = Allocator_t< T >::Alloc( nNewCapacity, AlignedSize< T >() );
+					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
+
+					if constexpr ( IS_GROWABLE )
+						CopyElements( nOld, pElements, Base_t::template FixedData< T >() );
+				}
+
+				return pElements;
 			}
-			else
+
+			if ( bWasOverflow )
 			{
-				pElements = Allocator_t< T >::Alloc( nNewCapacity, AlignedSize< T >() );
-				BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
-
 				if constexpr ( IS_GROWABLE )
-					CopyElements( nOld, pElements, FixedData< T >() );
+					CopyElements( nRequest, Base_t::template FixedData< T >(), pElements );
+
+				Allocator_t< T >::Free( pElements );
+
+				return Base_t::template FixedData< T >();
 			}
 
-			return pElements;
+			return Base_t::template FixedData< T >();
 		}
-
-		if ( bWasOverflow )
-		{
-			if constexpr ( IS_GROWABLE )
-				CopyElements( nRequest, FixedData< T >(), pElements );
-
-			Allocator_t< T >::Free( pElements );
-			return FixedData< T >();
-		}
-
-		return FixedData< T >();
 	}
 
 	template < typename T >
 	T *CopyFromBy( I nCount, const ConstView_t &other )
 	{
 		T *pDest = EnsureCapacityBy< T >( nCount );
-		const T *pSrc = other.template Base< T >();
 
-		if ( nCount > I( 0 ) )
-			CopyElements( nCount, pDest, pSrc );
+		if constexpr ( IS_PACKED_STORAGE< T > )
+		{
+			const size_t nBytes = Base_t::template PackedBytesForCount< T >( nCount );
+
+			if ( nBytes > size_t( 0 ) )
+				memcpy( reinterpret_cast< uchar_t * >( pDest ), other.template PackedBase< T >(), nBytes );
+		}
+		else
+		{
+			const T *pSrc = other.template Base< T >();
+
+			if ( nCount > I( 0 ) )
+				CopyElements( nCount, pDest, pSrc );
+		}
 
 		return pDest;
 	}
 
 	template < typename T >
-	T *InsertBy( I i, I nAdd, I nOld, I nNew )
+	T *EnsureInsertBy( I i, I nAdd, I nOld, I nNew )
 	{
-		T *p = EnsureCapacityBy< T >( nNew );
-
-		if ( i < nOld )
-			ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nOld ] );
-
-		return p;
+		( void )i;
+		( void )nAdd;
+		( void )nOld;
+		return EnsureCapacityBy< T >( nNew );
 	}
 
 	template < typename T >
-	void ShiftLeftByType( I i, I nRemove, I nOld )
+	void ShiftRightBaseBy( I i, I nAdd, I nOld )
 	{
-		T *p = Base< T >();
-		const I nTailBegin = i + nRemove;
+		if constexpr ( IS_PACKED_STORAGE< T > )
+		{
+			const I nRows = static_cast< I >( nOld - i );
 
-		if ( nTailBegin < nOld )
-			ShiftElementsLeft( &p[ i ], &p[ nTailBegin ], &p[ nOld ] );
+			if ( nRows > I( 0 ) )
+				Base_t::template PackedShiftRowsRight< T >( i, nRows, nAdd );
+		}
+		else
+		{
+			T *p = Base_t::template Base< T >();
+
+			if ( i < nOld )
+				ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nOld ] );
+		}
+	}
+
+	template < typename T >
+	void ShiftLeftBaseBy( I i, I nRemove, I nOld )
+	{
+		if constexpr ( IS_PACKED_STORAGE< T > )
+		{
+			const I nTailBegin = i + nRemove;
+
+			if ( nTailBegin < nOld )
+				Base_t::template PackedShiftRowsLeft< T >( i, static_cast< I >( nOld - nTailBegin ), nRemove );
+		}
+		else
+		{
+			T *p = Base_t::template Base< T >();
+
+			const I nTailBegin = i + nRemove;
+
+			if ( nTailBegin < nOld )
+				ShiftElementsLeft( &p[ i ], &p[ nTailBegin ], &p[ nOld ] );
+		}
 	}
 
 	void FreeAllHeaps()
 	{
-		( FreeByType< Ts >(), ... );
+		( FreeBaseBy< Ts >(), ... );
 	}
 
 	template < typename T >
-	void FreeByType()
+	void FreeBaseBy()
 	{
-		if ( IsOverflow< T >() )
+		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			T *p = Data< T >();
+			if ( Base_t::template IsPackedOverflow< T >() )
+			{
+				uchar_t *p = Base_t::template PackedBase< T >();
+
+				if ( p )
+					BaseAllocator_t< T >::Free( p );
+			}
+		}
+		else if ( Base_t::template IsOverflow< T >() )
+		{
+			T *p = Base_t::template Data< T >();
 
 			if ( p )
 				Allocator_t< T >::Free( p );
@@ -337,8 +394,15 @@ protected:
 	template < typename T0, typename... TRest, typename U0, typename... URest >
 	constexpr bool RowEquals( I i, const U0 &u0, const URest &...urest ) const noexcept
 	{
-		if ( !( Base< T0 >()[ i ] == u0 ) )
+		if constexpr ( IS_PACKED_STORAGE< T0 > )
+		{
+			if ( !( Base_t::template PackedGetValue< T0 >( i ) == static_cast< T0 >( u0 ) ) )
+				return false;
+		}
+		else if ( !( Base_t::template Base< T0 >()[ i ] == u0 ) )
+		{
 			return false;
+		}
 
 		if constexpr ( sizeof...( TRest ) > 0 )
 			return RowEquals< TRest... >( i, urest... );
@@ -358,7 +422,9 @@ public:
 	using ConstView_t = typename Base_t::ConstView_t;
 
 	using Base_t::Base_t;
+	template < typename T > static constexpr bool IS_PACKED_STORAGE = Base_t::template IS_PACKED_STORAGE< T >;
 	using Base_t::Count;
+	using Base_t::Set;
 
 	constexpr CMultiVectorImpl() noexcept : Base_t() {}
 	constexpr CMultiVectorImpl( const View_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
@@ -374,7 +440,7 @@ public:
 	// ---------------------------
 	void SetCount( I nNew )
 	{
-		Base_t::Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
+		Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
 	}
 
 	void Grow( I delta )
@@ -398,7 +464,7 @@ public:
 
 		BALL_ASSERT( nAdd > I( 0 ) );
 		EnsureInsert( i, nAdd );
-		( CopyElements( nAdd, Base_t::template Base< Ts >() + i, v.template Base< Ts >() ), ... );
+		( CopyFromViewBy< Ts >( i, v ), ... );
 
 		return i + nAdd;
 	}
@@ -459,8 +525,8 @@ public:
 		const I nOld = Count();
 		const I nNew = nOld - nRemove;
 
-		( Base_t::template ShiftLeftByType< Ts >( i, nRemove, nOld ), ... );
-		Base_t::Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
+		( Base_t::template ShiftLeftBaseBy< Ts >( i, nRemove, nOld ), ... );
+		Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
 	}
 
 protected:
@@ -475,14 +541,36 @@ protected:
 		const I nOld = Count();
 		const I nNew = nOld + nAdd;
 
-		Base_t::Set( nNew, Base_t::template InsertBy< Ts >( i, nAdd, nOld, nNew )... );
+		Set( nNew, Base_t::template EnsureInsertBy< Ts >( i, nAdd, nOld, nNew )... );
+
+		if ( i < nOld )
+			( Base_t::template ShiftRightBaseBy< Ts >( i, nAdd, nOld ), ... );
 	}
 
 private:
+	template < typename T >
+	constexpr void CopyFromViewBy( I i, const ConstView_t &v )
+	{
+		const I nAdd = v.Count();
+
+		if constexpr ( IS_PACKED_STORAGE< T > )
+		{
+			for ( I n = I( 0 ); n < nAdd; ++n )
+				Base_t::template PackedSetValue< T >( static_cast< I >( i + n ), v.template PackedGetValue< T >( n ) );
+		}
+		else
+		{
+			CopyElements( nAdd, Base_t::template Base< T >() + i, v.template Base< T >() );
+		}
+	}
+
 	template < typename T0, typename... TRest, typename U0, typename... URest >
 	constexpr void AssignRow( I i, U0 &&u0, URest &&...urest )
 	{
-		Base_t::template Base< T0 >()[ i ] = Forward< U0 >( u0 );
+		if constexpr ( IS_PACKED_STORAGE< T0 > )
+			Base_t::template PackedSetValue< T0 >( i, static_cast< T0 >( Forward< U0 >( u0 ) ) );
+		else
+			Base_t::template Base< T0 >()[ i ] = Forward< U0 >( u0 );
 
 		if constexpr ( sizeof...( TRest ) > 0 )
 			AssignRow< TRest... >( i, Forward< URest >( urest )... );

@@ -59,7 +59,7 @@ constexpr I BitCeil( I x )
 {
 	using Fixed_t = MFixed< I >;
 	constexpr I NUM_BITS = Fixed_t::BITS;
-	constexpr I INVALID = Fixed_t::BITS;
+	constexpr I INVALID = Fixed_t::INVALID;
 
 	if ( x <= 1 )
 	{

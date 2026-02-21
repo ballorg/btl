@@ -238,22 +238,22 @@ public:
 	}
 };
 
-template < typename I, typename T, I N > class CBufferString;
+template < typename I, typename T, I N, class A > class CBufferString;
 
-template < typename I = size_t, typename T = char >
-class CString : public CStringImpl< CVectorBase< CStringView< I, T >, I, T >, I, T >
+template < typename I = size_t, typename T = char, class A = CAllocator< I, T > >
+class CString : public CStringImpl< CVectorBase< CStringView< I, T >, I, T, A >, I, T >
 {
 public:
 	using Base_t = CStringImpl< CVectorBase< CStringView< I, T >, I, T >, I, T >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
-	template < I N > constexpr CString( const CBufferString< I, T, N > &other ) { CopyFrom< N >( other ); }
-	template < I N > constexpr CString &operator=( const CBufferString< I, T, N > &other ) { return CopyFrom< N >( other ); }
+	template < I N > constexpr CString( const CBufferString< I, T, N, A > &other ) { CopyFrom< N >( other ); }
+	template < I N > constexpr CString &operator=( const CBufferString< I, T, N, A > &other ) { return CopyFrom< N >( other ); }
 };
 
-template < typename I, typename T, I N >
-class CBufferString : public CStringImpl< CVectorBase< CStringView< I, T, N >, I, T >, I, T >
+template < typename I, typename T, I N, class A = CAllocator< I, T > >
+class CBufferString : public CStringImpl< CVectorBase< CStringView< I, T, N >, I, T, A >, I, T >
 {
 public:
 	using Base_t = CStringImpl< CVectorBase< CStringView< I, T, N >, I, T >, I, T >;
