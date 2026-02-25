@@ -54,6 +54,6 @@ struct Date_t
 /// This routine does *not* return wall-clock time. It reflects actual CPU
 /// execution time spent by the thread.
 ///-----------------------------------------------------------------------------
-BALL_EXTERN_C timens_t GetThreadCPUTime();
+BALL_EXTERN_C timens_t GetTimeNS();
 
 #endif // _INCLUDE_BALL_TIME_H_

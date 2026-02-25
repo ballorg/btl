@@ -10,8 +10,8 @@
 //   auto elapsed = BALL_PROF_END( Case01 ); // CTimeNS holding elapsed nanoseconds
 #	define BALL_PROF_CAT_IMPL( x, y ) x##y
 #	define BALL_PROF_CAT( x, y ) BALL_PROF_CAT_IMPL( x, y )
-#	define BALL_PROF_BEGIN( tag ) const BTL::timens_t BALL_PROF_CAT( __ballProfBeginNS_, tag ) = BTL::GetThreadCPUTime()
-#	define BALL_PROF_END( tag ) BTL::CTimeNS( BTL::GetThreadCPUTime() - BALL_PROF_CAT( __ballProfBeginNS_, tag ) )
+#	define BALL_PROF_BEGIN( tag ) const BTL::timens_t BALL_PROF_CAT( __ballProfBeginNS_, tag ) = BTL::GetTimeNS()
+#	define BALL_PROF_END( tag ) BTL::CTimeNS( BTL::GetTimeNS() - BALL_PROF_CAT( __ballProfBeginNS_, tag ) )
 
 namespace BTL
 {
