@@ -28,6 +28,16 @@
 #	define BALL_DLL_EXPORT_C BALL_EXTERN_C BALL_DLL_EXPORT
 #	define BALL_DLL_IMPORT_C BALL_EXTERN_C BALL_DLL_IMPORT
 
+#	if defined( _MSC_VER )
+#		define BALL_DLL_CONSTRUCTOR
+#		define BALL_DLL_DESTRUCTATOR
+#		define BALL_DLL_SECTION( name )
+#	elif defined( __GNUC__ )
+#		define BALL_DLL_CONSTRUCTOR __attribute__(( constructor ))
+#		define BALL_DLL_DESTRUCTATOR __attribute__(( destructor ))
+#		define BALL_DLL_SECTION( name ) __attribute__(( section( name ) ))
+#	endif
+
 #	ifdef __cplusplus
 #		if !defined( __MINGW32__ ) && !defined( _MSC_VER )
 #			define BALL_NULL __null

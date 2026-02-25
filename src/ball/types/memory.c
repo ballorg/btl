@@ -2,6 +2,7 @@
 #include <ball/types/base/fixed.h>
 #include <ball/types/c/assert.h>
 #include <ball/types/c/mmap.h>
+#include <ball/types/c/macros.h>
 #include <ball/types/c/memory.h>
 #include <ball/types/c/math.h>
 
@@ -18,6 +19,15 @@ struct Ball_AlignedHeader_t
 	size_t   nMapLength;    ///< Full mapping length to pass to munmap/mremap.
 	uint32_t nMagic;        ///< Signature to validate that the pointer is ours.
 }; // struct Ball_AlignedHeader_t
+
+///-----------------------------------------------------------------------------
+/// @brief Process-wide memory subsystem metadata.
+/// @note  Stores cached OS page size used by allocation and remap routines.
+///-----------------------------------------------------------------------------
+struct Ball_MemoryMetadata_t
+{
+	size_t nPageSize; ///< System page size in bytes.
+} g_Memory;
 
 ///-----------------------------------------------------------------------------
 /// @brief Returns system page size (falls back to 4096 on failure).
@@ -50,6 +60,15 @@ static inline struct Ball_AlignedHeader_t *Ball_HeaderFromUser( ptr_t pUser )
 }
 
 ///-----------------------------------------------------------------------------
+/// @brief Initializes global memory metadata during module load.
+/// @note  Must run before any allocator path that depends on page size.
+///-----------------------------------------------------------------------------
+BALL_DLL_CONSTRUCTOR void Ball_InitMemory()
+{
+	g_Memory.nPageSize = Ball_PageSize();
+}
+
+///-----------------------------------------------------------------------------
 /// @brief  Allocate page-backed memory with explicit alignment via mmap.
 /// @param  nSize  Logical size requested by the user (bytes).
 /// @param  nAlign Alignment (power of two, >= sizeof( ptr_t )).
@@ -68,7 +87,7 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	BALL_ASSERT_IF_MESSAGE( !nAlign || !BALL_IS_POW2( nAlign ), "Incorrect align" )
 		return BALL_NULL;
 
-	const size_t nPage            = Ball_PageSize();
+	const size_t nPage            = g_Memory.nPageSize;
 	const size_t nNeed            = nSize + nAlign + sizeof( struct Ball_AlignedHeader_t );
 	const size_t nMapLenInitial   = BALL_ROUND_UP( nNeed, nPage );
 
@@ -205,7 +224,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	// Attempt to resize the entire mapping in-place using mremap().
 	// If expansion fails, mremap() may return BALL_MAP_FAILED.
 	//-----------------------------------------------------------------------------
-	const size_t    nPage        = Ball_PageSize();
+	const size_t    nPage        = g_Memory.nPageSize;
 	const uintptr_t pDelta       = pUserPtr - pOldBase; // Offset of the user pointer within the mapping.
 
 	// Compute the new desired mapping range [pKeepStart .. pKeepEnd),
