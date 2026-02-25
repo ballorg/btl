@@ -45,6 +45,8 @@ public:
 
 	static constexpr TI NUM_TYPES = sizeof...( Ts );
 
+	template< typename T > static constexpr size_t BYTES = static_cast< size_t >( MFixedMetadata< RemoveCV_t< T > >::BYTES );
+
 	template < typename T > static constexpr TI TYPE_INDEX = IndexOf_t< T >::VALUE;
 	template < typename T > static constexpr bool TYPE_IN_PACK = ( TYPE_INDEX< T > != INVALID_TYPE_INDEX );
 
@@ -52,6 +54,7 @@ public:
 	template < typename T > using PackedTraits_t = MFixedMetadataBy< RemoveCV_t< T > >;
 	template < typename T > using PackedUnsigned_t = PackedTraits_t< T >::Unsigned_t;
 	template < typename T > static constexpr bool TYPE_HAS_PACKED_BITS = PackedTraits_t< T >::IS_PACKED;
+	template < typename T > static constexpr bits_t PACKED_BITS = PackedTraits_t< T >::BITS;
 	template < typename T > static constexpr bool IS_PACKED_STORAGE = TYPE_HAS_PACKED_BITS< T >;
 
 	// --------- state ----------
@@ -70,7 +73,7 @@ public:
 	/// @brief Construct from fixed-size C-arrays (all N must match implicitly).
 	template < I CN >
 	explicit constexpr CViewBase( const Ts ( &...arrays )[ CN ] ) noexcept
-		: CViewBase( I( CN ), static_cast< Ts * >( arrays )... )
+		: CViewBase( CN, static_cast< Ts * >( arrays )... )
 	{}
 
 	constexpr CViewBase( const CViewBase &copyFrom ) noexcept { CopyFrom( copyFrom ); }
@@ -79,14 +82,7 @@ public:
 	constexpr CViewBase &operator=( CViewBase &&moveFrom ) noexcept { return MoveFrom( Move( moveFrom ) ); }
 
 	// --------- sizes / byte sizes ----------
-	template < typename T >
-	static constexpr size_t TypeBytes() noexcept
-	{
-		using FixedData_t = MFixedMetadata< RemoveCV_t< T > >;
-		return static_cast< size_t >( FixedData_t::BYTES );
-	}
-
-	static constexpr size_t Stride() noexcept { return ( size_t( 0 ) + ... + TypeBytes< Ts >() ); }
+	static constexpr size_t Stride() noexcept { return ( size_t( 0 ) + ... + BYTES< Ts > ); }
 	constexpr size_t Size() const noexcept { return static_cast< size_t >( m_nCount ) * Stride(); }
 	constexpr I Count() const noexcept { return m_nCount; }
 	constexpr bool Empty() const noexcept { return Count() == FIRST_INDEX; }
@@ -419,15 +415,9 @@ protected:
 
 protected: // Packed methods.
 	template < typename T, Enable_t< T > = 0 >
-	static constexpr bits_t PackedBits() noexcept
-	{
-		return PackedTraits_t< T >::BITS;
-	}
-
-	template < typename T, Enable_t< T > = 0 >
 	static constexpr size_t PackedBytesForCount( I nCount ) noexcept
 	{
-		const bits_t nBits = static_cast< bits_t >( nCount ) * PackedBits< T >();
+		const bits_t nBits = static_cast< bits_t >( nCount ) * PACKED_BITS< T >;
 
 		return static_cast< size_t >( ( nBits + bits_t( 7 ) ) / bits_t( 8 ) );
 	}
@@ -435,7 +425,7 @@ protected: // Packed methods.
 	template < typename T, Enable_t< T > = 0 >
 	static constexpr bits_t PackedBitOffset( I i ) noexcept
 	{
-		return static_cast< bits_t >( i ) * PackedBits< T >();
+		return static_cast< bits_t >( i ) * PACKED_BITS< T >;
 	}
 
 	template < typename T, Enable_t< T > = 0 >
@@ -486,7 +476,7 @@ protected: // Packed methods.
 
 		BALL_ASSERT( pData != nullptr );
 
-		const bits_t nBits = static_cast< bits_t >( nRows ) * PackedBits< T >();
+		const bits_t nBits = static_cast< bits_t >( nRows ) * PACKED_BITS< T >;
 		const bits_t iFromBit = PackedBitOffset< T >( iFrom );
 
 		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
@@ -499,7 +489,7 @@ protected: // Packed methods.
 		if ( nRows <= FIRST_INDEX || nShiftRows <= FIRST_INDEX )
 			return;
 
-		const bits_t nValueBits = PackedBits< T >();
+		const bits_t nValueBits = PACKED_BITS< T >;
 		const bits_t nBits = static_cast< bits_t >( nRows ) * nValueBits;
 		const bits_t nShiftBits = static_cast< bits_t >( nShiftRows ) * nValueBits;
 		const bits_t iFromBit = PackedBitOffset< T >( iFrom );
@@ -525,7 +515,7 @@ protected: // Packed methods.
 		if ( nRows <= FIRST_INDEX || nShiftRows <= FIRST_INDEX )
 			return;
 
-		const bits_t nValueBits = PackedBits< T >();
+		const bits_t nValueBits = PACKED_BITS< T >;
 		const bits_t nBits = static_cast< bits_t >( nRows ) * nValueBits;
 		const bits_t nShiftBits = static_cast< bits_t >( nShiftRows ) * nValueBits;
 		const bits_t iFromBit = PackedBitOffset< T >( iFrom );
@@ -536,8 +526,8 @@ protected: // Packed methods.
 
 		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
 		{
-			const bits_t iDst = iFromBit + n;
-			PackedSetDataBit< T >( pData, iDst, PackedGetDataBit< T >( pData, iDst + nShiftBits ) );
+			const bits_t iDest = iFromBit + n;
+			PackedSetDataBit< T >( pData, iDest, PackedGetDataBit< T >( pData, iDest + nShiftBits ) );
 		}
 
 		for ( bits_t n = bits_t( 0 ); n < nShiftBits; ++n )

@@ -28,7 +28,7 @@ constexpr T *ConstructElement( T *pMemory, Ts &&...args )
 }
 
 template < typename T >
-constexpr void ConstructElements( T *pElement, const T *pEnd ) noexcept
+constexpr void ConstructElements( T *pElement, const T * const pEnd ) noexcept
 {
 	BALL_ASSERT_MESSAGE( pElement <= pEnd, "Invalid range" );
 
@@ -59,7 +59,7 @@ constexpr void DestructElements( T ( *pMemory )[ N ] )
 }
 
 template < typename T >
-constexpr void DestructElements( T *pElement, const T *pEnd ) noexcept
+constexpr void DestructElements( T *pElement, const T * const pEnd ) noexcept
 {
 	BALL_ASSERT_MESSAGE( pElement <= pEnd, "Invalid range in DestructElements" );
 
@@ -222,7 +222,7 @@ constexpr T *ShiftElementsRight( T *pDest, const T *pSrc, const T *pSrcEnd ) noe
 /// @return pDest
 ///-----------------------------------------------------------------------------
 template < typename T >
-constexpr T *ShiftElements( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
+constexpr T *ShiftElementsDiff( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
 {
 	BALL_ASSERT_MESSAGE( pSrc <= pSrcEnd, "Invalid source range" );
 
@@ -232,6 +232,26 @@ constexpr T *ShiftElements( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
 		return ShiftElementsRight( pDest, pSrc, pSrcEnd );
 	else
 		return pDest;
+}
+
+///-----------------------------------------------------------------------------
+/// @brief Shift elements in range [pSrc, pSrcEnd) into destination starting at pDest.
+///        Overlap-safe (memmove-like). Chooses left/right strategy automatically.
+/// @return pDest
+///-----------------------------------------------------------------------------
+template < typename T >
+constexpr T *ShiftElements( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
+{
+	BALL_ASSERT_MESSAGE( pSrc <= pSrcEnd, "Invalid source range" );
+
+	using Diff_t = decltype( pSrcEnd - pSrc );
+
+	const Diff_t nCount = pSrcEnd - pSrc;
+
+	if ( nCount <= Diff_t( 0 ) )
+		return pDest;
+
+	return static_cast< T *>( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
 
 /// @brief Byte-wise compare of @p nCount elements of T (memcmp semantics).

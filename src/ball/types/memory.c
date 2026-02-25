@@ -65,7 +65,7 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	if ( !nSize )
 		return BALL_NULL;
 
-	if ( !BALL_IS_POW2( nAlign ) || nAlign < sizeof( ptr_t ) )
+	BALL_ASSERT_IF_MESSAGE( !nAlign || !BALL_IS_POW2( nAlign ), "Incorrect align" )
 		return BALL_NULL;
 
 	const size_t nPage            = Ball_PageSize();
@@ -163,10 +163,8 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 		return BALL_NULL;
 	}
 
-	if ( !BALL_IS_POW2( nAlign ) || nAlign < sizeof( ptr_t ) )
-	{
+	BALL_ASSERT_IF_MESSAGE( !nAlign || !BALL_IS_POW2( nAlign ), "Incorrect align" )
 		return BALL_NULL;
-	}
 
 	struct Ball_AlignedHeader_t *pHeader = Ball_HeaderFromUser( pMem );
 
@@ -245,7 +243,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	const size_t nToCopy = ( pHeader->nSize < nNewSize ) ? pHeader->nSize : nNewSize;
 
 	if ( nToCopy )
-		__builtin_memcpy( pNew, pMem, nToCopy );
+		memcpy( pNew, pMem, nToCopy );
 
 	Ball_FreeAlign( pMem );
 

@@ -2,6 +2,7 @@
 #	define _SRC_BALL_TYPES_TESTS_COMMON_HPP_
 
 #ifdef BALL_ENABLE_MODULES
+import Ball.Time;
 import Ball.Types;
 #else
 #	include <ball/time.hpp>

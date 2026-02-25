@@ -269,7 +269,7 @@ struct MFixedMetadataBy : public MFixedPackedBy< T >
 
 	static constexpr bits_t STORAGE_BITS = bits_t( sizeof( Raw_t ) * 8ull );
 	static constexpr bits_t UNSIGNED_BITS = bits_t( sizeof( Unsigned_t ) * 8ull );
-	static constexpr bits_t BYTES = ( BITS + bits_t( 7ull ) ) / bits_t( 8ull );
+	static constexpr size_t BYTES = static_cast< size_t >( BITS + bits_t( 7ull ) ) / bits_t( 8ull );
 
 	static constexpr Unsigned_t MakeValueMask() noexcept
 	{

@@ -7,33 +7,7 @@
 #	include "base/fixed.h"
 #	include "meta/fixed.hpp"
 
-template < typename I = uint_t, typename U >
-constexpr I Num_BitWidth( U u ) noexcept
-{
-	I n = I( 0 );
-
-	do { ++n; u >>= 1u; } while ( u );
-
-	return n;
-}
-
-template < typename I = uint_t, uint8_t NS >
-constexpr I Num_Log2Pow2() noexcept
-{
-	static_assert( NS >= 2, "Base must be >= 2" );
-	static_assert( ( NS & ( NS - 1 ) ) == 0, "Base must be power-of-two" );
-
-	uint_t n = static_cast< uint_t >( NS );
-	I k = I( 0 );
-
-	while ( n > 1u )
-	{
-		n >>= 1u;
-		++k;
-	}
-
-	return k;
-}
+#	include "math.hpp"
 
 ///-----------------------------------------------------------------------------
 /// @brief Count of base-NS digits required to represent unsigned @p u.
@@ -41,7 +15,7 @@ constexpr I Num_Log2Pow2() noexcept
 ///        Optimized paths for NS = 2, 4, 8, 16 (powers of two).
 ///-----------------------------------------------------------------------------
 template < typename I = uint_t, uint8_t NS, typename U >
-constexpr I Num_DigitsNS( U u ) noexcept
+constexpr I Num_Digits( U u ) noexcept
 {
 	static_assert( NS >= 2, "Base must be >= 2" );
 
@@ -51,8 +25,8 @@ constexpr I Num_DigitsNS( U u ) noexcept
 	if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Power-of-two base: digits = ceil(bit_width / log2(NS)).
-		constexpr I k = Num_Log2Pow2< I, NS >();
-		const I bw = Num_BitWidth< I >( u );
+		constexpr I k = Math_Log2Pow2< I, NS >();
+		const I bw = Math_BitWidth< I >( u );
 
 		return I( ( bw + k - 1 ) / k );
 	}
@@ -82,7 +56,7 @@ constexpr T Num_DigitToChar( U d ) noexcept
 ///-----------------------------------------------------------------------------
 /// @brief Write unsigned @p u in base-NS into @p pOut as exactly @p nDigits chars.
 ///        Writes **back-to-front** (pOut[nDigits-1] .. pOut[0]).
-///        Precondition: nDigits == Num_DigitsNS<I, NS>(u).
+///        Precondition: nDigits == Num_Digits<I, NS>(u).
 ///
 /// Notes for compile-time friendliness:
 ///  - The loop runs exactly @p nDigits steps (no while(u)), which removes
@@ -103,7 +77,7 @@ constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 		// Base-16: fixed 4-bit step.
 		for ( I i = 0; i < nDigits; ++i )
 		{
-			const uint_t nib = static_cast< uint_t >( u & U( 0xFu ) );
+			const I nib = static_cast< I >( u & U( 0xFu ) );
 
 			*--q = Num_DigitToChar< T, I, U >( nib );
 			u >>= 4u;
@@ -117,20 +91,20 @@ constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 			const U q10 = u / U( 10u );
 			const U r10 = u - q10 * U( 10u );
 
-			*--q = Num_DigitToChar< T, I, U >( static_cast< uint_t >( r10 ) );
+			*--q = Num_DigitToChar< T, I, U >( static_cast< I >( r10 ) );
 			u = q10;
 		}
 	}
 	else if constexpr ( ( NS & ( NS - 1 ) ) == 0 )
 	{
 		// Any power-of-two base: use shifts & masks.
-		constexpr uint_t k = Num_Log2Pow2< uint_t, NS >();
+		constexpr I k = Math_Log2Pow2< I, NS >();
 
 		constexpr U MASK = ( U( 1 ) << k ) - U( 1 );
 
 		for ( I i = 0; i < nDigits; ++i )
 		{
-			*--q = Num_DigitToChar< T, I, U >( static_cast< uint_t >( u & MASK ) );
+			*--q = Num_DigitToChar< T, I, U >( static_cast< I >( u & MASK ) );
 			u >>= k;
 		}
 	}
@@ -156,9 +130,9 @@ constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 // (Optional) consteval helper for hard compile-time contexts
 //-----------------------------------------------------------------------------
 template < uint8_t NS, typename U >
-consteval uint_t Num_DigitsNS_Const( U u )
+consteval uint_t Num_Digits_Const( U u )
 {
-	return Num_DigitsNS< uint_t, NS, U >( u );
+	return Num_Digits< uint_t, NS, U >( u );
 }
 
 #endif // !defined( _INCLUDE_BALL_TYPES_NUMBER_HPP_ )

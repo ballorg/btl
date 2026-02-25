@@ -42,6 +42,7 @@ public:
 	using Base_t::FIXED_COUNT;
 	using Base_t::INVALID_INDEX;
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
+	template < typename T > static constexpr size_t ALIGNED_SIZE = alignof( T );
 	template < typename T > static constexpr bool IS_PACKED_STORAGE = Base_t::template TYPE_HAS_PACKED_BITS< T >;
 
 	using Base_t::Count;
@@ -176,26 +177,23 @@ public:
 
 	CMultiVectorBase &operator=( const ConstView_t &rhs ) { return CopyFrom( rhs ); }
 	CMultiVectorBase &operator=( const View_t &rhs ) { return CopyFrom( rhs ); }
-protected:
 
 protected:
-	template < typename T > static constexpr size_t AlignedSize() { return BitCeil_Const< I >( 8 * sizeof( T ) ); }
-
 	template < typename T >
 	T *EnsureCapacityBy( I nRequest )
 	{
-		const I nOld = Count();
+		const I nCount = Count();
 
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			const bool bWasOverflow = Base_t::template IsPackedOverflow< T >( nOld );
+			const bool bWasOverflow = Base_t::template IsPackedOverflow< T >( nCount );
 			const bool bWillOverflow = Base_t::template IsPackedOverflow< T >( nRequest );
 			uchar_t *pElements = Base_t::template PackedBase< T >();
 
 			if ( bWillOverflow )
 			{
-				const I nCapacity = BitCeil< I >( nOld );
-				const I nNewCapacity = BitCeil< I >( nRequest );
+				const I nCapacity = BitCeil( nCount );
+				const I nNewCapacity = BitCeil( nRequest );
 				const size_t nCapacityBytes = Base_t::template PackedBytesForCount< T >( nCapacity );
 				const size_t nNewCapacityBytes = Base_t::template PackedBytesForCount< T >( nNewCapacity );
 
@@ -207,17 +205,17 @@ protected:
 					if ( nNewCapacityBytes == nCapacityBytes )
 						return reinterpret_cast< T * >( pElements );
 
-					pElements = reinterpret_cast< uchar_t * >( BaseAllocator_t< T >::Realloc( pElements, nNewCapacityBytes, AlignedSize< uchar_t >() ) );
+					pElements = reinterpret_cast< uchar_t * >( BaseAllocator_t< T >::Realloc( pElements, nNewCapacityBytes, ALIGNED_SIZE< uchar_t > ) );
 					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate packed elements" );
 				}
 				else
 				{
-					pElements = reinterpret_cast< uchar_t * >( BaseAllocator_t< T >::Alloc( nNewCapacityBytes, AlignedSize< uchar_t >() ) );
+					pElements = reinterpret_cast< uchar_t * >( BaseAllocator_t< T >::Alloc( nNewCapacityBytes, ALIGNED_SIZE< uchar_t > ) );
 					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate packed elements" );
 
 					if constexpr ( IS_GROWABLE )
 					{
-						const size_t nBytes = Base_t::template PackedBytesForCount< T >( nOld );
+						const size_t nBytes = Base_t::template PackedBytesForCount< T >( nCount );
 
 						if ( nBytes > size_t( 0 ) )
 							CopyElements( nBytes, pElements, Base_t::template PackedFixedData< T >() );
@@ -245,15 +243,15 @@ protected:
 		}
 		else
 		{
-			const bool bWasOverflow = Base_t::template IsOverflow< T >( nOld );
+			const bool bWasOverflow = Base_t::template IsOverflow< T >( nCount );
 			const bool bWillOverflow = Base_t::template IsOverflow< T >( nRequest );
 
 			T *pElements = Base_t::template Base< T >();
 
 			if ( bWillOverflow )
 			{
-				const I nCapacity = BitCeil< I >( nOld );
-				const I nNewCapacity = BitCeil< I >( nRequest );
+				const I nCapacity = BitCeil( nCount );
+				const I nNewCapacity = BitCeil( nRequest );
 
 				BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
 					return pElements;
@@ -263,32 +261,31 @@ protected:
 					if ( nNewCapacity == nCapacity )
 						return pElements;
 
-					pElements = Allocator_t< T >::Realloc( pElements, nNewCapacity, AlignedSize< T >() );
+					pElements = Allocator_t< T >::Realloc( pElements, nNewCapacity, ALIGNED_SIZE< uchar_t > );
 					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to reallocate elements" );
 				}
 				else
 				{
-					pElements = Allocator_t< T >::Alloc( nNewCapacity, AlignedSize< T >() );
+					pElements = Allocator_t< T >::Alloc( nNewCapacity, ALIGNED_SIZE< uchar_t > );
 					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
 
 					if constexpr ( IS_GROWABLE )
-						CopyElements( nOld, pElements, Base_t::template FixedData< T >() );
+						CopyElements( nCount, pElements, Base_t::template FixedData< T >() );
 				}
-
-				return pElements;
 			}
-
-			if ( bWasOverflow )
+			else if ( bWasOverflow )
 			{
+				T *pFixedData = Base_t::template FixedData< T >();
+
 				if constexpr ( IS_GROWABLE )
-					CopyElements( nRequest, Base_t::template FixedData< T >(), pElements );
+					CopyElements( nRequest, pFixedData, pElements );
 
 				Allocator_t< T >::Free( pElements );
 
-				return Base_t::template FixedData< T >();
+				return pFixedData;
 			}
 
-			return Base_t::template FixedData< T >();
+			return pElements;
 		}
 	}
 
@@ -325,11 +322,11 @@ protected:
 	}
 
 	template < typename T >
-	void ShiftRightBaseBy( I i, I nAdd, I nOld )
+	void ShiftRightBaseBy( I i, I nAdd, I nCount )
 	{
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			const I nRows = static_cast< I >( nOld - i );
+			const I nRows = static_cast< I >( nCount - i );
 
 			if ( nRows > I( 0 ) )
 				Base_t::template PackedShiftRowsRight< T >( i, nRows, nAdd );
@@ -338,8 +335,8 @@ protected:
 		{
 			T *p = Base_t::template Base< T >();
 
-			if ( i < nOld )
-				ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nOld ] );
+			if ( i < nCount )
+				ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nCount ] );
 		}
 	}
 
@@ -522,11 +519,11 @@ public:
 		BALL_ASSERT( nRemove > I( 0 ) );
 		BALL_ASSERT( I( 0 ) <= i && i + nRemove <= Count() );
 
-		const I nOld = Count();
-		const I nNew = nOld - nRemove;
+		const I nCount = Count();
+		const I nNewCount = nCount - nRemove;
 
-		( Base_t::template ShiftLeftBaseBy< Ts >( i, nRemove, nOld ), ... );
-		Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
+		( Base_t::template ShiftLeftBaseBy< Ts >( i, nRemove, nCount ), ... );
+		Set( nNewCount, Base_t::template EnsureCapacityBy< Ts >( nNewCount )... );
 	}
 
 protected:

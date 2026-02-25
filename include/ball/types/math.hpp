@@ -7,6 +7,7 @@
 #	include "base/fixed.h"
 #	include "c/math.h"
 #	include "elements.hpp"
+#	include "bits.hpp"
 #	include "xvalue.hpp"
 
 // Swap two of anything.
@@ -69,8 +70,8 @@ inline size_t Math_RoundUp( size_t v, size_t g )
 
 
 /// @brief Floor(log2(x)) for unsigned integers. For x==0 returns 0.
-template < typename I = uint_t, typename U >
-constexpr I Math_Log2_Floor( U x ) noexcept
+template < typename I >
+constexpr I Math_Log2_Floor( I x ) noexcept
 {
 	I w = 0;
 
@@ -80,17 +81,35 @@ constexpr I Math_Log2_Floor( U x ) noexcept
 	return w;
 }
 
-/// @brief Bit width (number of bits needed to represent x). For x==0 returns 1.
-template < typename I = uint_t, typename U >
-constexpr I Math_BitWidth( U x ) noexcept
+template < typename I, uint8_t NS >
+constexpr I Math_Log2Pow2() noexcept
 {
-	return x ? ( Math_Log2_Floor< I, U >( x ) + 1u ) : 1u;
+	static_assert( NS >= 2, "Base must be >= 2" );
+	static_assert( ( NS & ( NS - 1 ) ) == 0, "Base must be power-of-two" );
+
+	uint_t n = static_cast< uint_t >( NS );
+	I k = I( 0 );
+
+	while ( n > 1u )
+	{
+		n >>= 1u;
+		++k;
+	}
+
+	return k;
+}
+
+/// @brief Bit width (number of bits needed to represent x). For x==0 returns 1.
+template < typename I >
+constexpr I Math_BitWidth( I x ) noexcept
+{
+	return BitWidth< I >( x );
 }
 
 /// @brief Floor(log_NS(x)) for compile-time base NS ∈ [2, 36].
 /// @details Generic slow path uses integer division; fast-paths for 16/2.
-template < typename I = uint_t, uint8_t NS, typename U >
-constexpr I Math_Log_Floor( U x ) noexcept
+template < typename I, uint8_t NS >
+constexpr I Math_Log_Floor( I x ) noexcept
 {
 	static_assert( NS >= 2 && NS <= 36, "Math_Log_Floor: base must be in [2,36]" );
 
@@ -103,7 +122,7 @@ constexpr I Math_Log_Floor( U x ) noexcept
 	}
 	else if constexpr ( NS == 16 )
 	{
-		const I bw = Math_BitWidth< I, U >( x );
+		const I bw = Math_BitWidth< I >( x );
 
 		return ( bw - 1u ) / 4u;
 	}
@@ -111,9 +130,9 @@ constexpr I Math_Log_Floor( U x ) noexcept
 	{
 		I k = 0;
 
-		while ( x >= U( NS ) )
+		while ( x >= I( NS ) )
 		{
-			x /= U( NS );
+			x /= I( NS );
 			++k;
 		}
 
@@ -122,10 +141,10 @@ constexpr I Math_Log_Floor( U x ) noexcept
 }
 
 /// @brief Number of digits in base-NS for value x (x==0 -> 1).
-template < typename I = uint_t, uint8_t NS, typename U >
-constexpr I Math_Digits( U x ) noexcept
+template < typename I, uint8_t NS >
+constexpr I Math_Digits( I x ) noexcept
 {
-	return ( x == 0 ) ? 1u : ( Math_Log_Floor< I, NS, U >( x ) + 1u );
+	return ( x == 0 ) ? 1u : ( Math_Log_Floor< I, NS >( x ) + 1u );
 }
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MATH_HPP_ )

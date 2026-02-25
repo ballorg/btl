@@ -53,7 +53,7 @@ public:
 
 	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
 	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
-	static constexpr size_t ALIGNED_SIZE = BitCeil_Const< I >( 8 * sizeof( Element_t ) );
+	static constexpr size_t ALIGNED_SIZE = alignof( Element_t );
 
 	/// @brief Default / external ctor. Does not assume ownership semantics beyond this instance.
 	constexpr ~CVectorBase() noexcept
@@ -73,7 +73,7 @@ public:
 	// Basic queries / accessors.
 	// ---------------------------
 
-	constexpr I Capacity() const noexcept { return BitCeil< I >( Count() ); }
+	constexpr I Capacity() const noexcept { return BitCeil( Count() ); }
 	constexpr size_t CapacitySize() const noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE )
@@ -149,24 +149,24 @@ protected:
 	///   - On allocation failure, nullptr may be returned; the caller must validate the pointer.
 	///   - Function never throws exceptions; caller must enforce safety policy.
 	///
-	/// @param nRequestedCount  Minimum required integer of elements before rounding.
+	/// @param nRequested Minimum required integer of elements before rounding.
 	/// @return Pointer to valid element storage (possibly reallocated or migrated).
 	///-----------------------------------------------------------------------------
-	constexpr T *EnsureCapacity( I nRequestedCount )
+	constexpr T *EnsureCapacity( I nRequested )
 	{
 		const I nCount = Count();
-		const I nCapacity = BitCeil< I >( nCount );
-		const I nNewCapacity = BitCeil< I >( nRequestedCount );
+		const I nCapacity = BitCeil( nCount );
+		const I nNewCapacity = BitCeil( nRequested );
 
-		if ( IS_PACKED_STORAGE )
+		BALL_ASSERT_MESSAGE( nCapacity != Fixed_t::INVALID, "Current capacity overflow!" );
+		BALL_ASSERT_MESSAGE( nNewCapacity != Fixed_t::INVALID, "Requested capacity overflow!" );
+
+		if constexpr ( IS_PACKED_STORAGE )
 		{
-			const bool bWillOverflow = IsPackedOverflow( nRequestedCount );
+			const bool bWillOverflow = IsPackedOverflow( nRequested );
 			const bool bWasOverflow = IsPackedOverflow( nCount );
 			uchar_t *pData = PackedBase();
 			uchar_t *pCurrent = pData;
-
-			BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
-				return reinterpret_cast< T * >( pCurrent );
 
 			const size_t nOldBytes = PackedBytesForCount( nCapacity );
 			const size_t nNewBytes = PackedBytesForCount( nNewCapacity );
@@ -180,9 +180,8 @@ protected:
 						return reinterpret_cast< T * >( pData );
 
 					pData = reinterpret_cast< uchar_t * >( BaseAllocator_t::Realloc( pData, static_cast< I >( nNewBytes ), 8u ) );
-					BALL_ASSERT_MESSAGE( pData != nullptr, "Failed to reallocate packed storage" );
 
-					if ( pData == nullptr )
+					BALL_ASSERT_IF_MESSAGE( pData == nullptr, "Failed to reallocate packed storage" )
 						return reinterpret_cast< T * >( pCurrent );
 
 					if ( nOldBytes < nNewBytes )
@@ -191,9 +190,8 @@ protected:
 				else
 				{
 					pData = reinterpret_cast< uchar_t * >( BaseAllocator_t::Alloc( static_cast< I >( nNewBytes ), 8u ) );
-					BALL_ASSERT_MESSAGE( pData != nullptr, "Failed to allocate packed storage" );
 
-					if ( pData == nullptr )
+					BALL_ASSERT_IF_MESSAGE( pData == nullptr, "Failed to allocate packed storage" )
 						return reinterpret_cast< T * >( pCurrent );
 
 					if ( nLiveBytes > size_t( 0 ) )
@@ -205,7 +203,7 @@ protected:
 
 				T *pNew = reinterpret_cast< T * >( pData );
 
-				Base_t::Set( nCount, pNew );
+				Set( nCount, pNew );
 
 				return pNew;
 			}
@@ -220,7 +218,7 @@ protected:
 				BaseAllocator_t::Free( pData );
 			}
 
-			Base_t::Set( nCount, pNew );
+			Set( nCount, pNew );
 
 			return pNew;
 		}
@@ -229,11 +227,8 @@ protected:
 			T *pElements = Base();
 
 			// Case A: request exceeds inline storage
-			if ( IsOverflow( nRequestedCount ) )
+			if ( IsOverflow( nRequested ) )
 			{
-				BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
-					return pElements;
-
 				// Subcase A1: already on heap
 				if ( IsOverflow() )
 				{
@@ -257,6 +252,10 @@ protected:
 			{
 				if constexpr ( IS_GROWABLE )
 					MoveToFixed( pElements );
+
+				Allocator_t::Free( pElements );
+
+				return FixedData();
 			}
 
 			return pElements;
@@ -296,7 +295,8 @@ protected:
 
 		if constexpr ( IS_PACKED_STORAGE )
 		{
-			Base_t::Set( nNewCount, pElements );
+			Set( nNewCount, pElements );
+
 			const size_t nBytes = PackedBytesForCount( nNewCount );
 
 			if ( nBytes > size_t( 0 ) )
@@ -305,7 +305,7 @@ protected:
 		else
 		{
 			CopyElements( other.Count(), pElements, other.Base() );
-			Base_t::Set( nNewCount, pElements );
+			Set( nNewCount, pElements );
 		}
 
 		return *this;
@@ -319,7 +319,7 @@ protected:
 
 		if constexpr ( IS_PACKED_STORAGE )
 		{
-			Base_t::Set( nNewCount, pElements );
+			Set( nNewCount, pElements );
 			const size_t nBytes = PackedBytesForCount( nNewCount );
 
 			if ( nBytes > size_t( 0 ) )
@@ -328,7 +328,7 @@ protected:
 		else
 		{
 			CopyElements( other.Count(), pElements, other.Base() );
-			Base_t::Set( nNewCount, pElements );
+			Set( nNewCount, pElements );
 		}
 
 		return *this;
@@ -371,13 +371,13 @@ public:
 	template < I N > constexpr CVectorImpl( const T ( &elements )[ N ] ) noexcept : Base_t() { AddToTail( I( N ), elements ); }
 	template < I N > constexpr CVectorImpl( T ( &&elements )[ N ] ) noexcept : Base_t() { AddToTail( I( N ), Move( elements ) ); }
 	constexpr CVectorImpl( T &element ) noexcept : Base_t() { AddToTail( element ); }
-	constexpr ~CVectorImpl() noexcept { Purge(); }
+	constexpr ~CVectorImpl() noexcept { T *pData = Base(); DestructElements( pData, pData + Count() ); }
 
 	constexpr CVectorImpl &operator=( const View_t &other ) { return CopyFrom( other ); }
 	constexpr CVectorImpl &operator=( const ConstView_t &other ) { return CopyFrom( other ); }
-	template < I N > constexpr CVectorImpl &operator=( const GrowableView_t< N > &other ) noexcept { CopyFrom( other ); }
-	template < I N > constexpr CVectorImpl &operator=( const ConstGrowableView_t< N > &other ) noexcept { CopyFrom( other ); }
-	constexpr CVectorImpl &operator=( CVectorImpl &&other ) { return MoveFrom( Move( other ) ); }
+	template < I N > constexpr CVectorImpl &operator=( const GrowableView_t< N > &other ) noexcept { return CopyFrom( other ); }
+	template < I N > constexpr CVectorImpl &operator=( const ConstGrowableView_t< N > &other ) noexcept { return CopyFrom( other ); }
+	constexpr CVectorImpl &operator=( CVectorImpl &&other ) noexcept { return MoveFrom( Move( other ) ); }
 
 	// Returns new count.
 	constexpr I Grow( const I n = 1 )
@@ -397,7 +397,7 @@ public:
 	{
 		BALL_ASSERT( !v.Empty() );
 
-		I nViewCount = v.Count();
+		const I nViewCount = v.Count();
 
 		T *pData = EnsureInsert( nIndex, nViewCount );
 
@@ -408,63 +408,44 @@ public:
 		}
 		else
 		{
-			CopyElements( nViewCount, pData, v.Base() );
-		}
-
-		return nIndex + nViewCount;
-	}
-	template < I N >
-	constexpr I Insert( const I nIndex, const GrowableView_t< N > &v )
-	{
-		BALL_ASSERT( !v.Empty() );
-
-		I nViewCount = v.Count();
-
-		T *pData = EnsureInsert( nIndex, nViewCount );
-
-		if constexpr ( IS_PACKED_STORAGE )
-		{
-			for ( I n = 0; n < nViewCount; ++n )
-				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
-		}
-		else
-		{
-			CopyElements( nViewCount, pData, v.Base() );
-		}
-
-		return nIndex + nViewCount;
-	}
-	template < I N >
-	constexpr I Insert( const I nIndex, const ConstGrowableView_t< N > &v )
-	{
-		BALL_ASSERT( !v.Empty() );
-
-		I nViewCount = v.Count();
-
-		T *pData = EnsureInsert( nIndex, nViewCount );
-
-		if constexpr ( IS_PACKED_STORAGE )
-		{
-			for ( I n = 0; n < nViewCount; ++n )
-				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
-		}
-		else
-		{
-			CopyElements( nViewCount, pData, v.Base() );
+			CopyElements_Unified( nViewCount, pData, v.Base() );
 		}
 
 		return nIndex + nViewCount;
 	}
 	constexpr I Insert( const I nIndex, const View_t &v ) { return Insert( nIndex, v.Const() ); }
 
+	template < I N >
+	constexpr I Insert( const I nIndex, const ConstGrowableView_t< N > &v )
+	{
+		BALL_ASSERT( !v.Empty() );
+
+		const I nViewCount = v.Count();
+
+		T *pData = EnsureInsert( nIndex, nViewCount );
+
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			for ( I n = 0; n < nViewCount; ++n )
+				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
+		}
+		else
+		{
+			CopyElements_Unified( nViewCount, pData, v.Base() );
+		}
+
+		return nIndex + nViewCount;
+	}
+	template < I N > constexpr I Insert( const I nIndex, const GrowableView_t< N > &v ) { return Insert( nIndex, v.Const() ); }
+
 	///-----------------------------------------------------------------------------
 	/// @brief Inserts R elements from a C-array at position @p index (copy).
 	/// @return The index where the first element was inserted.
 	///-----------------------------------------------------------------------------
 	template < I N >
-	constexpr I Insert( const I nIndex, const I nCount, const T ( &arrElements )[ N ] )
+	constexpr I InsertArray( const I nIndex, const I nCount, const T ( &arrElements )[ N ] )
 	{
-		static_assert( 0 < N, "Insert( I, const I, const & ) requires at least one element" );
+		static_assert( 0 < N, "InsertElements( I, const I, const & ) requires at least one element" );
 		BALL_ASSERT( 0 < nCount );
 		BALL_ASSERT( nCount <= N );
 
@@ -486,16 +467,16 @@ public:
 
 		return nIndex + nCount;
 	}
-	template < I N > constexpr I Insert( const I nIndex, const T ( &arrElements )[ N ] ) { return Insert( nIndex, arrElements ); }
+	template < I N > constexpr I InsertArray( const I nIndex, const T ( &arrElements )[ N ] ) { return InsertArray( nIndex, N, arrElements ); }
 
 	///-----------------------------------------------------------------------------
 	/// @brief Inserts R elements from an rvalue C-array at position @p index (move).
 	/// @return The index where the first element was inserted.
 	///-----------------------------------------------------------------------------
 	template < I N >
-	constexpr I Insert( const I nIndex, const I nCount, T ( &&arrElements )[ N ] )
+	constexpr I InsertArray( const I nIndex, const I nCount, T ( &&arrElements )[ N ] )
 	{
-		static_assert( 0 < N, "Insert( I, const I, && ) requires at least one element" );
+		static_assert( 0 < N, "InsertElements( I, const I, && ) requires at least one element" );
 		BALL_ASSERT( 0 < nCount );
 		BALL_ASSERT( nCount <= N );
 
@@ -517,7 +498,7 @@ public:
 
 		return nIndex + nCount;
 	}
-	template < I N > constexpr I Insert( const I nIndex, T ( &&arrElements )[ N ] ) { return Insert( nIndex, Move( arrElements ) ); }
+	template < I N > constexpr I InsertArray( const I nIndex, T ( &&arrElements )[ N ] ) { return InsertArray( nIndex, N, Move( arrElements ) ); }
 
 	///-----------------------------------------------------------------------------
 	/// @brief Insert a single element at position @p nIndex (copy).
@@ -525,7 +506,7 @@ public:
 	///-----------------------------------------------------------------------------
 	constexpr I Insert( const I nIndex, const T &element )
 	{
-		return Insert( nIndex, 1, { element } );
+		return InsertArray( nIndex, 1, { element } );
 	}
 
 	///-----------------------------------------------------------------------------
@@ -534,7 +515,7 @@ public:
 	///-----------------------------------------------------------------------------
 	constexpr I Insert( const I nIndex, T &&element )
 	{
-		return Insert( nIndex, 1, { Move( element ) } );
+		return InsertArray( nIndex, 1, { Move( element ) } );
 	}
 
 	///-----------------------------------------------------------------------------
@@ -606,10 +587,11 @@ public:
 		else
 		{
 			T *pData = Base();
+			T *pIt = &pData[ nIndex ], *pItEnd = pIt + n;
 
-			DestructElement( &pData[ nIndex ] );
-			ShiftElementsLeft( &pData[ nIndex ], &pData[ nIndex + n ], &pData[ nCount ] );
-			Grow( -n );
+			DestructElements( pIt, pItEnd );
+			ShiftElements( pIt, pItEnd, &pData[ nCount ] );
+			Set( nCount - n, pData );
 		}
 
 		return nIndex;
@@ -671,7 +653,7 @@ public:
 			ShiftElementsLeft( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
 
 			// 2.3 Commit new logical size.
-			Base_t::Set( nCount - nShrink, pData );
+			Set( nCount - nShrink, pData );
 
 			return ( nWith == I( 0 ) ) ? ( ( i == I( 0 ) ) ? INVALID_INDEX : i )
 			                           : ( i + nWith );
@@ -683,7 +665,7 @@ public:
 			const I nNew  = nCount + nGrow;
 
 			// 3.1 Ensure capacity; pointer may change.
-			pData = Base_t::EnsureCapacity( nNew );
+			pData = EnsureCapacity( nNew );
 
 			// 3.2 Shift suffix right by nGrow: [i + nRemove .. n) -> starts at [i + nWith .. )
 			const I nSuffixBegin  = i + nRemove;
@@ -692,7 +674,7 @@ public:
 			ShiftElementsRight( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
 
 			// 3.3 Commit new logical size before filling the gap.
-			Base_t::Set( nNew, pData );
+			Set( nNew, pData );
 
 			// 3.4 Copy replacement into its final spot.
 			for ( I k = 0; k < nWith; ++k )
@@ -872,7 +854,7 @@ protected:
 		// 2) Make a hole: shift the suffix [nIndex, nOldCount) to the right.
 		if ( nIndex < nOldCount )
 		{
-			if ( IS_PACKED_STORAGE )
+			if constexpr ( IS_PACKED_STORAGE )
 				PackedShiftRowsRight( nIndex, nOldCount - nIndex, nAddCount );
 			else
 				ShiftElementsRight( &pData[ nIndex + nAddCount ], &pData[ nIndex ], &pData[ nOldCount ] );
@@ -889,7 +871,9 @@ protected:
 	{
 		I nOld = Count();
 
-		Set( nNew, EnsureCapacity( nNew ) );
+		T *pData = EnsureCapacity( nNew );
+
+		Set( nNew, pData );
 
 		if constexpr ( IS_PACKED_STORAGE )
 		{
@@ -900,8 +884,6 @@ protected:
 		}
 		else
 		{
-			T *pData = Base();
-
 			if ( nOld < nNew )
 				ConstructElements( &pData[ nOld ], &pData[ nNew ] );
 			else if ( nOld > nNew )

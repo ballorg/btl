@@ -1,8 +1,9 @@
-#ifndef _INCLUDE_BALL_TYPES_C_ASSERT_HPP_
-#	define _INCLUDE_BALL_TYPES_C_ASSERT_HPP_
+#ifndef _INCLUDE_BALL_TYPES_C_ASSERT_H_
+#	define _INCLUDE_BALL_TYPES_C_ASSERT_H_
 
 #	include "debugbreak.h"
 #	include "macros.h"
+#	include "unreachable.h"
 
 #	ifndef BALL_ENABLE_ASSERT
 #		if defined( NDEBUG )
@@ -12,37 +13,31 @@
 #		endif // defined( NDEBUG )
 #	endif // !defined( BALL_ENABLE_ASSERT )
 
-#	if BALL_ENABLE_ASSERT
-#		define BALL_ASSERT_IMPL( func, expr, message, name, filename, line, column ) \
+#	define BALL_THROW_IMPL( func, sig, expr, message, name, filename, line, column ) \
+		{ \
+			if ( !( expr ) ) \
 			{ \
-				if ( !( expr ) ) \
-				{ \
-					func( #expr, message, name, filename, ( unsigned int )( line ), ( unsigned int )( column ) ); \
-					BALL_DEBUGBREAK(); \
-				} \
-			}
+				func( #expr, message, name, filename, ( unsigned int )( line ), ( unsigned int )( column ) ); \
+				sig(); \
+			} \
+		}
+
+#	if BALL_ENABLE_ASSERT
+#		define BALL_ASSERT_IMPL( expr, message, name, filename, line, column ) \
+		BALL_THROW_IMPL( Ball_AssertFail, BALL_DEBUGBREAK, expr, message, name, filename, line, column );
 #	else // !BALL_ENABLE_ASSERT
-#		define BALL_ASSERT_IMPL( func, expr, message, name, filename, line, column ) ( ( void )0 );
+#		define BALL_ASSERT_IMPL( expr, message, name, filename, line, column ) ( ( void )0 );
 #	endif // BALL_ENABLE_ASSERT
-#	define BALL_ASSERT_MESSAGE( expr, message ) BALL_ASSERT_IMPL( Ball_AssertFail, expr, message, __FUNCTION__, __FILE__, __LINE__, 0 )
+
+#	define BALL_ASSERT_MESSAGE( expr, message ) BALL_ASSERT_IMPL( expr, message, __FUNCTION__, __FILE__, __LINE__, 0 )
 #	define BALL_ASSERT( expr ) BALL_ASSERT_MESSAGE( expr, BALL_NULL )
-#	define BALL_ASSERT_IF_MESSAGE( expr, message ) BALL_ASSERT_IMPL( Ball_AssertFail, !( expr ), message, __FUNCTION__, __FILE__, __LINE__, 0 ) if( expr )
+#	define BALL_ASSERT_IF_MESSAGE( expr, message ) BALL_ASSERT_IMPL( !( expr ), message, __FUNCTION__, __FILE__, __LINE__, 0 ) if( expr )
 #	define BALL_ASSERT_IF( expr ) BALL_ASSERT_IF_MESSAGE( expr, BALL_NULL )
 
-//TODO
-#	define BALL_FATAL_MESSAGE( expr, message ) ( ( void )0 )
-#	define BALL_FATAL( expr ) ( ( void )0 )
-
-// BALL_ASSUME(x)
-//  - Optimization hint to the compiler that x is always true in Release.
-//  - In GCC/Clang we route false-case into UB to enable more aggressive opts.
-#if defined( _MSC_VER )
-#	define BALL_ASSUME( x ) __assume( x )
-#elif defined( __GNUC__ ) || defined( __clang__ )
-#	define BALL_ASSUME( x ) do { if ( !(x) ) __builtin_unreachable(); } while ( 0 )
-#else
-#	define BALL_ASSUME( x ) ( ( void )0 )
-#endif
+#	define BALL_FATAL_IMPL( expr, message, name, filename, line, column ) \
+		BALL_THROW_IMPL( Ball_AssertFail, BALL_UNREACHABLE, expr, message, name, filename, line, column );
+#	define BALL_FATAL_MESSAGE( expr, message ) BALL_FATAL_IMPL( expr, message, __FUNCTION__, __FILE__, __LINE__, 0 )
+#	define BALL_FATAL( expr ) BALL_FATAL_MESSAGE( expr, BALL_NULL )
 
 BALL_EXTERN_C void Ball_AssertFail(
 	const char *pszExpression,
@@ -53,4 +48,4 @@ BALL_EXTERN_C void Ball_AssertFail(
 	unsigned int nColumn
 );
 
-#endif // !defined( _INCLUDE_BALL_TYPES_C_ASSERT_HPP_ )
+#endif // !defined( _INCLUDE_BALL_TYPES_C_ASSERT_H_ )

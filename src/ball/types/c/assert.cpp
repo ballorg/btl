@@ -25,7 +25,7 @@ void Ball_AssertFail(
 
 	if ( pszExpression  != nullptr )
 	{
-		sMessage.AppendMultiple( "Assertion failed: ", StringView_t( pszExpression ), "\n" );
+		sMessage.AppendMultiple( "Expression failed: ", StringView_t( pszExpression ), "\n" );
 	}
 
 	// Message (if available)
@@ -64,5 +64,4 @@ void Ball_AssertFail(
 	const char *pszOut = sMessage.String();
 
 	puts( pszOut );
-	BALL_DEBUGBREAK();
 }

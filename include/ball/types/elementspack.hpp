@@ -322,7 +322,7 @@ public:
 			if ( IsOverflow( nCount ) )
 				m_Node.m_pData = other.DataBy< T >();
 			else
-				CopyElements( nCount, m_Node.m_Fixed.Data(), other.FixedBy< T >() );
+				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< T >() );
 		else
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
@@ -333,7 +333,7 @@ public:
 			if ( IsOverflow( nCount ) )
 				m_Node.m_pData = other.DataBy< K, Type >();
 			else
-				CopyElements( nCount, m_Node.m_Fixed.Data(), other.FixedBy< K, Type >() );
+				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< K, Type >() );
 		else
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
 	}
@@ -630,7 +630,7 @@ public:
 			if ( IsOverflow( nCount ) )
 				m_Node.m_pData = other.DataBy< T >();
 			else
-				CopyElements( nCount, m_Node.m_Fixed.Data(), other.FixedBy< T >() );
+				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< T >() );
 		else
 			m_Tail.template CopyBy< T >( nCount, other.m_Tail );
 	}
@@ -641,7 +641,7 @@ public:
 			if ( IsOverflow( nCount ) )
 				m_Node.m_pData = other.DataBy< K, Type >();
 			else
-				CopyElements( nCount, m_Node.m_Fixed.Data(), other.FixedBy< K, Type >() );
+				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< K, Type >() );
 		else
 			m_Tail.template CopyBy< K - 1 >( nCount, other.m_Tail );
 	}

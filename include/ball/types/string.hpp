@@ -41,16 +41,17 @@ protected:
 	{
 		static_assert( NS >= 2 && NS <= 36, "InsertUnsigned: base must be in [2,36]" );
 
-		const uint8_t nDigits = Math_Digits< uint8_t, NS, U >( u );
+		const U nDigits = Math_Digits< U, NS >( u );
+		const I nDigitCount = static_cast< I >( nDigits );
 
 		// Make a single hole once; returns pointer to the gap start.
-		T *pGap = EnsureInsert( nIndex, static_cast< I >( nDigits ) );
+		T *pGap = EnsureInsert( nIndex, nDigitCount );
 
 		// Fill digits directly into the reserved gap.
-		Num_WriteUnsigned< T, I, NS, U >( u, pGap, static_cast< I >( nDigits ) );
+		Num_WriteUnsigned< T, I, NS, U >( u, pGap, nDigitCount );
 
 		// Return index of the last written character.
-		return nIndex + static_cast< I >( nDigits );
+		return nIndex + nDigitCount;
 	}
 
 	///-----------------------------------------------------------------------------
@@ -66,26 +67,28 @@ protected:
 		{
 			const U nMag0 = U( v ), nMag = ( ~nMag0 ) + U( 1 ); // two's complement magnitude
 
-			const uint8_t nDigits = Math_Digits< uint8_t, NS, U >( nMag );
-			const I nTotal = static_cast< I >( 1 + nDigits ); // '-' + digits
+			const U nDigits = Math_Digits< U, NS >( nMag );
+			const I nDigitCount = static_cast< I >( nDigits );
+			const I nTotal = 1 + nDigitCount; // '-' + digits
 
 			T *pGap = EnsureInsert( nIndex, nTotal );
 
 			pGap[ 0 ] = static_cast< T >( '-' );
-			Num_WriteUnsigned< T, I, NS, U >( nMag, pGap + 1, static_cast< I >( nDigits ) );
+			Num_WriteUnsigned< T, I, NS, U >( nMag, pGap + 1, nDigitCount );
 
 			return nIndex + nTotal - 1;
 		}
 		else
 		{
 			const U u = static_cast< U >( v );
-			const uint8_t nDigits = Math_Digits< uint8_t, static_cast< uint8_t >( NS ), U >( u );
+			const U nDigits = Math_Digits< U, NS >( u );
+			const I nDigitCount = static_cast< I >( nDigits );
 
-			T *pGap = EnsureInsert( nIndex, static_cast< I >( nDigits ) );
+			T *pGap = EnsureInsert( nIndex, nDigitCount );
 
-			Num_WriteUnsigned< T, I, NS, U >( u, pGap, static_cast< I >( nDigits ) );
+			Num_WriteUnsigned< T, I, NS, U >( u, pGap, nDigitCount );
 
-			return nIndex + static_cast< I >( nDigits );
+			return nIndex + nDigitCount;
 		}
 	}
 
@@ -150,8 +153,8 @@ public:
 	constexpr I Insert( I i, T character )                                          { return Base_t::Insert( i, character ); }
 	constexpr I Insert( I i, const View_t &sv )                                     { return Base_t::Insert( i, sv ); }
 	constexpr I Insert( I i, const ConstView_t &sv )                                { return Base_t::Insert( i, sv ); }
-	template < I N > constexpr I Insert( I i, const T ( &str )[ N ] )               { return Base_t::template Insert< N - 1 >( i, ConstGrowableView_t< N - 1 >( N - 1, str ) ); }
-	template < I N > constexpr I Insert( I i, T ( &&str )[ N ] )                    { return Base_t::template Insert< N - 1 >( i, ConstGrowableView_t< N - 1 >( N - 1, Move( str ) ) ); }
+	template < I N > constexpr I Insert( I i, const T ( &str )[ N ] )               { return Base_t::template InsertArray< N >( i, N - 1, str ); }
+	template < I N > constexpr I Insert( I i, T ( &&str )[ N ] )                    { return Base_t::template InsertArray< N >( i, N - 1, Move( str ) ); } // 
 	constexpr I Insert( I i, I nLength, const T *pString )                          { return Insert( i, ConstView_t( nLength, pString ) ); }
 	constexpr I Insert( I i, bool_t b )                                             { return b ? Insert( i, "true" ) : Insert( i, "false" ); }
 	constexpr I Insert( I i, int_t v )                                              { return InsertSigned10( i, v ); }
@@ -240,7 +243,7 @@ public:
 
 template < typename I, typename T, I N, class A > class CBufferString;
 
-template < typename I = size_t, typename T = char, class A = CAllocator< I, T > >
+template < typename I = size_t, typename T = char_t, class A = CAllocator< I, T > >
 class CString : public CStringImpl< CVectorBase< CStringView< I, T >, I, T, A >, I, T >
 {
 public:
