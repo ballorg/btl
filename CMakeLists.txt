@@ -17,6 +17,7 @@ string(TOUPPER "${PROJECT_NAME_SUBSTRING}" PROJECT_NAME_UPPER)
 
 option(BALL_ENABLE_ASSERT ON)
 option(BALL_ENABLE_MODULES ON)
+option(BALL_ENABLE_TESTS OFF)
 
 set(PROJECT_OUTPUT_NAME "ball-types")
 
@@ -76,6 +77,8 @@ endif()
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_ASSERT_NAME} ${PROJECT_MEMORY_NAME})
 
-include(CTest)
-include(cmake/ball/types/base/tests.cmake)
-include(cmake/ball/types/tests.cmake)
+if(BALL_ENABLE_TESTS)
+	include(CTest)
+	include(cmake/ball/types/base/tests.cmake)
+	include(cmake/ball/types/tests.cmake)
+endif()

@@ -11,7 +11,7 @@
 			"description": "Build using Ninja generator",
 			"cacheVariables":
 			{
-				"CMAKE_CONFIGURATION_TYPES": "Debug;RelWithDebInfo;Release"
+				"BALL_ENABLE_TESTS": true
 			},
 
 			"hidden": true
