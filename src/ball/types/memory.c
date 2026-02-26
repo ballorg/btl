@@ -8,7 +8,7 @@
 #define BALL_MAGIC 0x42414C4C // "BALL" (without null-terminated)
 #define BALL_DEFAULT_PAGE_SIZE 4096u
 
-#ifndef _WIN32
+#ifndef BALL_WIN
 #	include <ball/types/c/mmap.h>
 #else
 #	define BALL_WINAPI_REALLOC_COMMIT_CHUNK ( 8u * BALL_DEFAULT_PAGE_SIZE )
@@ -65,17 +65,17 @@ struct Ball_MemoryMetadata_t
 ///-----------------------------------------------------------------------------
 static inline size_t Ball_GetPageSize( void )
 {
-#if defined( _WIN32 )
+#if defined( BALL_WIN )
 	Ball_SystemInfo_t info;
 
 	GetSystemInfo( &info );
 
 	return ( info.nPageSize > 0u ) ? ( size_t )info.nPageSize : BALL_DEFAULT_PAGE_SIZE;
-#else // !defined( _WIN32 )
+#else // !defined( BALL_WIN )
 	long_t nPageSize = sysconf( BALL_SC_PAGESIZE );
 
 	return ( nPageSize > 0 ) ? ( size_t )nPageSize : BALL_DEFAULT_PAGE_SIZE;
-#endif // defined( _WIN32 )
+#endif // defined( BALL_WIN )
 }
 
 static inline size_t Ball_PageSize_Cached( void )
@@ -142,7 +142,7 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 
 	const size_t nNeed = nSize + nAlign + sizeof( struct Ball_AlignedHeader_t );
 
-#if defined( _WIN32 )
+#if defined( BALL_WIN )
 	const size_t nPage = Ball_PageSize_Cached(), nInitialLength = BALL_ROUND_UP( nNeed, nPage );
 	size_t nReserveLength = nPage;
 
@@ -176,7 +176,7 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	pHeader->nSignature = BALL_MAGIC;
 
 	return pUser;
-#else // !defined( _WIN32 )
+#else // !defined( BALL_WIN )
 	const size_t nPage = Ball_PageSize(), nInitialLength = BALL_ROUND_UP( nNeed, nPage );
 
 	// Initial overmap: we will trim extra head/tail pages later.
@@ -224,7 +224,7 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	pHeader->nSignature = BALL_MAGIC;
 
 	return pUser;
-#endif // defined( _WIN32 )
+#endif // defined( BALL_WIN )
 }
 
 ///-----------------------------------------------------------------------------
@@ -240,12 +240,76 @@ void Ball_FreeAlign( ptr_t pMem )
 		return;
 
 	pHeader->nSignature = 0; // Poison signature to minimize accidental reuse.
-#if defined( _WIN32 )
+#if defined( BALL_WIN )
 	( void )VirtualFree( pHeader->pRaw, 0u, BALL_WINAPI_MEM_RELEASE );
 #else
 	( void )munmap( pHeader->pRaw, pHeader->nLength );
 #endif
 }
+
+#	if defined( BALL_APPLE )
+static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
+{
+	if ( ( nFlags & ~BALL_MREMAP_MAYMOVE ) != 0 )
+		return BALL_MAP_FAILED;
+
+	if ( pOldAddress == BALL_NULL )
+		return BALL_MAP_FAILED;
+
+	if ( nNewSize == 0u )
+		return BALL_MAP_FAILED;
+
+	if ( nNewSize == nOldSize )
+		return pOldAddress;
+
+	if ( nNewSize < nOldSize )
+	{
+		const size_t nTailLength = nOldSize - nNewSize;
+		uchar_t *pTail = ( uchar_t * )pOldAddress + nNewSize;
+
+		( void )munmap( ( void * )pTail, nTailLength );
+
+		return pOldAddress;
+	}
+
+	if ( ( nFlags & BALL_MREMAP_MAYMOVE ) == 0 )
+		return BALL_MAP_FAILED;
+
+	ptr_t pNewAddress = mmap(
+		BALL_NULL,
+		nNewSize,
+		BALL_PROT_READ | BALL_PROT_WRITE,
+		BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS,
+		-1,
+		0
+	);
+
+	if ( pNewAddress == BALL_MAP_FAILED )
+		return BALL_MAP_FAILED;
+
+	{
+		uchar_t *pDst = ( uchar_t * )pNewAddress;
+		const uchar_t *pSrc = ( const uchar_t * )pOldAddress;
+
+		for ( size_t nIndex = 0u ; nIndex < nOldSize; ++nIndex )
+			pDst[ nIndex ] = pSrc[ nIndex ];
+	}
+
+	( void )munmap( pOldAddress, nOldSize );
+
+	return pNewAddress;
+}
+#	elif defined( BALL_UNIX )
+static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
+{
+	return mremap( pOldAddress, nOldSize, nNewSize, nFlags );
+}
+#	else // !defined( BALL_APPLE ) && !defined( BALL_UNIX )
+static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
+{
+	return BALL_MAP_FAILED;
+}
+#	endif // defined( BALL_APPLE )
 
 static ptr_t Ball_ReallocAlign_Internal( ptr_t pMem, size_t nNewSize, size_t nAlign )
 {
@@ -306,7 +370,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 
 	const uintptr_t pOldBase = ( uintptr_t )pHeader->pRaw;      // Base address of the current mapping (VMA)
 	const uintptr_t pUserPtr = ( uintptr_t )pMem;               // User-visible pointer
-	const size_t nOldLen = pHeader->nLength;                    // Current mapping size in bytes
+	const size_t nOldLenght = pHeader->nLength;                    // Current mapping size in bytes
 
 	//-----------------------------------------------------------------------------
 	// Fast path.
@@ -319,11 +383,11 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	if ( nNewSize <= ( size_t )( ~( uintptr_t )( 0u ) - pUserPtr ) )
 	{
 		const uintptr_t pNeedEnd = pUserPtr + ( uintptr_t )nNewSize;
-#if defined( _WIN32 )
+#if defined( BALL_WIN )
 		const size_t nPage = Ball_PageSize_Cached();
 		const uintptr_t pOldCommitEnd = BALL_ROUND_UP( pUserPtr + ( uintptr_t )pHeader->nSize, nPage );
 		const uintptr_t pNewCommitEnd = BALL_ROUND_UP( pNeedEnd, nPage );
-		const uintptr_t pReserveEnd = pOldBase + ( uintptr_t )nOldLen;
+		const uintptr_t pReserveEnd = pOldBase + ( uintptr_t )nOldLenght;
 
 		if ( pHeaderStart >= pOldBase && pNewCommitEnd <= pReserveEnd )
 		{
@@ -359,7 +423,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 			return ( ptr_t )pUserPtr;
 		}
 #else
-		const uintptr_t pMapEnd = pOldBase + ( uintptr_t )nOldLen;
+		const uintptr_t pMapEnd = pOldBase + ( uintptr_t )nOldLenght;
 
 		if ( pHeaderStart >= pOldBase && pNeedEnd <= pMapEnd )
 		{
@@ -374,7 +438,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	// Attempt to resize the entire mapping in-place on Unix using mremap().
 	// Windows falls through to allocate-copy-free path below.
 	//-----------------------------------------------------------------------------
-#if !defined( _WIN32 )
+#if !defined( BALL_WIN )
 	{
 		if ( nNewSize <= ( size_t )( ~( uintptr_t )( 0u ) - pUserPtr ) )
 		{
@@ -386,7 +450,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 			const uintptr_t pKeepStart = BALL_ROUND_DOWN( pHeaderStart, nPage ), pKeepEnd = BALL_ROUND_UP( pUserPtr + ( uintptr_t )nNewSize, nPage );
 			const size_t nNewLength = ( size_t )( pKeepEnd - pKeepStart );
 
-			void *pNewBase = mremap( ( void * )pOldBase, nOldLen, nNewLength, BALL_MREMAP_MAYMOVE );
+			ptr_t pNewBase = Ball_Realloc_MemoryRemap( ( ptr_t )pOldBase, nOldLenght, nNewLength, BALL_MREMAP_MAYMOVE );
 
 			if ( pNewBase != BALL_MAP_FAILED )
 			{
@@ -394,7 +458,7 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 				ptr_t pNewUser = ( ptr_t )( pNewBaseU + pDelta );
 				struct Ball_AlignedHeader_t *pNewHeader = ( ( struct Ball_AlignedHeader_t * )pNewUser ) - 1;
 
-				pNewHeader->pRaw = ( ptr_t )pNewBase;
+				pNewHeader->pRaw = pNewBase;
 				pNewHeader->nSize = nNewSize;
 				pNewHeader->nLength = nNewLength;
 				pNewHeader->nSignature = BALL_MAGIC;

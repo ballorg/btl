@@ -41,6 +41,10 @@
 #		define BALL_LINUX 1
 #	endif
 
+#	if defined( __MCST__ )
+#		define BALL_MCST 1
+#	endif
+
 #	ifdef BALL_CXX
 #		define BALL_LANGUAGE_STR "C++"
 #		define BALL_EXTERN_C extern "C"
