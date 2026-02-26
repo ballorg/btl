@@ -57,6 +57,62 @@ timens_t GetTimeNS( void )
 	}
 }
 
+#elif defined( BALL_APPLE )
+
+/// ---------------------------------------------------------------------------
+/// Minimal macOS Mach time subset (without including <mach/mach_time.h>).
+///
+/// Uses mach_absolute_time() with mach_timebase_info() conversion to ns.
+/// ---------------------------------------------------------------------------
+
+typedef struct Ball_MachTimebaseInfo_t
+{
+	uint32_t nNumer;
+	uint32_t nDenom;
+} Ball_MachTimebaseInfo_t;
+
+BALL_DLL_IMPORT ullong_t mach_absolute_time( void );
+BALL_DLL_IMPORT int mach_timebase_info( Ball_MachTimebaseInfo_t *pInfo );
+
+/// ---------------------------------------------------------------------------
+/// @brief Retrieves high-resolution monotonic time in nanoseconds (macOS).
+///
+/// Returns:
+///   Monotonic timestamp in nanoseconds.
+///
+/// Notes:
+///   - Backed by mach_absolute_time() (monotonic).
+///   - Converts ticks to ns using mach_timebase_info().
+///   - If timebase query fails, the function returns 0.
+/// ---------------------------------------------------------------------------
+timens_t GetTimeNS( void )
+{
+	static ullong_t nNumer = 0ULL;
+	static ullong_t nDenom = 0ULL;
+	const ullong_t nTicks = mach_absolute_time();
+
+	if( nDenom == 0ULL )
+	{
+		Ball_MachTimebaseInfo_t info;
+
+		if( mach_timebase_info( &info ) != 0 || info.nDenom == 0u )
+			return 0ULL;
+
+		nNumer = ( ullong_t )info.nNumer;
+		nDenom = ( ullong_t )info.nDenom;
+	}
+
+	if( nNumer == nDenom )
+		return ( timens_t )nTicks;
+
+	{
+		const ullong_t nQ = nTicks / nDenom;
+		const ullong_t nR = nTicks % nDenom;
+
+		return ( timens_t )( nQ * nNumer + ( nR * nNumer ) / nDenom );
+	}
+}
+
 #elif defined( __linux__ )
 
 /// ---------------------------------------------------------------------------

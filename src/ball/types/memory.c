@@ -247,7 +247,7 @@ void Ball_FreeAlign( ptr_t pMem )
 #endif
 }
 
-#	if defined( BALL_APPLE )
+#if defined( BALL_APPLE )
 static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
 {
 	if ( ( nFlags & ~BALL_MREMAP_MAYMOVE ) != 0 )
@@ -299,17 +299,17 @@ static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize
 
 	return pNewAddress;
 }
-#	elif defined( BALL_UNIX )
+#elif defined( BALL_UNIX )
 static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
 {
 	return mremap( pOldAddress, nOldSize, nNewSize, nFlags );
 }
-#	else // !defined( BALL_APPLE ) && !defined( BALL_UNIX )
+#else // !defined( BALL_APPLE ) && !defined( BALL_UNIX )
 static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
 {
 	return BALL_MAP_FAILED;
 }
-#	endif // defined( BALL_APPLE )
+#endif // defined( BALL_APPLE )
 
 static ptr_t Ball_ReallocAlign_Internal( ptr_t pMem, size_t nNewSize, size_t nAlign )
 {
