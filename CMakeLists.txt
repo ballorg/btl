@@ -6,8 +6,8 @@ endif()
 
 project(ball
 	VERSION 1.0.0
-	DESCRIPTION "Ball C++ libraries - Types"
-	HOMEPAGE_URL "https://github.com/Wend4r/cpp-sample"
+	DESCRIPTION "BTL"
+	HOMEPAGE_URL "https://github.com/ballorg/btl"
 	LANGUAGES C CXX
 )
 
