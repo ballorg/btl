@@ -1,12 +1,43 @@
 #include <ball/types/base/arch.h>
 #include <ball/types/base/fixed.h>
 #include <ball/types/c/assert.h>
-#include <ball/types/c/mmap.h>
 #include <ball/types/c/macros.h>
 #include <ball/types/c/memory.h>
 #include <ball/types/c/math.h>
 
 #define BALL_MAGIC 0x42414C4C // "BALL" (without null-terminated)
+#define BALL_DEFAULT_PAGE_SIZE 4096u
+
+#ifndef _WIN32
+#	include <ball/types/c/mmap.h>
+#else
+#	define BALL_WINAPI_REALLOC_COMMIT_CHUNK ( 8u * BALL_DEFAULT_PAGE_SIZE )
+#	define BALL_WINAPI_REALLOC_DECOMMIT_THRESHOLD ( 32u * BALL_DEFAULT_PAGE_SIZE )
+
+#	define BALL_WINAPI_MEM_COMMIT 0x00001000u
+#	define BALL_WINAPI_MEM_RESERVE 0x00002000u
+#	define BALL_WINAPI_MEM_RELEASE 0x00008000u
+#	define BALL_WINAPI_PAGE_READWRITE 0x00000004u
+#	define BALL_WINAPI_MEM_DECOMMIT 0x00004000u
+
+typedef struct Ball_SystemInfo_t
+{
+	DWORD nOemId;
+	DWORD nPageSize;
+	LPVOID pMinApplicationAddress;
+	LPVOID pMaxApplicationAddress;
+	DWORD_PTR nActiveProcessorMask;
+	DWORD nProcessorCount;
+	DWORD nProcessorType;
+	DWORD nAllocationGranularity;
+	WORD nProcessorLevel;
+	WORD nProcessorRevision;
+} Ball_SystemInfo_t;
+
+BALL_DLL_IMPORT void BALL_WINAPI GetSystemInfo( Ball_SystemInfo_t *pSystemInfo );
+BALL_DLL_IMPORT LPVOID BALL_WINAPI VirtualAlloc( LPVOID pAddress, SIZE_T nSize, DWORD nAllocationType, DWORD nProtect );
+BALL_DLL_IMPORT BOOL BALL_WINAPI VirtualFree( LPVOID pAddress, SIZE_T nSize, DWORD nFreeType );
+#endif
 
 ///-----------------------------------------------------------------------------
 /// @brief Header placed immediately before the user pointer inside the same VMA.
@@ -16,8 +47,8 @@ struct Ball_AlignedHeader_t
 {
 	ptr_t    pRaw;          ///< Mapping base address (after head trim).
 	size_t   nSize;         ///< Logical size requested by the user.
-	size_t   nMapLength;    ///< Full mapping length to pass to munmap/mremap.
-	uint32_t nMagic;        ///< Signature to validate that the pointer is ours.
+	size_t   nLength;       ///< Full platform allocation length for release/resize logic.
+	uint32_t nSignature;    ///< Signature to validate that the pointer is ours.
 }; // struct Ball_AlignedHeader_t
 
 ///-----------------------------------------------------------------------------
@@ -31,14 +62,33 @@ struct Ball_MemoryMetadata_t
 
 ///-----------------------------------------------------------------------------
 /// @brief Returns system page size (falls back to 4096 on failure).
-/// @note  Cached page size is not necessary here; sysconf is cheap enough,
-///        and this helper is rarely on a hot path.
 ///-----------------------------------------------------------------------------
-static inline size_t Ball_PageSize( void )
+static inline size_t Ball_GetPageSize( void )
 {
+#if defined( _WIN32 )
+	Ball_SystemInfo_t info;
+
+	GetSystemInfo( &info );
+
+	return ( info.nPageSize > 0u ) ? ( size_t )info.nPageSize : BALL_DEFAULT_PAGE_SIZE;
+#else // !defined( _WIN32 )
 	long_t nPageSize = sysconf( BALL_SC_PAGESIZE );
 
-	return ( nPageSize > 0 ) ? ( size_t )nPageSize : 4096u;
+	return ( nPageSize > 0 ) ? ( size_t )nPageSize : BALL_DEFAULT_PAGE_SIZE;
+#endif // defined( _WIN32 )
+}
+
+static inline size_t Ball_PageSize_Cached( void )
+{
+	if ( g_Memory.nPageSize == 0u )
+		g_Memory.nPageSize = Ball_GetPageSize();
+
+	return g_Memory.nPageSize;
+}
+
+static inline size_t Ball_PageSize( void )
+{
+	return g_Memory.nPageSize;
 }
 
 ///-----------------------------------------------------------------------------
@@ -53,7 +103,7 @@ static inline struct Ball_AlignedHeader_t *Ball_HeaderFromUser( ptr_t pUser )
 
 	struct Ball_AlignedHeader_t *h = ( ( struct Ball_AlignedHeader_t * )pUser ) - 1;
 
-	if ( h->nMagic != BALL_MAGIC )
+	if ( h->nSignature != BALL_MAGIC )
 		return BALL_NULL;
 
 	return h;
@@ -65,17 +115,17 @@ static inline struct Ball_AlignedHeader_t *Ball_HeaderFromUser( ptr_t pUser )
 ///-----------------------------------------------------------------------------
 BALL_DLL_CONSTRUCTOR void Ball_InitMemory()
 {
-	g_Memory.nPageSize = Ball_PageSize();
+	g_Memory.nPageSize = Ball_GetPageSize();
 }
 
 ///-----------------------------------------------------------------------------
-/// @brief  Allocate page-backed memory with explicit alignment via mmap.
+/// @brief  Allocate page-backed memory with explicit alignment.
 /// @param  nSize  Logical size requested by the user (bytes).
 /// @param  nAlign Alignment (power of two, >= sizeof( ptr_t )).
 /// @return Aligned user pointer or BALL_NULL on failure.
 /// @note
-///   * Overmaps then trims head/tail with munmap to make the aligned user
-///     pointer lie at the beginning of a VMA (useful for mprotect/madvise).
+///   * Unix: overmaps and trims head/tail pages via munmap.
+///   * WinAPI: reserves/commits one region via VirtualAlloc (no partial trim).
 ///   * Header is placed immediately before the user pointer (same VMA).
 ///   * No guard pages are used; caller can add them explicitly if needed.
 ///-----------------------------------------------------------------------------
@@ -87,29 +137,63 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	BALL_ASSERT_IF_MESSAGE( !nAlign || !BALL_IS_POW2( nAlign ), "Incorrect align" )
 		return BALL_NULL;
 
-	const size_t nPage            = g_Memory.nPageSize;
-	const size_t nNeed            = nSize + nAlign + sizeof( struct Ball_AlignedHeader_t );
-	const size_t nMapLenInitial   = BALL_ROUND_UP( nNeed, nPage );
+	if ( nSize > ( size_t )( ~( size_t )0u ) - nAlign - sizeof( struct Ball_AlignedHeader_t ) )
+		return BALL_NULL;
 
-	// Initial overmap: we will trim extra head/tail pages later.
-	ptr_t pMapInitial = mmap( BALL_NULL, nMapLenInitial,
-	                          BALL_PROT_READ | BALL_PROT_WRITE,
-	                          BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS, -1, 0 );
+	const size_t nNeed = nSize + nAlign + sizeof( struct Ball_AlignedHeader_t );
 
-	BALL_ASSERT_IF_MESSAGE( pMapInitial == BALL_MAP_FAILED, "Initial map failed" )
+#if defined( _WIN32 )
+	const size_t nPage = Ball_PageSize_Cached(), nInitialLength = BALL_ROUND_UP( nNeed, nPage );
+	size_t nReserveLength = nPage;
+
+	while ( nReserveLength < nInitialLength && nReserveLength <= ( ( size_t )~0u >> 1 ) )
+		nReserveLength <<= 1;
+
+	if ( nReserveLength < nInitialLength )
+		nReserveLength = nInitialLength;
+
+	ptr_t pRaw = ( ptr_t )VirtualAlloc( BALL_NULL, nReserveLength, BALL_WINAPI_MEM_RESERVE, BALL_WINAPI_PAGE_READWRITE );
+
+	BALL_ASSERT_IF_MESSAGE( pRaw == BALL_NULL, "VirtualAlloc failed" )
+		return BALL_NULL;
+
+	if ( VirtualAlloc( pRaw, nInitialLength, BALL_WINAPI_MEM_COMMIT, BALL_WINAPI_PAGE_READWRITE ) != pRaw )
 	{
+		( void )VirtualFree( pRaw, 0u, BALL_WINAPI_MEM_RELEASE );
+
 		return BALL_NULL;
 	}
 
+	const uintptr_t pData = ( uintptr_t )pRaw;
+	const uintptr_t pCandUser = BALL_ROUND_UP( pData + sizeof( struct Ball_AlignedHeader_t ), nAlign );
+	ptr_t pUser = ( ptr_t )pCandUser;
+
+	struct Ball_AlignedHeader_t *pHeader = ( ( struct Ball_AlignedHeader_t * )pUser ) - 1;
+
+	pHeader->pRaw = pRaw;
+	pHeader->nSize = nSize;
+	pHeader->nLength = nReserveLength;
+	pHeader->nSignature = BALL_MAGIC;
+
+	return pUser;
+#else // !defined( _WIN32 )
+	const size_t nPage = Ball_PageSize(), nInitialLength = BALL_ROUND_UP( nNeed, nPage );
+
+	// Initial overmap: we will trim extra head/tail pages later.
+	ptr_t pMapInitial = mmap( BALL_NULL, nInitialLength, BALL_PROT_READ | BALL_PROT_WRITE, BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS, -1, 0 );
+
+	BALL_ASSERT_IF_MESSAGE( pMapInitial == BALL_MAP_FAILED, "Initial map failed" )
+		return BALL_NULL;
+
 	// Compute aligned user pointer with space for the header right before it.
-	const uintptr_t pData       = ( uintptr_t )pMapInitial;
-	const uintptr_t pCandUser   = BALL_ROUND_UP( pData + sizeof( struct Ball_AlignedHeader_t ), nAlign );
-	const uintptr_t pHdrStart   = pCandUser - sizeof( struct Ball_AlignedHeader_t );
+	const uintptr_t pData = ( uintptr_t )pMapInitial;
+	const uintptr_t pCandUser = BALL_ROUND_UP( pData + sizeof( struct Ball_AlignedHeader_t ), nAlign );
+	const uintptr_t pHdrStart = pCandUser - sizeof( struct Ball_AlignedHeader_t );
 
 	// Keep [keepStart, keepEnd) and trim everything else.
-	const uintptr_t pKeepStart  = BALL_ROUND_DOWN( pHdrStart, nPage );         // ensure header is kept
-	const uintptr_t pKeepEnd    = BALL_ROUND_UP( pCandUser + nSize, nPage );   // ensure full user range
-	const uintptr_t pMapEnd     = pData + nMapLenInitial;
+	const uintptr_t pKeepStart = BALL_ROUND_DOWN( pHdrStart, nPage );         // ensure header is kept
+	const uintptr_t pKeepEnd = BALL_ROUND_UP( pCandUser + nSize, nPage );   // ensure full user range
+	const uintptr_t pMapEnd = pData + nInitialLength;
 
 	// Trim head.
 	if ( pKeepStart > pData )
@@ -127,19 +211,20 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 		( void )munmap( ( void * )pKeepEnd, nTailLength );
 	}
 
-	ptr_t   pRaw        = ( ptr_t )pKeepStart;
-	size_t  nMapLength  = ( size_t )( pKeepEnd - pKeepStart );
-	ptr_t   pUser       = ( ptr_t )pCandUser;
+	ptr_t pRaw = ( ptr_t )pKeepStart;
+	size_t nLength = ( size_t )( pKeepEnd - pKeepStart );
+	ptr_t pUser = ( ptr_t )pCandUser;
 
 	// Initialize header located right before the aligned user pointer.
 	struct Ball_AlignedHeader_t *pHeader = ( ( struct Ball_AlignedHeader_t * )pUser ) - 1;
 
-	pHeader->pRaw       = pRaw;
-	pHeader->nSize      = nSize;
-	pHeader->nMapLength = nMapLength;
-	pHeader->nMagic     = BALL_MAGIC;
+	pHeader->pRaw = pRaw;
+	pHeader->nSize = nSize;
+	pHeader->nLength = nLength;
+	pHeader->nSignature = BALL_MAGIC;
 
 	return pUser;
+#endif // defined( _WIN32 )
 }
 
 ///-----------------------------------------------------------------------------
@@ -154,8 +239,37 @@ void Ball_FreeAlign( ptr_t pMem )
 	if ( !pHeader )
 		return;
 
-	pHeader->nMagic = 0; // Poison signature to minimize accidental reuse.
-	( void )munmap( pHeader->pRaw, pHeader->nMapLength );
+	pHeader->nSignature = 0; // Poison signature to minimize accidental reuse.
+#if defined( _WIN32 )
+	( void )VirtualFree( pHeader->pRaw, 0u, BALL_WINAPI_MEM_RELEASE );
+#else
+	( void )munmap( pHeader->pRaw, pHeader->nLength );
+#endif
+}
+
+static ptr_t Ball_ReallocAlign_Internal( ptr_t pMem, size_t nNewSize, size_t nAlign )
+{
+	struct Ball_AlignedHeader_t *pHeader = Ball_HeaderFromUser( pMem );
+
+	BALL_ASSERT_IF_MESSAGE( !pHeader, "Memory validation failed" )
+		return BALL_NULL;
+
+	//-----------------------------------------------------------------------------
+	// Fallback: allocate a new aligned block, copy the data, and free the old one.
+	//-----------------------------------------------------------------------------
+	ptr_t pNew = Ball_AllocAlign( nNewSize, nAlign );
+
+	BALL_ASSERT_IF_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" )
+		return BALL_NULL;
+
+	const size_t nToCopy = ( pHeader->nSize < nNewSize ) ? pHeader->nSize : nNewSize;
+
+	if ( nToCopy )
+		memcpy( pNew, pMem, nToCopy );
+
+	Ball_FreeAlign( pMem );
+
+	return pNew;
 }
 
 ///-----------------------------------------------------------------------------
@@ -165,10 +279,10 @@ void Ball_FreeAlign( ptr_t pMem )
 /// @param  nAlign Required alignment (same constraints as in alloc).
 /// @return New user pointer (possibly moved) or BALL_NULL on failure.
 /// @note
-///   * Fast path: try mremap( MREMAP_MAYMOVE ) to resize the *whole* VMA while
-///     preserving the user pointer offset (delta) from the VMA base.
+///   * Fast path: if the new logical range fits current mapping, update metadata only.
+///   * Unix: additionally tries mremap( MREMAP_MAYMOVE ) for in-place resize.
+///   * WinAPI: uses allocate-copy-free fallback when growth exceeds current mapping.
 ///   * Fallback: allocate a new aligned block, memcpy( min( old, new ) ), free old.
-///   * On shrink, mremap may return the same base; on grow it may move.
 ///-----------------------------------------------------------------------------
 ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 {
@@ -188,18 +302,16 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	struct Ball_AlignedHeader_t *pHeader = Ball_HeaderFromUser( pMem );
 
 	BALL_ASSERT_IF_MESSAGE( !pHeader, "Memory validation failed" )
-	{
 		return BALL_NULL;
-	}
 
-	const uintptr_t pOldBase = ( uintptr_t )pHeader->pRaw;     // Base address of the current mapping (VMA)
-	const uintptr_t pUserPtr = ( uintptr_t )pMem;              // User-visible pointer
-	const size_t    nOldLen  = pHeader->nMapLength;            // Current mapping size in bytes
+	const uintptr_t pOldBase = ( uintptr_t )pHeader->pRaw;      // Base address of the current mapping (VMA)
+	const uintptr_t pUserPtr = ( uintptr_t )pMem;               // User-visible pointer
+	const size_t nOldLen = pHeader->nLength;                    // Current mapping size in bytes
 
 	//-----------------------------------------------------------------------------
-	// Fast path: the new logical size fully fits into the already allocated region.
-	// Check that the range [header_start .. user_ptr + nNewSize) is inside the
-	// mapped region [pOldBase .. pOldBase + nOldLen).
+	// Fast path.
+	// Unix: new logical range already fits committed mapping.
+	// WinAPI: resize in place inside reserved span by commit/decommit.
 	//-----------------------------------------------------------------------------
 	const uintptr_t pHeaderStart = pUserPtr - sizeof( struct Ball_AlignedHeader_t );
 
@@ -207,66 +319,93 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nNewSize, size_t nAlign )
 	if ( nNewSize <= ( size_t )( ~( uintptr_t )( 0u ) - pUserPtr ) )
 	{
 		const uintptr_t pNeedEnd = pUserPtr + ( uintptr_t )nNewSize;
-		const uintptr_t pMapEnd  = pOldBase + ( uintptr_t )nOldLen;
+#if defined( _WIN32 )
+		const size_t nPage = Ball_PageSize_Cached();
+		const uintptr_t pOldCommitEnd = BALL_ROUND_UP( pUserPtr + ( uintptr_t )pHeader->nSize, nPage );
+		const uintptr_t pNewCommitEnd = BALL_ROUND_UP( pNeedEnd, nPage );
+		const uintptr_t pReserveEnd = pOldBase + ( uintptr_t )nOldLen;
+
+		if ( pHeaderStart >= pOldBase && pNewCommitEnd <= pReserveEnd )
+		{
+			if ( pNewCommitEnd > pOldCommitEnd )
+			{
+				const size_t nNeedCommitLength = ( size_t )( pNewCommitEnd - pOldCommitEnd );
+				const size_t nMaxCommitLength = ( size_t )( pReserveEnd - pOldCommitEnd );
+				size_t nCommitSpan = nNeedCommitLength;
+
+				if ( nCommitSpan < BALL_WINAPI_REALLOC_COMMIT_CHUNK && BALL_WINAPI_REALLOC_COMMIT_CHUNK <= nMaxCommitLength )
+					nCommitSpan = BALL_WINAPI_REALLOC_COMMIT_CHUNK;
+
+				nCommitSpan = BALL_ROUND_UP( nCommitSpan, nPage );
+
+				if ( nCommitSpan > nMaxCommitLength )
+					nCommitSpan = nMaxCommitLength;
+
+				void *pCommit = VirtualAlloc( ( void * )pOldCommitEnd, nCommitSpan, BALL_WINAPI_MEM_COMMIT, BALL_WINAPI_PAGE_READWRITE );
+
+				if ( pCommit != ( void * )pOldCommitEnd )
+					return Ball_ReallocAlign_Internal( pMem, nNewSize, nAlign );
+			}
+			else if ( pNewCommitEnd < pOldCommitEnd )
+			{
+				const size_t nDecommitLength = ( size_t )( pOldCommitEnd - pNewCommitEnd );
+
+				if ( nDecommitLength >= BALL_WINAPI_REALLOC_DECOMMIT_THRESHOLD )
+					( void )VirtualFree( ( void * )pNewCommitEnd, nDecommitLength, BALL_WINAPI_MEM_DECOMMIT );
+			}
+
+			pHeader->nSize = nNewSize;
+
+			return ( ptr_t )pUserPtr;
+		}
+#else
+		const uintptr_t pMapEnd = pOldBase + ( uintptr_t )nOldLen;
 
 		if ( pHeaderStart >= pOldBase && pNeedEnd <= pMapEnd )
 		{
-			// The new data region is still fully inside the existing mapping.
-			// Simply update the logical size and return the same pointer.
 			pHeader->nSize = nNewSize;
 
-			// Physical map length remains unchanged.
 			return ( ptr_t )pUserPtr;
 		}
+#endif
 	}
 
 	//-----------------------------------------------------------------------------
-	// Attempt to resize the entire mapping in-place using mremap().
-	// If expansion fails, mremap() may return BALL_MAP_FAILED.
+	// Attempt to resize the entire mapping in-place on Unix using mremap().
+	// Windows falls through to allocate-copy-free path below.
 	//-----------------------------------------------------------------------------
-	const size_t    nPage        = g_Memory.nPageSize;
-	const uintptr_t pDelta       = pUserPtr - pOldBase; // Offset of the user pointer within the mapping.
-
-	// Compute the new desired mapping range [pKeepStart .. pKeepEnd),
-	// aligned to full pages, that covers both header and user data.
-	const uintptr_t pKeepStart   = BALL_ROUND_DOWN( pHeaderStart, nPage );
-	const uintptr_t pKeepEnd     = BALL_ROUND_UP( pUserPtr + ( uintptr_t )nNewSize, nPage );
-	const size_t    nNewLength   = ( size_t )( pKeepEnd - pKeepStart );
-
-	void *pNewBase = mremap( ( void * )pOldBase, nOldLen, nNewLength, BALL_MREMAP_MAYMOVE );
-
-	if ( pNewBase != BALL_MAP_FAILED )
+#if !defined( _WIN32 )
 	{
-		const uintptr_t pNewBaseU  = ( uintptr_t )pNewBase;
-		ptr_t           pNewUser   = ( ptr_t )( pNewBaseU + pDelta );
-		struct Ball_AlignedHeader_t *pNewHeader = ( ( struct Ball_AlignedHeader_t * )pNewUser ) - 1;
+		if ( nNewSize <= ( size_t )( ~( uintptr_t )( 0u ) - pUserPtr ) )
+		{
+			const size_t nPage = Ball_PageSize();
+			const uintptr_t pDelta = pUserPtr - pOldBase; // Offset of the user pointer within the mapping.
 
-		pNewHeader->pRaw        = ( ptr_t )pNewBase;
-		pNewHeader->nSize       = nNewSize;
-		pNewHeader->nMapLength  = nNewLength;
-		pNewHeader->nMagic      = BALL_MAGIC;
+			// Compute the new desired mapping range [pKeepStart .. pKeepEnd),
+			// aligned to full pages, that covers both header and user data.
+			const uintptr_t pKeepStart = BALL_ROUND_DOWN( pHeaderStart, nPage ), pKeepEnd = BALL_ROUND_UP( pUserPtr + ( uintptr_t )nNewSize, nPage );
+			const size_t nNewLength = ( size_t )( pKeepEnd - pKeepStart );
 
-		return pNewUser;
+			void *pNewBase = mremap( ( void * )pOldBase, nOldLen, nNewLength, BALL_MREMAP_MAYMOVE );
+
+			if ( pNewBase != BALL_MAP_FAILED )
+			{
+				const uintptr_t pNewBaseU  = ( uintptr_t )pNewBase;
+				ptr_t pNewUser = ( ptr_t )( pNewBaseU + pDelta );
+				struct Ball_AlignedHeader_t *pNewHeader = ( ( struct Ball_AlignedHeader_t * )pNewUser ) - 1;
+
+				pNewHeader->pRaw = ( ptr_t )pNewBase;
+				pNewHeader->nSize = nNewSize;
+				pNewHeader->nLength = nNewLength;
+				pNewHeader->nSignature = BALL_MAGIC;
+
+				return pNewUser;
+			}
+		}
 	}
+#endif
 
-	//-----------------------------------------------------------------------------
-	// Fallback: allocate a new aligned block, copy the data, and free the old one.
-	//-----------------------------------------------------------------------------
-	ptr_t pNew = Ball_AllocAlign( nNewSize, nAlign );
-
-	BALL_ASSERT_IF_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" )
-	{
-		return BALL_NULL;
-	}
-
-	const size_t nToCopy = ( pHeader->nSize < nNewSize ) ? pHeader->nSize : nNewSize;
-
-	if ( nToCopy )
-		memcpy( pNew, pMem, nToCopy );
-
-	Ball_FreeAlign( pMem );
-
-	return pNew;
+	return Ball_ReallocAlign_Internal( pMem, nNewSize, nAlign );
 }
 
 ///-----------------------------------------------------------------------------

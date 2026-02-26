@@ -37,16 +37,19 @@ class CAllocator : public CAllocatorBase
 {
 public:
 	using Base_t = CAllocatorBase;
+	static constexpr size_t ALIGN_SIZE = alignof( T );
 
 	static T *Alloc( I nCount, size_t nAligned )
 	{
 		return reinterpret_cast< T * >( Base_t::Alloc( nCount * sizeof( T ), nAligned ) );
 	}
+	static T *Alloc( I nCount ) { return Alloc( nCount, ALIGN_SIZE ); }
 
 	static T *Realloc( T *pMem, I nCount, size_t nAligned )
 	{
 		return reinterpret_cast< T * >( Base_t::Realloc( pMem, nCount * sizeof( T ), nAligned ) );
 	}
+	static T *Realloc( T *pMem, I nCount ) { return Realloc( pMem, nCount, ALIGN_SIZE ); }
 }; // class CAllocator
 
 #endif // !defined( _INCLUDE_BALL_TYPES_CALLOCATOR_HPP_ )
