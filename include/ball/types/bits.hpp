@@ -22,7 +22,7 @@ constexpr I BitWidth( I x )
 	constexpr I NUM_BITS = Fixed_t::BITS;
 	constexpr I INVALID = Fixed_t::INVALID;
 
-#	if defined( _MSC_VER )
+#	if defined( BALL_MSVC )
 	if constexpr ( NUM_BITS <= 32 )
 	{
 		ulong_t i; // Bit index returned by the scan intrinsic.
@@ -42,7 +42,7 @@ constexpr I BitWidth( I x )
 	else
 		return INVALID;
 
-#	elif defined( __GNUC__ ) || defined( __clang__ )
+#	elif defined( BALL_GNUC )
 	// GCC/Clang: use __builtin_clz*/__builtin_clzll for up to 64-bit inputs.
 	if constexpr ( NUM_BITS <= 32 )
 	{
@@ -59,9 +59,9 @@ constexpr I BitWidth( I x )
 	else
 		return INVALID;
 
-#	else
+#	else // !defined( BALL_MSVC ) && !defined( BALL_GNUC )
 #		error Unsupported platform!
-#	endif
+#	endif // defined( BALL_MSVC ) || defined( BALL_GNUC )
 }
 
 /// @brief Returns the smallest power of two greater than or equal to @p x.
