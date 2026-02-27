@@ -7,6 +7,7 @@
 
 #define BALL_MAGIC 0x42414C4C // "BALL" (without null-terminated)
 #define BALL_DEFAULT_PAGE_SIZE 4096u
+#define BALL_DEFAULT_WIN_ALLOCATION_GRANULARITY 65536u
 
 #ifndef BALL_WIN
 #	include <ball/types/c/mmap.h>
@@ -58,32 +59,56 @@ struct Ball_AlignedHeader_t
 struct Ball_MemoryMetadata_t
 {
 	size_t nPageSize; ///< System page size in bytes.
+	size_t nAllocationGranularity; ///< Virtual allocation granularity (Windows) or page size (Unix).
 } g_Memory;
+
+static inline size_t Ball_AlignUpSafe( size_t nValue, size_t nAlign )
+{
+	if ( nAlign <= 1u )
+		return nValue;
+
+	const size_t nMask = nAlign - 1u;
+
+	if ( nValue > ( size_t )( ~( size_t )0u ) - nMask )
+		return nValue;
+
+	return ( nValue + nMask ) & ~nMask;
+}
 
 ///-----------------------------------------------------------------------------
 /// @brief Returns system page size (falls back to 4096 on failure).
 ///-----------------------------------------------------------------------------
-static inline size_t Ball_GetPageSize( void )
+static inline void Ball_LoadMemoryMetadata( void )
 {
 #if defined( BALL_WIN )
 	Ball_SystemInfo_t info;
 
 	GetSystemInfo( &info );
 
-	return ( info.nPageSize > 0u ) ? ( size_t )info.nPageSize : BALL_DEFAULT_PAGE_SIZE;
+	g_Memory.nPageSize = ( info.nPageSize > 0u ) ? ( size_t )info.nPageSize : BALL_DEFAULT_PAGE_SIZE;
+	g_Memory.nAllocationGranularity = ( info.nAllocationGranularity > 0u ) ? ( size_t )info.nAllocationGranularity : BALL_DEFAULT_WIN_ALLOCATION_GRANULARITY;
 #else // !defined( BALL_WIN )
 	long_t nPageSize = sysconf( BALL_SC_PAGESIZE );
 
-	return ( nPageSize > 0 ) ? ( size_t )nPageSize : BALL_DEFAULT_PAGE_SIZE;
+	g_Memory.nPageSize = ( nPageSize > 0 ) ? ( size_t )nPageSize : BALL_DEFAULT_PAGE_SIZE;
+	g_Memory.nAllocationGranularity = g_Memory.nPageSize;
 #endif // defined( BALL_WIN )
 }
 
 static inline size_t Ball_PageSize_Cached( void )
 {
 	if ( g_Memory.nPageSize == 0u )
-		g_Memory.nPageSize = Ball_GetPageSize();
+		Ball_LoadMemoryMetadata();
 
 	return g_Memory.nPageSize;
+}
+
+static inline size_t Ball_AllocationGranularity_Cached( void )
+{
+	if ( g_Memory.nAllocationGranularity == 0u )
+		Ball_LoadMemoryMetadata();
+
+	return g_Memory.nAllocationGranularity;
 }
 
 static inline size_t Ball_PageSize( void )
@@ -115,7 +140,7 @@ static inline struct Ball_AlignedHeader_t *Ball_HeaderFromUser( ptr_t pUser )
 ///-----------------------------------------------------------------------------
 BALL_DLL_CONSTRUCTOR void Ball_InitMemory()
 {
-	g_Memory.nPageSize = Ball_GetPageSize();
+	Ball_LoadMemoryMetadata();
 }
 
 ///-----------------------------------------------------------------------------
@@ -143,11 +168,17 @@ ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign )
 	const size_t nNeed = nSize + nAlign + sizeof( struct Ball_AlignedHeader_t );
 
 #if defined( BALL_WIN )
-	const size_t nPage = Ball_PageSize_Cached(), nInitialLength = BALL_ROUND_UP( nNeed, nPage );
-	size_t nReserveLength = nPage;
+	const size_t nPage = Ball_PageSize_Cached();
+	const size_t nGranularity = Ball_AllocationGranularity_Cached();
+	const size_t nInitialLength = Ball_AlignUpSafe( nNeed, nPage );
+	const size_t nGrowBy = ( nInitialLength >= BALL_WINAPI_REALLOC_COMMIT_CHUNK ) ? nInitialLength : ( size_t )BALL_WINAPI_REALLOC_COMMIT_CHUNK;
 
-	while ( nReserveLength < nInitialLength && nReserveLength <= ( ( size_t )~0u >> 1 ) )
-		nReserveLength <<= 1;
+	size_t nReserveTarget = nInitialLength;
+
+	if ( nInitialLength <= ( size_t )( ~( size_t )0u ) - nGrowBy )
+		nReserveTarget = nInitialLength + nGrowBy;
+
+	size_t nReserveLength = Ball_AlignUpSafe( nReserveTarget, nGranularity );
 
 	if ( nReserveLength < nInitialLength )
 		nReserveLength = nInitialLength;
@@ -307,6 +338,11 @@ static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize
 #else // !defined( BALL_APPLE ) && !defined( BALL_UNIX )
 static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
 {
+	( void )pOldAddress;
+	( void )nOldSize;
+	( void )nNewSize;
+	( void )nFlags;
+
 	return BALL_NULL;
 }
 #endif // defined( BALL_APPLE )
