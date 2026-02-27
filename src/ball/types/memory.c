@@ -306,25 +306,31 @@ static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize
 	if ( ( nFlags & BALL_MREMAP_MAYMOVE ) == 0 )
 		return BALL_MAP_FAILED;
 
-	ptr_t pNewAddress = mmap(
-		BALL_NULL,
-		nNewSize,
-		BALL_PROT_READ | BALL_PROT_WRITE,
-		BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS,
-		-1,
-		0
-	);
+	{
+		const uintptr_t pOldBase = ( uintptr_t )pOldAddress;
+
+		if ( nOldSize <= ( size_t )( ~( uintptr_t )0u - pOldBase ) )
+		{
+			const size_t nGrowLength = nNewSize - nOldSize;
+			ptr_t pTailExpected = ( ptr_t )( pOldBase + nOldSize );
+			ptr_t pTailMapped = mmap( pTailExpected, nGrowLength, BALL_PROT_READ | BALL_PROT_WRITE, BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS, -1, 0 );
+
+			// Fast path on Darwin: if the kernel maps exactly at the tail,
+			// the whole region becomes contiguous without moving/copying.
+			if ( pTailMapped == pTailExpected )
+				return pOldAddress;
+
+			if ( pTailMapped != BALL_MAP_FAILED )
+				( void )munmap( pTailMapped, nGrowLength );
+		}
+	}
+
+	ptr_t pNewAddress = mmap( BALL_NULL, nNewSize, BALL_PROT_READ | BALL_PROT_WRITE, BALL_MAP_PRIVATE | BALL_MAP_ANONYMOUS, -1, 0 );
 
 	if ( pNewAddress == BALL_MAP_FAILED )
 		return BALL_MAP_FAILED;
 
-	{
-		uchar_t *pDst = ( uchar_t * )pNewAddress;
-		const uchar_t *pSrc = ( const uchar_t * )pOldAddress;
-
-		for ( size_t nIndex = 0u ; nIndex < nOldSize; ++nIndex )
-			pDst[ nIndex ] = pSrc[ nIndex ];
-	}
+	memcpy( pNewAddress, pOldAddress, nOldSize );
 
 	( void )munmap( pOldAddress, nOldSize );
 
