@@ -213,7 +213,7 @@ protected:
 			if ( bWasOverflow )
 			{
 				if ( nLiveBytes > size_t( 0 ) )
-					memmove( PackedFixedData(), pNew, nLiveBytes );
+					memmove( pNew, pData, nLiveBytes );
 
 				BaseAllocator_t::Free( pData );
 			}

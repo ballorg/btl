@@ -307,7 +307,7 @@ static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize
 #else // !defined( BALL_APPLE ) && !defined( BALL_UNIX )
 static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
 {
-	return BALL_MAP_FAILED;
+	return BALL_NULL;
 }
 #endif // defined( BALL_APPLE )
 
