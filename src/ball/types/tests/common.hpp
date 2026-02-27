@@ -45,9 +45,9 @@ bool CheckContainerMatches( const typename A::C &container, const std::vector< p
 	}
 
 	if ( bMatches )
-		sOut.AppendMultiple( "ok (", nContainerCount, " elements)" );
+		sOut.AppendMultiple( " - ok (", nContainerCount, " elements)" );
 	else
-		sOut.AppendMultiple( "mismatch (C=", nContainerCount, ", Ref=", nExpectedCount, ")" );
+		sOut.AppendMultiple( " - mismatch (C=", nContainerCount, ", Ref=", nExpectedCount, ")" );
 
 	return bMatches;
 }
@@ -97,9 +97,8 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		{
 			A::Remove( vecContainer, A::FirstIndex( vecContainer ) );
 		}
-		funcLogState( "Removed head", BALL_PROF_END( RemoveHead ) );
-
 		vecReference.erase( vecReference.begin() );
+		funcLogState( "Removed head", BALL_PROF_END( RemoveHead ) );
 
 		if ( A::Count( vecContainer ) > 0 )
 		{
@@ -109,9 +108,8 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 			{
 				A::Remove( vecContainer, tailIndex );
 			}
-			funcLogState( "Removed tail", BALL_PROF_END( RemoveTail ) );
-
 			vecReference.erase( vecReference.begin() + tailIndex );
+			funcLogState( "Removed tail", BALL_PROF_END( RemoveTail ) );
 		}
 	}
 
@@ -124,9 +122,8 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		{
 			A::Insert( vecContainer, middleIndex, middle );
 		}
-		funcLogState( "Inserted middle element", BALL_PROF_END( InsertMiddle ) );
-
 		vecReference.insert( vecReference.begin() + middleIndex, middle );
+		funcLogState( "Inserted middle element", BALL_PROF_END( InsertMiddle ) );
 	}
 
 	const pair_t head{ 0xC0DE, 0xFEED };
@@ -136,8 +133,8 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		{
 			A::Insert( vecContainer, A::FirstIndex( vecContainer ), head );
 		}
-		funcLogState( "Inserted at head", BALL_PROF_END( InsertHead ) );
 		vecReference.insert( vecReference.begin(), head );
+		funcLogState( "Inserted at head", BALL_PROF_END( InsertHead ) );
 	}
 
 	const pair_t tail{ 0x1234, 0x5678 };
@@ -147,8 +144,8 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		{
 			A::Insert( vecContainer, A::Count( vecContainer ), tail );
 		}
-		funcLogState( "Inserted at tail", BALL_PROF_END( InsertTail ) );
 		vecReference.push_back( tail );
+		funcLogState( "Inserted at tail", BALL_PROF_END( InsertTail ) );
 	}
 
 	const pair_t searchValue = middle;
