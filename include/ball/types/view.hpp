@@ -93,26 +93,26 @@ public:
 	class Ref_t
 	{
 	public:
-		constexpr Ref_t( CView *pOwner, I i ) noexcept : m_pOwner( pOwner ), m_i( i ) {}
-		constexpr operator T() const noexcept { return m_pOwner->GetValue( m_i ); }
+		constexpr Ref_t( CView *pOwner, I i ) noexcept : m_pOwner( pOwner ), m_index( i ) {}
+		constexpr operator T() const noexcept { return m_pOwner->GetValue( m_index ); }
 
 		template < typename Q = T, EnableIf_t< !IS_CONST< Q >, int > = 0 >
-		constexpr Ref_t &operator=( const T &value ) noexcept { m_pOwner->SetValue( m_i, value ); return *this; }
+		constexpr Ref_t &operator=( const T &value ) noexcept { m_pOwner->SetValue( m_index, value ); return *this; }
 
 		template < typename Q = T, EnableIf_t< !IS_CONST< Q >, int > = 0 >
 		constexpr Ref_t &operator=( const Ref_t &other ) noexcept { return operator=( static_cast< T >( other ) ); }
 
 	private:
+		I m_index;
 		CView *m_pOwner;
-		I m_i;
 	};
 
 	constexpr decltype( auto ) GetValue( I i ) const noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE )
-			return Base_t::template PackedGetValue< T >( i );
+			return PackedGetValue( i );
 		else
-			return Base_t::template At< T >( i );
+			return Base()[ i ];
 	}
 
 	// --------- iterators ----------
@@ -136,10 +136,8 @@ public:
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( 0 <= i && i < Count() );
 
-		if constexpr ( IS_PACKED_STORAGE && !IS_CONST< T > )
-			return Ref_t( this, i );
-		else if constexpr ( IS_PACKED_STORAGE )
-			return GetValue( i );
+		if constexpr ( IS_PACKED_STORAGE )
+			return PackedGetValue( i );
 		else
 			return Base_t::template At< T >( i );
 	}
@@ -150,7 +148,7 @@ public:
 		BALL_ASSERT( 0 <= i && i < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return GetValue( i );
+			return PackedGetValue( i );
 		else
 			return Base_t::template At< T >( i );
 	}
@@ -164,7 +162,7 @@ public:
 		BALL_ASSERT( 0 < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return GetValue( 0 );
+			return PackedGetValue( 0 );
 		else
 			return Base_t::template Front< T >();
 	}
@@ -174,7 +172,7 @@ public:
 		BALL_ASSERT( 0 < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return GetValue( Count() - 1 );
+			return PackedGetValue( Count() - 1 );
 		else
 			return Base_t::template Back< T >();
 	}
@@ -217,30 +215,54 @@ public:
 	// --------- prefix / suffix checks ----------
 	constexpr bool StartsWith( const ConstView_t &vPrefix ) const noexcept
 	{
-		I nPrefixCount = vPrefix.Count();
+		const I nPrefixCount = vPrefix.Count();
 
 		if ( nPrefixCount > Count() )
 			return false;
 
-		for ( I i = 0; i < nPrefixCount; ++i )
-			if ( !( GetValue( i ) == vPrefix.GetValue( i ) ) )
-				return false;
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			for ( I i = 0; i < nPrefixCount; ++i )
+				if ( !( PackedGetValue( i ) == vPrefix.PackedGetValue( i ) ) )
+					return false;
+		}
+		else
+		{
+			const T *pLeft = Base();
+			const T *pRight = vPrefix.Base();
+
+			for ( I i = 0; i < nPrefixCount; ++i )
+				if ( !( pLeft[ i ] == pRight[ i ] ) )
+					return false;
+		}
 
 		return true;
 	}
 
 	constexpr bool EndsWith( const ConstView_t &vSuffix ) const noexcept
 	{
-		I nCount = Count(), nSuffixCount = vSuffix.Count();
+		const I nCount = Count(), nSuffixCount = vSuffix.Count();
 
 		if ( nSuffixCount > nCount )
 			return false;
 
-		I nOffset = static_cast< I >( nCount - nSuffixCount );
+		const I nOffset = static_cast< I >( nCount - nSuffixCount );
 
-		for ( I i = 0; i < nSuffixCount; ++i )
-			if ( !( GetValue( nOffset + i ) == vSuffix.GetValue( i ) ) )
-				return false;
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			for ( I i = 0; i < nSuffixCount; ++i )
+				if ( !( PackedGetValue( nOffset + i ) == vSuffix.PackedGetValue( i ) ) )
+					return false;
+		}
+		else
+		{
+			const T *pLeft = Base() + nOffset;
+			const T *pRight = vSuffix.Base();
+
+			for ( I i = 0; i < nSuffixCount; ++i )
+				if ( !( pLeft[ i ] == pRight[ i ] ) )
+					return false;
+		}
 
 		return true;
 	}
@@ -266,29 +288,61 @@ public:
 		if ( nStart > nCount || nViewCount > nCount - nStart )
 			return INVALID_INDEX;
 
-		const I iLastStart = nCount - nViewCount;
-		const T needleFirst = v.GetValue( 0 );
-
-		for ( I i = nStart; i <= iLastStart; ++i )
+		if constexpr ( IS_PACKED_STORAGE )
 		{
-			// Quick check on the first element.
-			if ( !( GetValue( i ) == needleFirst ) )
-				continue;
+			const I iLastStart = nCount - nViewCount;
+			const T needleFirst = v.PackedGetValue( 0 );
 
-			// Verify the rest of the needle.
-			I k = I( 1 );
-
-			for ( ; k < nViewCount; ++k )
+			for ( I i = nStart; i <= iLastStart; ++i )
 			{
-				if ( !( GetValue( i + k ) == v.GetValue( k ) ) )
-					break;
+				// Quick check on the first element.
+				if ( !( PackedGetValue( i ) == needleFirst ) )
+					continue;
+
+				// Verify the rest of the needle.
+				I k = I( 1 );
+
+				for ( ; k < nViewCount; ++k )
+				{
+					if ( !( PackedGetValue( i + k ) == v.PackedGetValue( k ) ) )
+						break;
+				}
+
+				if ( k == nViewCount )
+					return i;
 			}
 
-			if ( k == nViewCount )
-				return i;
+			return INVALID_INDEX;
 		}
+		else
+		{
+			const T *pHay = Base();
+			const T *pNeedle = v.Base();
+			const T *pCur = pHay + nStart;
+			const T *pLastStart = pHay + ( nCount - nViewCount );
+			const T needleFirst = pNeedle[ 0 ];
 
-		return INVALID_INDEX;
+			for ( ; pCur <= pLastStart; ++pCur )
+			{
+				if ( !( *pCur == needleFirst ) )
+					continue;
+
+				const T *pHayIt = pCur + I( 1 );
+				const T *pNeedleIt = pNeedle + I( 1 );
+				const T *pNeedleEnd = pNeedle + nViewCount;
+
+				while ( pNeedleIt < pNeedleEnd && ( *pHayIt == *pNeedleIt ) )
+				{
+					++pHayIt;
+					++pNeedleIt;
+				}
+
+				if ( pNeedleIt == pNeedleEnd )
+					return static_cast< I >( pCur - pHay );
+			}
+
+			return INVALID_INDEX;
+		}
 	}
 
 	///-----------------------------------------------------------------------------
@@ -348,33 +402,67 @@ public:
 			iStart = iFrom;
 		}
 
-		const T needleFirst = v.GetValue( 0 );
-
-		// Backward scan: iStart .. 0
-		for ( I i = iStart; ; --i )
+		if constexpr ( IS_PACKED_STORAGE )
 		{
-			// Quick check on the first element at this start.
-			if ( GetValue( i ) == needleFirst )
-			{
-				// Verify the rest of the needle forward from i.
-				I k = I( 1 );
+			const T needleFirst = v.PackedGetValue( 0 );
 
-				for ( ; k < nViewCount; ++k )
+			// Backward scan: iStart .. 0
+			for ( I i = iStart; ; --i )
+			{
+				// Quick check on the first element at this start.
+				if ( PackedGetValue( i ) == needleFirst )
 				{
-					if ( !( GetValue( i + k ) == v.GetValue( k ) ) )
-						break;
+					// Verify the rest of the needle forward from i.
+					I k = I( 1 );
+
+					for ( ; k < nViewCount; ++k )
+					{
+						if ( !( PackedGetValue( i + k ) == v.PackedGetValue( k ) ) )
+							break;
+					}
+
+					if ( k == nViewCount )
+						return i;
 				}
 
-				if ( k == nViewCount )
-					return i;
+				// Stop when i == 0 to avoid unsigned underflow.
+				if ( i == FIRST_INDEX )
+					break;
 			}
 
-			// Stop when i == 0 to avoid unsigned underflow.
-			if ( i == FIRST_INDEX )
-				break;
+			return INVALID_INDEX;
 		}
+		else
+		{
+			const T *pHay = Base();
+			const T *pNeedle = v.Base();
+			const T needleFirst = pNeedle[ 0 ];
+			const T *pCur = pHay + iStart;
 
-		return INVALID_INDEX;
+			for ( ; ; --pCur )
+			{
+				if ( *pCur == needleFirst )
+				{
+					const T *pHayIt = pCur + I( 1 );
+					const T *pNeedleIt = pNeedle + I( 1 );
+					const T *pNeedleEnd = pNeedle + nViewCount;
+
+					while ( pNeedleIt < pNeedleEnd && ( *pHayIt == *pNeedleIt ) )
+					{
+						++pHayIt;
+						++pNeedleIt;
+					}
+
+					if ( pNeedleIt == pNeedleEnd )
+						return static_cast< I >( pCur - pHay );
+				}
+
+				if ( pCur == pHay )
+					break;
+			}
+
+			return INVALID_INDEX;
+		}
 	}
 
 	// --------- comparisons ----------
