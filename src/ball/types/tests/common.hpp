@@ -45,9 +45,9 @@ bool CheckContainerMatches( const typename A::C &container, const std::vector< p
 	}
 
 	if ( bMatches )
-		sOut.AppendMultiple( "ok (", nContainerCount, " elements)\n" );
+		sOut.AppendMultiple( "ok (", nContainerCount, " elements)" );
 	else
-		sOut.AppendMultiple( "mismatch (C=", nContainerCount, ", Ref=", nExpectedCount, ")\n\n" );
+		sOut.AppendMultiple( "mismatch (C=", nContainerCount, ", Ref=", nExpectedCount, ")" );
 
 	return bMatches;
 }
@@ -73,28 +73,45 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		}
 	};
 
-	auto funcLogState = [&]( const char *pszLabel )
+	auto funcLogState = [&]( const char *pszLabel, const BTL::CTimeNS &elapsed = BTL::CTimeNS() )
 	{
-		sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": ", BTL::StringView_t( pszLabel ), ": " );
+		sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": ", BTL::StringView_t( pszLabel ) );
 		CheckContainerMatches< A >( vecContainer, vecReference, sOut );
+
+		if ( elapsed.IsValid() )
+			sOut.AppendMultiple( " - elapsed ", elapsed.AsMillisF(), " ms\n" );
+		else
+			sOut += "\n";
 	};
 
+	BALL_PROF_BEGIN( AppendRange );
 	funcAppendRange( 0, 10'000'000 );
-	funcLogState( "Initial fill" );
+
+	auto nsAppendRange = BALL_PROF_END( AppendRange );
+
+	funcLogState( "Initial fill", nsAppendRange );
 
 	if ( A::Count( vecContainer ) >= 2 )
 	{
-		A::Remove( vecContainer, A::FirstIndex( vecContainer ) );
+		BALL_PROF_BEGIN( RemoveHead );
+		{
+			A::Remove( vecContainer, A::FirstIndex( vecContainer ) );
+		}
+		funcLogState( "Removed head", BALL_PROF_END( RemoveHead ) );
+
 		vecReference.erase( vecReference.begin() );
-		funcLogState( "Removed head" );
 
 		if ( A::Count( vecContainer ) > 0 )
 		{
 			const size_t tailIndex = A::Count( vecContainer ) - 1;
 
-			A::Remove( vecContainer, tailIndex );
+			BALL_PROF_BEGIN( RemoveTail );
+			{
+				A::Remove( vecContainer, tailIndex );
+			}
+			funcLogState( "Removed tail", BALL_PROF_END( RemoveTail ) );
+
 			vecReference.erase( vecReference.begin() + tailIndex );
-			funcLogState( "Removed tail" );
 		}
 	}
 
@@ -103,30 +120,46 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 	{
 		const size_t middleIndex = A::Count( vecContainer ) / 2;
 
-		A::Insert( vecContainer, middleIndex, middle );
+		BALL_PROF_BEGIN( InsertMiddle );
+		{
+			A::Insert( vecContainer, middleIndex, middle );
+		}
+		funcLogState( "Inserted middle element", BALL_PROF_END( InsertMiddle ) );
+
 		vecReference.insert( vecReference.begin() + middleIndex, middle );
-		funcLogState( "Inserted middle element" );
 	}
 
 	const pair_t head{ 0xC0DE, 0xFEED };
 
 	{
-		A::Insert( vecContainer, A::FirstIndex( vecContainer ), head );
+		BALL_PROF_BEGIN( InsertHead );
+		{
+			A::Insert( vecContainer, A::FirstIndex( vecContainer ), head );
+		}
+		funcLogState( "Inserted at head", BALL_PROF_END( InsertHead ) );
 		vecReference.insert( vecReference.begin(), head );
-		funcLogState( "Inserted at head" );
 	}
 
 	const pair_t tail{ 0x1234, 0x5678 };
 
 	{
-		A::Insert( vecContainer, A::Count( vecContainer ), tail );
+		BALL_PROF_BEGIN( InsertTail );
+		{
+			A::Insert( vecContainer, A::Count( vecContainer ), tail );
+		}
+		funcLogState( "Inserted at tail", BALL_PROF_END( InsertTail ) );
 		vecReference.push_back( tail );
-		funcLogState( "Inserted at tail" );
 	}
 
 	const pair_t searchValue = middle;
+
+	BALL_PROF_BEGIN( Find );
+
 	const size_t iFound = A::Find( vecContainer, searchValue );
 	const bool bContainerFound = A::IsValidIndex( vecContainer, iFound );
+
+	auto nsFind = BALL_PROF_END( Find );
+
 	const auto itReference = std::find( vecReference.begin(), vecReference.end(), searchValue );
 	const bool bReferenceFound = itReference != vecReference.end();
 	const size_t iReference = bReferenceFound ? static_cast< size_t >( itReference - vecReference.begin() ) : A::INVALID_INDEX;
@@ -152,9 +185,14 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 	sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": " );
 
 	if ( A::IsValidIndex( vecContainer, iMissing ) )
-		sOut.AppendMultiple( "Missing element was unexpectedly found at ", iMissing, "\n" );
+		sOut.AppendMultiple( "Missing element was unexpectedly found at ", iMissing );
 	else
-		sOut.AppendMultiple( "Missing element not found as expected\n" );
+		sOut.AppendMultiple( "Missing element not found as expected" );
+
+	if ( nsFind.IsValid() )
+		sOut.AppendMultiple( " - elapsed ", nsFind.AsMillisF(), " ms\n" );
+	else
+		sOut += "\n";
 
 	sOut += "---\n";
 }

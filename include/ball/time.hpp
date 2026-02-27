@@ -37,6 +37,8 @@ namespace BTL
 		explicit CTimeNS( const timens_t nNS ) noexcept : m_nNS( nNS ) {}
 
 	public:
+		bool IsValid() const noexcept { return m_nNS != 0; }
+
 		void SetNS( const timens_t nNS ) noexcept { m_nNS = nNS; }
 
 		//-------------------------------------------------------------------------
