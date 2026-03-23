@@ -6,28 +6,9 @@
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/math.h"
+#	include "meta/xvalue.hpp"
 #	include "elements.hpp"
 #	include "bits.hpp"
-#	include "xvalue.hpp"
-
-// Swap two of anything.
-template < class T >
-inline void Math_Swap( T &x, T &y ) noexcept
-{
-	T temp = x;
-
-	x = y;
-	y = Move( temp );
-}
-
-template < class T, size_t N >
-inline void Math_SwapN( T ( &x )[ N ], T ( &y )[ N ] ) noexcept
-{
-	T temp[ N ] = x;
-
-	x = y;
-	y = Move( temp );
-}
 
 /// @brief Computes power of 10 at compile/runtime without floating point.
 /// @tparam P The exponent.

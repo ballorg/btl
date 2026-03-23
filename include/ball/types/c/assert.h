@@ -5,6 +5,8 @@
 #	include "macros.h"
 #	include "unreachable.h"
 
+#	include "assert/static.h"
+
 #	ifndef BALL_ENABLE_ASSERT
 #		if defined( NDEBUG )
 #			define BALL_ENABLE_ASSERT 0

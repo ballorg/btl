@@ -10,18 +10,18 @@
 #	include "fixed.hpp"
 #	include "meta/fixed.hpp"
 #	include "meta/isintegral.hpp"
+#	include "meta/xvalue.hpp"
 #	include "allocator.hpp"
 #	include "bits.hpp"
 #	include "elements.hpp"
 #	include "math.hpp"
 #	include "view.hpp"
-#	include "xvalue.hpp"
 
 // ===============================
 // CVectorBase (now derives from CView)
 // ===============================
 template < class B, typename I, typename T, class A = CAllocator< I, T > >
-class CVectorBase : public B
+class CVectorBase : public A, public B
 {
 public:
 	using Base_t      = B;

@@ -407,7 +407,7 @@ protected:
 		if ( this == &other )
 			return *this;
 
-		Math_Swap( m_nCount, other.m_nCount );
+		Swap( m_nCount, other.m_nCount );
 		SwapElementsFrom( static_cast< CViewBase & >( other ) );
 
 		return *this;
@@ -689,7 +689,7 @@ protected: // Packed methods.
 		if constexpr ( TYPE_HAS_PACKED_BITS< T0 > )
 		{
 			if ( m_Elements.template IsPackedOverflowBy< K >( nCount ) )
-				Math_Swap( m_Elements.template PackedDataBy< K, T0 >(), other.m_Elements.template PackedDataBy< K, T0 >() );
+				Swap( m_Elements.template PackedDataBy< K, T0 >(), other.m_Elements.template PackedDataBy< K, T0 >() );
 			else
 			{
 				uchar_t *pLeft = m_Elements.template PackedFixedBy< K, T0 >();
@@ -697,7 +697,7 @@ protected: // Packed methods.
 				const size_t nBytes = PackedBytesForCount< T0 >( nCount );
 
 				for ( size_t n = size_t( 0 ); n < nBytes; ++n )
-					Math_Swap( pLeft[ n ], pRight[ n ] );
+					Swap( pLeft[ n ], pRight[ n ] );
 			}
 		}
 		else
@@ -725,7 +725,7 @@ protected: // Packed methods.
 
 	constexpr void Swap( CViewBase &other ) noexcept
 	{
-		Math_Swap( m_nCount, other.m_nCount );
+		Swap( m_nCount, other.m_nCount );
 		SwapElementsFrom( other );
 	}
 

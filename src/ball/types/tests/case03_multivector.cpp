@@ -5,7 +5,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	using C = BTL::MultiVector_t< size_t, uint32_t >;
 
 	C vec;
-	std::vector< pair_t > ref;
+	std::vector< TestPair_t > ref;
 
 	auto funcCheck = [&]( const char *pszLabel )
 	{
@@ -17,13 +17,13 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 		{
 			for ( size_t i = 0; i < nVec; ++i )
 			{
-				if ( vec.template At< size_t >( i ) != ref[ i ].first )
+				if ( vec.template At< size_t >( i ) != ref[ i ].First() )
 				{
 					bOk = false;
 					break;
 				}
 
-				if ( vec.template At< uint32_t >( i ) != static_cast< uint32_t >( ref[ i ].second ) )
+				if ( vec.template At< uint32_t >( i ) != static_cast< uint32_t >( ref[ i ].Second() ) )
 				{
 					bOk = false;
 					break;
@@ -69,15 +69,15 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	funcCheck( "Insert single row" );
 
 	vec.InsertMultiple( 2, 2, size_t( 5 ), uint32_t( 50 ) );
-	ref.insert( ref.begin() + 2, 2, pair_t{ 5, 50 } );
+	ref.insert( ref.begin() + 2, 2, TestPair_t{ 5, 50 } );
 	funcCheck( "InsertMultiple" );
 
 	vec.AddMultipleToHead( 2, size_t( 8 ), uint32_t( 80 ) );
-	ref.insert( ref.begin(), 2, pair_t{ 8, 80 } );
+	ref.insert( ref.begin(), 2, TestPair_t{ 8, 80 } );
 	funcCheck( "AddMultipleToHead" );
 
 	vec.AddMultipleToTail( 3, size_t( 7 ), uint32_t( 70 ) );
-	ref.insert( ref.end(), 3, pair_t{ 7, 70 } );
+	ref.insert( ref.end(), 3, TestPair_t{ 7, 70 } );
 	funcCheck( "AddMultipleToTail" );
 
 	vec.Remove( 1 );
@@ -91,12 +91,10 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	if ( !ref.empty() )
 	{
 		vec.template At< uint32_t >( 0 ) += uint32_t( 1 );
-		ref[ 0 ].second += 1;
+		ref[ 0 ].Second() += 1;
 
-		const bool bFrontOk = vec.template Front< size_t >() == ref.front().first
-			&& vec.template Front< uint32_t >() == static_cast< uint32_t >( ref.front().second );
-		const bool bBackOk = vec.template Back< size_t >() == ref.back().first
-			&& vec.template Back< uint32_t >() == static_cast< uint32_t >( ref.back().second );
+		const bool bFrontOk = vec.template Front< size_t >() == ref.front().First() && vec.template Front< uint32_t >() == static_cast< uint32_t >( ref.front().First() );
+		const bool bBackOk = vec.template Back< size_t >() == ref.back().First() && vec.template Back< uint32_t >() == static_cast< uint32_t >( ref.back().Second() );
 
 		sOut.AppendMultiple( "BTL::MultiVector_t: typed access: " );
 
@@ -123,8 +121,8 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	if ( !ref.empty() )
 	{
 		const size_t iProbe = ref.size() / 2;
-		const size_t nProbeFirst = ref[ iProbe ].first;
-		const uint32_t nProbeSecond = static_cast< uint32_t >( ref[ iProbe ].second );
+		const size_t nProbeFirst = ref[ iProbe ].First();
+		const uint32_t nProbeSecond = static_cast< uint32_t >( ref[ iProbe ].Second() );
 
 		const size_t iFindRow = vec.Find( nProbeFirst, nProbeSecond );
 		const size_t iRefFindRow = funcFindRow( nProbeFirst, nProbeSecond );
@@ -140,7 +138,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 
 		for ( size_t i = ref.size(); i > 0; --i )
 		{
-			if ( ref[ i - 1 ].first == nProbeFirst && ref[ i - 1 ].second == static_cast< size_t >( nProbeSecond ) )
+			if ( ref[ i - 1 ].First() == nProbeFirst && ref[ i - 1 ].Second() == static_cast< size_t >( nProbeSecond ) )
 			{
 				iRefRFindRow = i - 1;
 				break;
@@ -161,7 +159,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 
 		for ( size_t i = 0; i < ref.size(); ++i )
 		{
-			if ( ref[ i ].first == nProbeFirst )
+			if ( ref[ i ].First() == nProbeFirst )
 			{
 				iRefFindFirstCol = i;
 				break;
@@ -170,7 +168,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 
 		for ( size_t i = ref.size(); i > 0; --i )
 		{
-			if ( ref[ i - 1 ].first == nProbeFirst )
+			if ( ref[ i - 1 ].First() == nProbeFirst )
 			{
 				iRefRFindFirstCol = i - 1;
 				break;
@@ -192,7 +190,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 
 		for ( size_t i = 0; i < ref.size(); ++i )
 		{
-			if ( static_cast< uint32_t >( ref[ i ].second ) == nProbeSecond )
+			if ( static_cast< uint32_t >( ref[ i ].Second() ) == nProbeSecond )
 			{
 				iRefFindSecondCol = i;
 				break;

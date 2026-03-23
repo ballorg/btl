@@ -342,9 +342,9 @@ public:
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			if ( IsOverflow( nCount ) )
-				Math_Swap( m_Node.m_pData, other.m_Node.m_pData );
+				Swap( m_Node.m_pData, other.m_Node.m_pData );
 			else
-				Math_Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
+				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
 		else
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
 	}
@@ -353,9 +353,9 @@ public:
 	{
 		if constexpr ( K == 0 )
 			if ( IsOverflow( nCount ) )
-				Math_Swap( m_Node.m_pData, other.m_Node.m_pData );
+				Swap( m_Node.m_pData, other.m_Node.m_pData );
 			else
-				Math_Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
+				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
 		else
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
 	}
@@ -650,9 +650,9 @@ public:
 	{
 		if constexpr ( IS_SAME< Type, T > )
 			if ( IsOverflow( nCount ) )
-				Math_Swap( m_Node.m_pData, other.m_Node.m_pData );
+				Swap( m_Node.m_pData, other.m_Node.m_pData );
 			else
-				Math_Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
+				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
 		else
 			m_Tail.template SwapBy< T >( nCount, other.m_Tail );
 	}
@@ -661,9 +661,9 @@ public:
 	{
 		if constexpr ( K == 0 )
 			if ( IsOverflow( nCount ) )
-				Math_Swap( m_Node.m_pData, other.m_Node.m_pData );
+				Swap( m_Node.m_pData, other.m_Node.m_pData );
 			else
-				Math_Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
+				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
 		else
 			m_Tail.template SwapBy< K - 1 >( nCount, other.m_Tail );
 	}

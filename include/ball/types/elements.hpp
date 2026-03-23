@@ -9,7 +9,7 @@
 #	include "c/memory.h"
 #	include "meta/traits.hpp"
 #	include "meta/removereference.hpp"
-#	include "xvalue.hpp"
+#	include "meta/xvalue.hpp"
 
 template < typename T >
 constexpr T *ConstructElement( T *pMemory )

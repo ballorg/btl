@@ -15,17 +15,10 @@ import Ball.Types;
 #include <vector>
 
 using TestsOutput_t = BTL::BufferString_t< 4096 >;
-
-struct pair_t
-{
-	size_t first;
-	size_t second;
-
-	bool operator==( const pair_t &rhs ) const { return first == rhs.first && second == rhs.second; }
-};
+using TestPair_t = BTL::Pair_t< size_t, size_t >;
 
 template < class A >
-bool CheckContainerMatches( const typename A::C &container, const std::vector< pair_t > &expected, TestsOutput_t &sOut )
+bool CheckContainerMatches( const typename A::C &container, const std::vector< TestPair_t > &expected, TestsOutput_t &sOut )
 {
 	const size_t nContainerCount = A::Count( container );
 	const size_t nExpectedCount  = expected.size();
@@ -58,7 +51,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 	using C = typename A::C;
 
 	C vecContainer;
-	std::vector< pair_t > vecReference;
+	std::vector< TestPair_t > vecReference;
 
 	A::Reserve( vecContainer, 16 );
 
@@ -66,7 +59,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 	{
 		for ( size_t i = 0; i < count; ++i )
 		{
-			const pair_t value{ start + i, ( start + i ) * 3 + 1 };
+			const TestPair_t value{ start + i, ( start + i ) * 3 + 1 };
 
 			A::Append( vecContainer, value );
 			vecReference.push_back( value );
@@ -113,7 +106,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		}
 	}
 
-	const pair_t middle{ 0xDEAD, 0xBEEF };
+	const TestPair_t middle{ 0xDEAD, 0xBEEF };
 
 	{
 		const size_t middleIndex = A::Count( vecContainer ) / 2;
@@ -126,7 +119,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		funcLogState( "Inserted middle element", BALL_PROF_END( InsertMiddle ) );
 	}
 
-	const pair_t head{ 0xC0DE, 0xFEED };
+	const TestPair_t head{ 0xC0DE, 0xFEED };
 
 	{
 		BALL_PROF_BEGIN( InsertHead );
@@ -137,7 +130,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		funcLogState( "Inserted at head", BALL_PROF_END( InsertHead ) );
 	}
 
-	const pair_t tail{ 0x1234, 0x5678 };
+	const TestPair_t tail{ 0x1234, 0x5678 };
 
 	{
 		BALL_PROF_BEGIN( InsertTail );
@@ -148,7 +141,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		funcLogState( "Inserted at tail", BALL_PROF_END( InsertTail ) );
 	}
 
-	const pair_t searchValue = middle;
+	const TestPair_t searchValue = middle;
 
 	BALL_PROF_BEGIN( Find );
 
@@ -176,7 +169,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 	if ( bContainerFound != bReferenceFound || ( bContainerFound && bReferenceFound && iFound != iReference ) )
 		sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), " - Find mismatch between container and reference\n" );
 
-	const pair_t missing{ 0xFFFF, 0xFFFF };
+	const TestPair_t missing{ 0xFFFF, 0xFFFF };
 	const size_t iMissing = A::Find( vecContainer, missing );
 
 	sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": " );

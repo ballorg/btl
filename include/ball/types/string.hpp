@@ -4,11 +4,11 @@
 #	pragma once
 
 #	include "base/arch.h"
+#	include "meta/xvalue.hpp"
 #	include "math.hpp"
 #	include "number.hpp"
 #	include "stringview.hpp"
 #	include "vector.hpp"
-#	include "xvalue.hpp"
 
 template < class B, typename I, typename T >
 class CStringImpl : public CVectorImpl< B, I, T >

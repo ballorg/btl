@@ -3,6 +3,7 @@
 
 #	pragma once
 
+#	include "xvalue.hpp"
 #	include "issame.hpp"
 
 ///-----------------------------------------------------------------------------
@@ -51,14 +52,14 @@ public:
 	}
 
 	// index access
-	template < TI K, typename T > constexpr T &BaseBy() noexcept
+	template < TI K > constexpr decltype( auto ) BaseBy() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
-			static_assert( K == 0 , "MPack: index OOB for empty pack" );
+			static_assert( K == 0, "MPack: index OOB for empty pack" );
 	}
-	template < TI K, typename T > constexpr const T &BaseBy() const noexcept
+	template < TI K > constexpr decltype( auto ) BaseBy() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
@@ -75,7 +76,7 @@ public:
 protected:
 	constexpr void Swap( MPack &other ) noexcept
 	{
-		Math_Swap( m_Node, other.m_Node );
+		Swap( m_Node, other.m_Node );
 	}
 
 	constexpr MPack &CopyFrom( const MPack &other ) noexcept
@@ -93,7 +94,7 @@ protected:
 	}
 
 public:
-	T0  m_Node;
+	T0 m_Node;
 };
 
 // non-empty pack
@@ -128,14 +129,14 @@ public:
 	}
 
 	// index access
-	template < TI K, typename T > constexpr T &BaseBy() noexcept
+	template < TI K > constexpr decltype( auto ) BaseBy() noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
 		else
 			return m_Tail.template BaseBy< K - 1 >();
 	}
-	template < TI K, typename T > constexpr const T &BaseBy() const noexcept
+	template < TI K > constexpr decltype( auto ) BaseBy() const noexcept
 	{
 		if constexpr ( K == 0 )
 			return m_Node;
@@ -153,7 +154,7 @@ public:
 protected:
 	constexpr void Swap( MPack &other ) noexcept
 	{
-		Math_Swap( m_Node, other.m_Node );
+		Swap( m_Node, other.m_Node );
 		m_Tail.Swap( other.m_Tail );
 	}
 
@@ -173,7 +174,7 @@ protected:
 	}
 
 public:
-	T0     m_Node;
+	T0 m_Node;
 	Tail_t m_Tail;
 };
 
