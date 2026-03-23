@@ -600,16 +600,16 @@ public:
 	constexpr CBufferMultiVector &operator=( const CMultiVector< I, TI, Ts... > &other ) { return CopyFrom( other ); }
 };
 
-template < typename... Ts > using MultiVector_t =            CMultiVector< size_t, uint8_t, Ts... >;
-template < typename... Ts > using MultiVector8_t =           CMultiVector< uint8_t, uint8_t, Ts... >;
-template < typename... Ts > using MultiVector16_t =          CMultiVector< uint16_t, uint8_t, Ts... >;
-template < typename... Ts > using MultiVector32_t =          CMultiVector< uint32_t, uint8_t, Ts... >;
-template < typename... Ts > using MultiVector64_t =          CMultiVector< uint64_t, uint8_t, Ts... >;
+template < typename... Ts > using MultiVector_t =            CMultiVector< size_t, size8_t, Ts... >;
+template < typename... Ts > using MultiVector8_t =           CMultiVector< size8_t, size8_t, Ts... >;
+template < typename... Ts > using MultiVector16_t =          CMultiVector< size16_t, size8_t, Ts... >;
+template < typename... Ts > using MultiVector32_t =          CMultiVector< size32_t, size8_t, Ts... >;
+template < typename... Ts > using MultiVector64_t =          CMultiVector< size64_t, size8_t, Ts... >;
 
-template < size_t N, typename... Ts > using BufferMultiVector_t =            CBufferMultiVector< size_t, N, uint8_t, Ts... >;
-template < uint8_t N, typename... Ts > using BufferMultiVector8_t =          CBufferMultiVector< uint8_t, N, uint8_t, Ts... >;
-template < uint16_t N, typename... Ts > using BufferMultiVector16_t =        CBufferMultiVector< uint16_t, N, uint8_t, Ts... >;
-template < uint32_t N, typename... Ts > using BufferMultiVector32_t =        CBufferMultiVector< uint32_t, N, uint8_t, Ts... >;
-template < uint64_t N, typename... Ts > using BufferMultiVector64_t =        CBufferMultiVector< uint64_t, N, uint8_t, Ts... >;
+template < size_t N, typename... Ts > using BufferMultiVector_t =            CBufferMultiVector< size_t, N, size8_t, Ts... >;
+template < size8_t N, typename... Ts > using BufferMultiVector8_t =          CBufferMultiVector< size8_t, N, size8_t, Ts... >;
+template < size16_t N, typename... Ts > using BufferMultiVector16_t =        CBufferMultiVector< size16_t, N, size8_t, Ts... >;
+template < size32_t N, typename... Ts > using BufferMultiVector32_t =        CBufferMultiVector< size32_t, N, size8_t, Ts... >;
+template < size64_t N, typename... Ts > using BufferMultiVector64_t =        CBufferMultiVector< size64_t, N, size8_t, Ts... >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MULTIVECTOR_HPP_ )

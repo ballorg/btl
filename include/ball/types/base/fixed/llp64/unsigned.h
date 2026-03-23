@@ -69,4 +69,9 @@ typedef unsigned long long int uint64_t;
 
 typedef unsigned long long int uintptr_t;
 
+typedef unsigned char size8_t;
+typedef unsigned short int size16_t;
+typedef unsigned int size32_t;
+typedef unsigned long long int size64_t;
+
 #endif // !defined( _INCLUDE_BALL_TYPES_BASE_FIXED_LLP64_UNSIGNED_H_ )

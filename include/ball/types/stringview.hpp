@@ -164,34 +164,34 @@ public:
 };
 
 using StringView_t =        CStringView< size_t, const char_t >;
-using StringView8_t =       CStringView< uint8_t, const char_t >;
-using StringView16_t =      CStringView< uint16_t, const char_t >;
-using StringView32_t =      CStringView< uint32_t, const char_t >;
-using StringView64_t =      CStringView< uint64_t, const char_t >;
+using StringView8_t =       CStringView< size8_t, const char_t >;
+using StringView16_t =      CStringView< size16_t, const char_t >;
+using StringView32_t =      CStringView< size32_t, const char_t >;
+using StringView64_t =      CStringView< size64_t, const char_t >;
 
 using WStringView_t =       CStringView< size_t, const wchar_t >;
-using WStringView8_t =      CStringView< uint8_t, const wchar_t >;
-using WStringView16_t =     CStringView< uint16_t, const wchar_t >;
-using WStringView32_t =     CStringView< uint32_t, const wchar_t >;
-using WStringView64_t =     CStringView< uint64_t, const wchar_t >;
+using WStringView8_t =      CStringView< size8_t, const wchar_t >;
+using WStringView16_t =     CStringView< size16_t, const wchar_t >;
+using WStringView32_t =     CStringView< size32_t, const wchar_t >;
+using WStringView64_t =     CStringView< size64_t, const wchar_t >;
 
 using UTF8StringView_t =    CStringView< size_t, const char8_t >;
-using UTF8StringView8_t =   CStringView< uint8_t, const char8_t >;
-using UTF8StringView16_t =  CStringView< uint16_t, const char8_t >;
-using UTF8StringView32_t =  CStringView< uint32_t, const char8_t >;
-using UTF8StringView64_t =  CStringView< uint64_t, const char8_t >;
+using UTF8StringView8_t =   CStringView< size8_t, const char8_t >;
+using UTF8StringView16_t =  CStringView< size16_t, const char8_t >;
+using UTF8StringView32_t =  CStringView< size32_t, const char8_t >;
+using UTF8StringView64_t =  CStringView< size64_t, const char8_t >;
 
 using UTF16StringView_t =   CStringView< size_t, const char16_t >;
-using UTF16StringView8_t =  CStringView< uint8_t, const char16_t >;
-using UTF16StringView16_t = CStringView< uint16_t, const char16_t >;
-using UTF16StringView32_t = CStringView< uint32_t, const char16_t >;
-using UTF16StringView64_t = CStringView< uint64_t, const char16_t >;
+using UTF16StringView8_t =  CStringView< size8_t, const char16_t >;
+using UTF16StringView16_t = CStringView< size16_t, const char16_t >;
+using UTF16StringView32_t = CStringView< size32_t, const char16_t >;
+using UTF16StringView64_t = CStringView< size64_t, const char16_t >;
 
 using UTF32StringView_t =   CStringView< size_t, const char32_t >;
-using UTF32StringView8_t =  CStringView< uint8_t, const char32_t >;
-using UTF32StringView16_t = CStringView< uint16_t, const char32_t >;
-using UTF32StringView32_t = CStringView< uint32_t, const char32_t >;
-using UTF32StringView64_t = CStringView< uint64_t, const char32_t >;
+using UTF32StringView8_t =  CStringView< size8_t, const char32_t >;
+using UTF32StringView16_t = CStringView< size16_t, const char32_t >;
+using UTF32StringView32_t = CStringView< size32_t, const char32_t >;
+using UTF32StringView64_t = CStringView< size64_t, const char32_t >;
 
 //------------------------------------------------------------------------------
 // StringView literals

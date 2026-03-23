@@ -919,15 +919,15 @@ public:
 };
 
 template < typename T > using Vector_t =            CVector< size_t, T >;
-template < typename T > using Vector8_t =           CVector< uint8_t, T >;
-template < typename T > using Vector16_t =          CVector< uint16_t, T >;
-template < typename T > using Vector32_t =          CVector< uint32_t, T >;
-template < typename T > using Vector64_t =          CVector< uint64_t, T >;
+template < typename T > using Vector8_t =           CVector< size8_t, T >;
+template < typename T > using Vector16_t =          CVector< size16_t, T >;
+template < typename T > using Vector32_t =          CVector< size32_t, T >;
+template < typename T > using Vector64_t =          CVector< size64_t, T >;
 
 template < typename T, size_t N > using BufferVector_t =            CBufferVector< size_t, N, T >;
-template < typename T, uint8_t N > using BufferVector8_t =          CBufferVector< uint8_t, N, T >;
-template < typename T, uint16_t N > using BufferVector16_t =        CBufferVector< uint16_t, N, T >;
-template < typename T, uint32_t N > using BufferVector32_t =        CBufferVector< uint32_t, N, T >;
-template < typename T, uint64_t N > using BufferVector64_t =        CBufferVector< uint64_t, N, T >;
+template < typename T, size8_t N > using BufferVector8_t =          CBufferVector< size8_t, N, T >;
+template < typename T, size16_t N > using BufferVector16_t =        CBufferVector< size16_t, N, T >;
+template < typename T, size32_t N > using BufferVector32_t =        CBufferVector< size32_t, N, T >;
+template < typename T, size64_t N > using BufferVector64_t =        CBufferVector< size64_t, N, T >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_VECTOR_HPP_ )
