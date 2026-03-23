@@ -4,8 +4,8 @@
 #	pragma once
 
 #	include "base/arch.h"
-#	include "base/fixed.h"
 #	include "meta/fixed/bits.h"
+#	include "base/fixed.h"
 #	include "meta/isintegral.hpp"
 #	include "meta/issame.hpp"
 #	include "meta/removecv.hpp"
@@ -41,7 +41,30 @@ enum FixedTag_t : uint2_t
 {
 	FIXED_SIGNED = 0,
 	FIXED_UNCERTAIN = 1,
-	FIXED_UNSIGNED = 2
+	FIXED_UNSIGNED = 2,
+	FIXED_RESERVED = 3
+};
+
+template < bits_t NBIT >
+struct MFixedMask
+{
+	static constexpr ullong_t Value()
+	{
+		if constexpr ( NBIT >= 64 )
+			return ~0ull;
+		else
+			return ( 1ull << NBIT ) - 1ull;
+	}
+	static constexpr ullong_t SignValue()
+	{
+		if constexpr ( NBIT <= 1 )
+			return 1ull;
+		else
+			return VALUE ^ MFixedMask< NBIT - bits_t( 1 ) >::VALUE;
+	}
+
+	static constexpr ullong_t VALUE = Value();
+	static constexpr ullong_t SIGN_VALUE = SignValue();
 };
 
 ///-----------------------------------------------------------------------------
@@ -73,11 +96,17 @@ struct MFixedBase
 	using Type = T;
 	using Signed_t = typename MSigned< Type >::Type;
 	using Unsigned_t = typename MUnsigned< Type >::Type;
+	using Mask_t = MFixedMask< TBITS >;
 
 	static constexpr FixedTag_t TAG = TTAG; /// Compile-time signedness policy.
 	static constexpr bits_t BITS = TBITS; /// Logical number of meaningful bits.
 	static constexpr bits_t STORAGE_BITS = bits_t( sizeof( Type ) * 8u ); /// Physical storage width of `Type` in bits.
-	static constexpr bool IS_SIGNED = TAG == FIXED_SIGNED || TAG == FIXED_UNCERTAIN; /// Effective signed behavior used by normalization/sign-extension.
+	static constexpr bool IS_SIGNED = IS_SAME< Type, Signed_t >; /// Effective signed behavior used by normalization/sign-extension.
+
+	static constexpr Type IsSigned( Type value ) noexcept
+	{
+		return ( value & Mask_t::SIGN_VALUE ) != Unsigned_t( 0 );
+	}
 
 	///-----------------------------------------------------------------------------
 	/// @brief Canonicalize an arbitrary input value to (`BITS`, `TAG`) domain.
@@ -91,16 +120,14 @@ struct MFixedBase
 
 		if constexpr ( BITS < STORAGE_BITS )
 		{
-			const Unsigned_t nMask = ( Unsigned_t( 1 ) << BITS ) - Unsigned_t( 1 );
+			constexpr Unsigned_t nMask = Mask_t::VALUE;
 
 			nRaw = nRaw & nMask;
 
 			if constexpr ( IS_SIGNED )
 			{
-				const Unsigned_t nSignBit = Unsigned_t( 1 ) << ( BITS - bits_t( 1 ) );
-
-				if ( ( nRaw & nSignBit ) != Unsigned_t( 0 ) )
-					nRaw = nRaw | static_cast< Unsigned_t >( ~nMask );
+				if ( IsSigned( nRaw ) )
+					nRaw |= ~nMask;
 			}
 		}
 
@@ -271,15 +298,7 @@ struct MFixedMetadataBy : public MFixedPackedBy< T >
 	static constexpr bits_t UNSIGNED_BITS = bits_t( sizeof( Unsigned_t ) * 8ull );
 	static constexpr size_t BYTES = static_cast< size_t >( BITS + bits_t( 7ull ) ) / bits_t( 8ull );
 
-	static constexpr Unsigned_t MakeValueMask() noexcept
-	{
-		if constexpr ( BITS >= UNSIGNED_BITS )
-			return static_cast< Unsigned_t >( ~Unsigned_t( 0u ) );
-		else
-			return static_cast< Unsigned_t >( ( Unsigned_t( 1u ) << BITS ) - Unsigned_t( 1u ) );
-	}
-
-	static constexpr Unsigned_t VALUE_MASK = MakeValueMask();
+	static constexpr Unsigned_t VALUE_MASK = MFixedMask< BITS >::VALUE;
 };
 
 template < typename T >
