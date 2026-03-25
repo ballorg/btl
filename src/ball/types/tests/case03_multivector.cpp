@@ -93,7 +93,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 		vec.template At< uint32_t >( 0 ) += uint32_t( 1 );
 		ref[ 0 ].Second() += 1;
 
-		const bool bFrontOk = vec.template Front< size_t >() == ref.front().First() && vec.template Front< uint32_t >() == static_cast< uint32_t >( ref.front().First() );
+		const bool bFrontOk = vec.template Front< size_t >() == ref.front().First() && vec.template Front< uint32_t >() == static_cast< uint32_t >( ref.front().Second() );
 		const bool bBackOk = vec.template Back< size_t >() == ref.back().First() && vec.template Back< uint32_t >() == static_cast< uint32_t >( ref.back().Second() );
 
 		sOut.AppendMultiple( "BTL::MultiVector_t: typed access: " );

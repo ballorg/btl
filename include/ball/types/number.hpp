@@ -14,7 +14,7 @@
 ///        Returns at least 1 (i.e., u==0 => 1).
 ///        Optimized paths for NS = 2, 4, 8, 16 (powers of two).
 ///-----------------------------------------------------------------------------
-template < typename I = uint_t, uint8_t NS, typename U >
+template < typename I = uint_t, size8_t NS, typename U >
 constexpr I Num_Digits( U u ) noexcept
 {
 	static_assert( NS >= 2, "Base must be >= 2" );
@@ -65,7 +65,7 @@ constexpr T Num_DigitToChar( U d ) noexcept
 ///  - For base-10 and generic base, uses one division per step and computes
 ///    the remainder as r = u - q*BASE.
 ///-----------------------------------------------------------------------------
-template < typename T = uchar_t, typename I = uint_t, uint8_t NS, typename U >
+template < typename T = uchar_t, typename I = uint_t, size8_t NS, typename U >
 constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 {
 	static_assert( NS >= 2 && NS <= 36, "NS must be in [2..36]" );
@@ -129,7 +129,7 @@ constexpr T *Num_WriteUnsigned( U u, T *pOut, I nDigits ) noexcept
 //-----------------------------------------------------------------------------
 // (Optional) consteval helper for hard compile-time contexts
 //-----------------------------------------------------------------------------
-template < uint8_t NS, typename U >
+template < size8_t NS, typename U >
 consteval uint_t Num_Digits_Const( U u )
 {
 	return Num_Digits< uint_t, NS, U >( u );

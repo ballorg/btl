@@ -186,16 +186,16 @@ protected:
 
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			const bool bWasOverflow = Base_t::template IsPackedOverflow< T >( nCount );
-			const bool bWillOverflow = Base_t::template IsPackedOverflow< T >( nRequest );
-			uchar_t *pElements = Base_t::template PackedBase< T >();
+			const bool bWasOverflow = Base_t::template IsPackedOverflowBy< T >( nCount );
+			const bool bWillOverflow = Base_t::template IsPackedOverflowBy< T >( nRequest );
+			uchar_t *pElements = Base_t::template PackedBaseBy< T >();
 
 			if ( bWillOverflow )
 			{
 				const I nCapacity = BitCeil( nCount );
 				const I nNewCapacity = BitCeil( nRequest );
-				const size_t nCapacityBytes = Base_t::template PackedBytesForCount< T >( nCapacity );
-				const size_t nNewCapacityBytes = Base_t::template PackedBytesForCount< T >( nNewCapacity );
+				const size_t nCapacityBytes = Base_t::template PackedBytesForCountBy< T >( nCapacity );
+				const size_t nNewCapacityBytes = Base_t::template PackedBytesForCountBy< T >( nNewCapacity );
 
 				BALL_ASSERT_IF_MESSAGE( nNewCapacity == Fixed_t::INVALID, "Capacity overflow!" )
 					return reinterpret_cast< T * >( pElements );
@@ -215,10 +215,10 @@ protected:
 
 					if constexpr ( IS_GROWABLE )
 					{
-						const size_t nBytes = Base_t::template PackedBytesForCount< T >( nCount );
+						const size_t nBytes = Base_t::template PackedBytesForCountBy< T >( nCount );
 
 						if ( nBytes > size_t( 0 ) )
-							CopyElements( nBytes, pElements, Base_t::template PackedFixedData< T >() );
+							CopyElements( nBytes, pElements, Base_t::template PackedFixedDataBy< T >() );
 					}
 				}
 
@@ -229,24 +229,24 @@ protected:
 			{
 				if constexpr ( IS_GROWABLE )
 				{
-					const size_t nBytes = Base_t::template PackedBytesForCount< T >( nRequest );
+					const size_t nBytes = Base_t::template PackedBytesForCountBy< T >( nRequest );
 
 					if ( nBytes > size_t( 0 ) )
-						memcpy( Base_t::template PackedFixedData< T >(), pElements, nBytes );
+						memcpy( Base_t::template PackedFixedDataBy< T >(), pElements, nBytes );
 				}
 
 				BaseAllocator_t< T >::Free( pElements );
-				return reinterpret_cast< T * >( Base_t::template PackedFixedData< T >() );
+				return reinterpret_cast< T * >( Base_t::template PackedFixedDataBy< T >() );
 			}
 
-			return reinterpret_cast< T * >( Base_t::template PackedFixedData< T >() );
+			return reinterpret_cast< T * >( Base_t::template PackedFixedDataBy< T >() );
 		}
 		else
 		{
-			const bool bWasOverflow = Base_t::template IsOverflow< T >( nCount );
-			const bool bWillOverflow = Base_t::template IsOverflow< T >( nRequest );
+			const bool bWasOverflow = Base_t::template IsOverflowBy< T >( nCount );
+			const bool bWillOverflow = Base_t::template IsOverflowBy< T >( nRequest );
 
-			T *pElements = Base_t::template Base< T >();
+			T *pElements = Base_t::template BaseBy< T >();
 
 			if ( bWillOverflow )
 			{
@@ -270,12 +270,12 @@ protected:
 					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
 
 					if constexpr ( IS_GROWABLE )
-						CopyElements( nCount, pElements, Base_t::template FixedData< T >() );
+						CopyElements( nCount, pElements, Base_t::template FixedDataBy< T >() );
 				}
 			}
 			else if ( bWasOverflow )
 			{
-				T *pFixedData = Base_t::template FixedData< T >();
+				T *pFixedData = Base_t::template FixedDataBy< T >();
 
 				if constexpr ( IS_GROWABLE )
 					CopyElements( nRequest, pFixedData, pElements );
@@ -296,7 +296,7 @@ protected:
 
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			const size_t nBytes = Base_t::template PackedBytesForCount< T >( nCount );
+			const size_t nBytes = Base_t::template PackedBytesForCountBy< T >( nCount );
 
 			if ( nBytes > size_t( 0 ) )
 				memcpy( reinterpret_cast< uchar_t * >( pDest ), other.template PackedBase< T >(), nBytes );
@@ -329,11 +329,11 @@ protected:
 			const I nRows = static_cast< I >( nCount - i );
 
 			if ( nRows > I( 0 ) )
-				Base_t::template PackedShiftRowsRight< T >( i, nRows, nAdd );
+				Base_t::template PackedShiftRowsRightBy< T >( i, nRows, nAdd );
 		}
 		else
 		{
-			T *p = Base_t::template Base< T >();
+			T *p = Base_t::template BaseBy< T >();
 
 			if ( i < nCount )
 				ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nCount ] );
@@ -348,11 +348,11 @@ protected:
 			const I nTailBegin = i + nRemove;
 
 			if ( nTailBegin < nOld )
-				Base_t::template PackedShiftRowsLeft< T >( i, static_cast< I >( nOld - nTailBegin ), nRemove );
+				Base_t::template PackedShiftRowsLeftBy< T >( i, static_cast< I >( nOld - nTailBegin ), nRemove );
 		}
 		else
 		{
-			T *p = Base_t::template Base< T >();
+			T *p = Base_t::template BaseBy< T >();
 
 			const I nTailBegin = i + nRemove;
 
@@ -371,17 +371,17 @@ protected:
 	{
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			if ( Base_t::template IsPackedOverflow< T >() )
+			if ( Base_t::template IsPackedOverflowBy< T >() )
 			{
-				uchar_t *p = Base_t::template PackedBase< T >();
+				uchar_t *p = Base_t::template PackedBaseBy< T >();
 
 				if ( p )
 					BaseAllocator_t< T >::Free( p );
 			}
 		}
-		else if ( Base_t::template IsOverflow< T >() )
+		else if ( Base_t::template IsOverflowBy< T >() )
 		{
-			T *p = Base_t::template Data< T >();
+			T *p = Base_t::template DataBy< T >();
 
 			if ( p )
 				Allocator_t< T >::Free( p );
@@ -393,10 +393,10 @@ protected:
 	{
 		if constexpr ( IS_PACKED_STORAGE< T0 > )
 		{
-			if ( !( Base_t::template PackedGetValue< T0 >( i ) == static_cast< T0 >( u0 ) ) )
+			if ( !( Base_t::template PackedGetValueBy< T0 >( i ) == static_cast< T0 >( u0 ) ) )
 				return false;
 		}
-		else if ( !( Base_t::template Base< T0 >()[ i ] == u0 ) )
+		else if ( !( Base_t::template BaseBy< T0 >()[ i ] == u0 ) )
 		{
 			return false;
 		}
@@ -553,7 +553,7 @@ private:
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
 			for ( I n = I( 0 ); n < nAdd; ++n )
-				Base_t::template PackedSetValue< T >( static_cast< I >( i + n ), v.template PackedGetValue< T >( n ) );
+				Base_t::template PackedSetValueBy< T >( static_cast< I >( i + n ), v.template PackedGetValueBy< T >( n ) );
 		}
 		else
 		{
@@ -565,9 +565,9 @@ private:
 	constexpr void AssignRow( I i, U0 &&u0, URest &&...urest )
 	{
 		if constexpr ( IS_PACKED_STORAGE< T0 > )
-			Base_t::template PackedSetValue< T0 >( i, static_cast< T0 >( Forward< U0 >( u0 ) ) );
+			Base_t::template PackedSetValueBy< T0 >( i, static_cast< T0 >( Forward< U0 >( u0 ) ) );
 		else
-			Base_t::template Base< T0 >()[ i ] = Forward< U0 >( u0 );
+			Base_t::template BaseBy< T0 >()[ i ] = Forward< U0 >( u0 );
 
 		if constexpr ( sizeof...( TRest ) > 0 )
 			AssignRow< TRest... >( i, Forward< URest >( urest )... );

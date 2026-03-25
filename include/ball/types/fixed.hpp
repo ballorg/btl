@@ -187,10 +187,10 @@ BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_SIGNED )
 BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_UNCERTAIN )
 BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_UNSIGNED )
 
-template < typename T > struct MFixedPackedBy;
+template < typename T > struct MFixedPackedBase;
 
 template < typename T >
-struct MFixedPackedBy
+struct MFixedPackedBase
 {
 	using Type = T;
 	using Raw_t = RemoveCV_t< Type >;
@@ -204,7 +204,7 @@ struct MFixedPackedBy
 	static constexpr bits_t BITS = bits_t( sizeof( Raw_t ) * 8u );
 };
 
-template <> struct MFixedPackedBy< bool >
+template <> struct MFixedPackedBase< bool >
 {
 	using Type = bool;
 	using Raw_t = bool;
@@ -216,7 +216,7 @@ template <> struct MFixedPackedBy< bool >
 	static constexpr bits_t BITS = 1;
 };
 
-template <> struct MFixedPackedBy< FixedTag_t >
+template <> struct MFixedPackedBase< FixedTag_t >
 {
 	using Type = FixedTag_t;
 	using Raw_t = FixedTag_t;
@@ -229,7 +229,7 @@ template <> struct MFixedPackedBy< FixedTag_t >
 };
 
 #	define BALL_FIXED_DECLARE_SIGNED_BASE_TRAIT( typeDef, bits, typeName ) \
-	template <> struct MFixedPackedBy< typeName > : public MFixedPackedBy< typeDef > \
+	template <> struct MFixedPackedBase< typeName > : public MFixedPackedBase< typeDef > \
 	{ \
 		static constexpr bool IS_SIGNED = true; \
 		static constexpr bool IS_UNSIGNED = false; \
@@ -237,7 +237,7 @@ template <> struct MFixedPackedBy< FixedTag_t >
 	};
 
 #	define BALL_FIXED_DECLARE_UNCERTAIN_BASE_TRAIT( typeDef, bits, typeName ) \
-	template <> struct MFixedPackedBy< typeName > : public MFixedPackedBy< typeDef > \
+	template <> struct MFixedPackedBase< typeName > : public MFixedPackedBase< typeDef > \
 	{ \
 		static constexpr bool IS_SIGNED = true; \
 		static constexpr bool IS_UNSIGNED = false; \
@@ -245,7 +245,7 @@ template <> struct MFixedPackedBy< FixedTag_t >
 	};
 
 #	define BALL_FIXED_DECLARE_UNSIGNED_BASE_TRAIT( typeDef, bits, typeName ) \
-	template <> struct MFixedPackedBy< typeName > : public MFixedPackedBy< typeDef > \
+	template <> struct MFixedPackedBase< typeName > : public MFixedPackedBase< typeDef > \
 	{ \
 		static constexpr bool IS_SIGNED = false; \
 		static constexpr bool IS_UNSIGNED = true; \
@@ -270,10 +270,10 @@ BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_UNCERTAIN_TRAIT )
 BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_UNSIGNED_TRAIT )
 
 template < typename T >
-struct MFixedMetadataBy : public MFixedPackedBy< T >
+struct MFixedMetadataBase : public MFixedPackedBase< T >
 {
 	using Type = T;
-	using Base_t = MFixedPackedBy< T >;
+	using Base_t = MFixedPackedBase< T >;
 	using typename Base_t::Raw_t;
 	using typename Base_t::Signed_t;
 	using typename Base_t::Unsigned_t;
@@ -302,9 +302,9 @@ struct MFixedMetadataBy : public MFixedPackedBy< T >
 };
 
 template < typename T >
-struct MFixedMetadata : public MFixedMetadataBy< RemoveCV_t< T > >
+struct MFixedMetadata : public MFixedMetadataBase< RemoveCV_t< T > >
 {
-	using Base_t = MFixedMetadataBy< RemoveCV_t< T > >;
+	using Base_t = MFixedMetadataBase< RemoveCV_t< T > >;
 	using Type = typename Base_t::Type;
 	using Signed_t = typename Base_t::Signed_t;
 	using Unsigned_t = typename Base_t::Unsigned_t;

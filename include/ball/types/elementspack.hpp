@@ -54,7 +54,7 @@ struct MElementsPack : MElementsPackBase< I, T >
 
 	static constexpr size_t PackedBytesForCount( I nCount ) noexcept
 	{
-		const bits_t nBits = static_cast< bits_t >( nCount ) * MFixedMetadataBy< Element_t >::BITS;
+		const bits_t nBits = static_cast< bits_t >( nCount ) * MFixedMetadata< Element_t >::BITS;
 
 		return static_cast< size_t >( ( nBits + bits_t( 7 ) ) / bits_t( 8 ) );
 	}

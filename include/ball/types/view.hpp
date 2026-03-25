@@ -13,10 +13,10 @@
 #	include "viewbase.hpp"
 
 template < typename I, typename T, I N = 0 >
-class CView : public CViewBase< I, N, uint8_t, T >
+class CView : public CViewBase< I, N, size8_t, T >
 {
 public:
-	using Base_t        = CViewBase< I, N, uint8_t, T >;
+	using Base_t        = CViewBase< I, N, size8_t, T >;
 	using Element_t     = T;
 	using Index_t       = I;
 	using View_t        = CView< Index_t, Element_t, N >;
@@ -60,31 +60,31 @@ public:
 	// --------- sizes / count / base ----------
 	using Base_t::Size;
 	using Base_t::Count;
-	constexpr const bool IsOverflow( I nCount ) const           { return Base_t::template IsOverflow< T >( nCount ); }
+	constexpr const bool IsOverflow( I nCount ) const           { return Base_t::template IsOverflowBy< T >( nCount ); }
 	constexpr const bool IsOverflow() const                     { return IsOverflow( Count() ); }
-	constexpr const bool IsPackedOverflow( I nCount ) const     { return Base_t::template IsPackedOverflow< T >( nCount ); }
+	constexpr const bool IsPackedOverflow( I nCount ) const     { return Base_t::template IsPackedOverflowBy< T >( nCount ); }
 	constexpr const bool IsPackedOverflow() const               { return IsPackedOverflow( Count() ); }
 
-	constexpr T *FixedData() noexcept                           { return Base_t::template FixedData< T >(); }
-	constexpr const T *FixedData() const noexcept               { return Base_t::template FixedData< T >(); }
-	constexpr uchar_t *PackedFixedData() noexcept               { return Base_t::template PackedFixedData< T >(); }
-	constexpr const uchar_t *PackedFixedData() const noexcept   { return Base_t::template PackedFixedData< T >(); }
-	constexpr T *Data() noexcept                                { return Base_t::template Data< T >(); }
-	constexpr const T *Data() const noexcept                    { return Base_t::template Data< T >(); }
-	constexpr uchar_t *PackedData() noexcept                    { return Base_t::template PackedData< T >(); }
-	constexpr const uchar_t *PackedData() const noexcept        { return Base_t::template PackedData< T >(); }
-	constexpr T *Base() noexcept                                { return Base_t::template Base< T >(); }
-	constexpr const T *Base() const noexcept                    { return Base_t::template Base< T >(); }
-	constexpr uchar_t *PackedBase() noexcept                    { return Base_t::template PackedBase< T >(); }
-	constexpr const uchar_t *PackedBase() const noexcept        { return Base_t::template PackedBase< T >(); }
+	constexpr T *FixedData() noexcept                           { return Base_t::template FixedDataBy< T >(); }
+	constexpr const T *FixedData() const noexcept               { return Base_t::template FixedDataBy< T >(); }
+	constexpr uchar_t *PackedFixedData() noexcept               { return Base_t::template PackedFixedDataBy< T >(); }
+	constexpr const uchar_t *PackedFixedData() const noexcept   { return Base_t::template PackedFixedDataBy< T >(); }
+	constexpr T *Data() noexcept                                { return Base_t::template DataBy< T >(); }
+	constexpr const T *Data() const noexcept                    { return Base_t::template DataBy< T >(); }
+	constexpr uchar_t *PackedData() noexcept                    { return Base_t::template PackedDataBy< T >(); }
+	constexpr const uchar_t *PackedData() const noexcept        { return Base_t::template PackedDataBy< T >(); }
+	constexpr T *Base() noexcept                                { return Base_t::template BaseBy< T >(); }
+	constexpr const T *Base() const noexcept                    { return Base_t::template BaseBy< T >(); }
+	constexpr uchar_t *PackedBase() noexcept                    { return Base_t::template PackedBaseBy< T >(); }
+	constexpr const uchar_t *PackedBase() const noexcept        { return Base_t::template PackedBaseBy< T >(); }
 
-	static constexpr bits_t PackedBits() noexcept               { return Base_t::template PackedBits< T >(); }
-	static constexpr size_t PackedBytesForCount( I nCount ) noexcept { return Base_t::template PackedBytesForCount< T >( nCount ); }
-	constexpr void PackedClearRows( I iFrom, I nRows ) noexcept { return Base_t::template PackedClearRows< T >( iFrom, nRows ); }
-	constexpr void PackedShiftRowsLeft( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsLeft< T >( iFrom, nRows, nShiftRows ); }
-	constexpr void PackedShiftRowsRight( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsRight< T >( iFrom, nRows, nShiftRows ); }
-	constexpr T PackedGetValue( I i ) const noexcept { return Base_t::template PackedGetValue< T >( i ); }
-	constexpr void PackedSetValue( I i, const T &value ) noexcept { return Base_t::template PackedSetValue< T >( i, value ); }
+	static constexpr bits_t PackedBits() noexcept               { return Base_t::template PackedBitsBy< T >(); }
+	static constexpr size_t PackedBytesForCount( I nCount ) noexcept { return Base_t::template PackedBytesForCountBy< T >( nCount ); }
+	constexpr void PackedClearRows( I iFrom, I nRows ) noexcept { return Base_t::template PackedClearRowsBy< T >( iFrom, nRows ); }
+	constexpr void PackedShiftRowsLeft( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsLeftBy< T >( iFrom, nRows, nShiftRows ); }
+	constexpr void PackedShiftRowsRight( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsRightBy< T >( iFrom, nRows, nShiftRows ); }
+	constexpr T PackedGetValue( I i ) const noexcept { return Base_t::template PackedGetValueBy< T >( i ); }
+	constexpr void PackedSetValue( I i, const T &value ) noexcept { return Base_t::template PackedSetValueBy< T >( i, value ); }
 
 	// --------- basic access ----------
 	using Base_t::Empty;
@@ -526,15 +526,15 @@ protected:
 }; // class CView
 
 template < typename T > using View_t =      CView< size_t, const T >;
-template < typename T > using View8_t =     CView< uint8_t, const T >;
-template < typename T > using View16_t =    CView< uint16_t, const T >;
-template < typename T > using View32_t =    CView< uint32_t, const T >;
-template < typename T > using View64_t =    CView< uint64_t, const T >;
+template < typename T > using View8_t =     CView< size8_t, const T >;
+template < typename T > using View16_t =    CView< size16_t, const T >;
+template < typename T > using View32_t =    CView< size32_t, const T >;
+template < typename T > using View64_t =    CView< size64_t, const T >;
 
 template < typename T, size_t N > using BufferView_t =      CView< size_t, const T, N >;
-template < typename T, size_t N > using BufferView8_t =     CView< uint8_t, const T, N >;
-template < typename T, size_t N > using BufferView16_t =    CView< uint16_t, const T, N >;
-template < typename T, size_t N > using BufferView32_t =    CView< uint32_t, const T, N >;
-template < typename T, size_t N > using BufferView64_t =    CView< uint64_t, const T, N >;
+template < typename T, size_t N > using BufferView8_t =     CView< size8_t, const T, N >;
+template < typename T, size_t N > using BufferView16_t =    CView< size16_t, const T, N >;
+template < typename T, size_t N > using BufferView32_t =    CView< size32_t, const T, N >;
+template < typename T, size_t N > using BufferView64_t =    CView< size64_t, const T, N >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_VIEW_HPP_ )

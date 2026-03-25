@@ -7,7 +7,7 @@ template < typename F, BTL::bits_t BITS >
 bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 {
 	using T = typename F::Type;
-	using Traits_t = BTL::MFixedMetadataBy< F >;
+	using Traits_t = BTL::MFixedMetadata< F >;
 	using U = typename Traits_t::Unsigned_t;
 	using C = BTL::MultiVector_t< F, float >;
 

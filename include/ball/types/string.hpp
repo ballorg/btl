@@ -36,7 +36,7 @@ protected:
 	/// @brief Insert unsigned integer @p u in base-NS at position @p nIndex.
 	///        Uses EnsureInsert to do a single grow+shift and returns last written idx.
 	///-----------------------------------------------------------------------------
-	template < uint8_t NS, typename U >
+	template < size8_t NS, typename U >
 	constexpr I InsertUnsigned( I nIndex, U u )
 	{
 		static_assert( NS >= 2 && NS <= 36, "InsertUnsigned: base must be in [2,36]" );
@@ -58,7 +58,7 @@ protected:
 	/// @brief Insert signed integer @p v in base-NS at position @p nIndex.
 	///        Does a single EnsureInsert for sign + digits (when negative).
 	///-----------------------------------------------------------------------------
-	template < uint8_t NS, typename S >
+	template < size8_t NS, typename S >
 	constexpr I InsertSigned( I nIndex, S v )
 	{
 		using U = typename MUnsigned< S >::Type;

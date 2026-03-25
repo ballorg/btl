@@ -62,7 +62,7 @@ constexpr I Math_Log2_Floor( I x ) noexcept
 	return w;
 }
 
-template < typename I, uint8_t NS >
+template < typename I, size8_t NS >
 constexpr I Math_Log2Pow2() noexcept
 {
 	static_assert( NS >= 2, "Base must be >= 2" );
@@ -89,7 +89,7 @@ constexpr I Math_BitWidth( I x ) noexcept
 
 /// @brief Floor(log_NS(x)) for compile-time base NS ∈ [2, 36].
 /// @details Generic slow path uses integer division; fast-paths for 16/2.
-template < typename I, uint8_t NS >
+template < typename I, size8_t NS >
 constexpr I Math_Log_Floor( I x ) noexcept
 {
 	static_assert( NS >= 2 && NS <= 36, "Math_Log_Floor: base must be in [2,36]" );
@@ -122,7 +122,7 @@ constexpr I Math_Log_Floor( I x ) noexcept
 }
 
 /// @brief Number of digits in base-NS for value x (x==0 -> 1).
-template < typename I, uint8_t NS >
+template < typename I, size8_t NS >
 constexpr I Math_Digits( I x ) noexcept
 {
 	return ( x == 0 ) ? 1u : ( Math_Log_Floor< I, NS >( x ) + 1u );

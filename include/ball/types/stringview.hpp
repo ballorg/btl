@@ -202,34 +202,34 @@ using UTF32StringView64_t = CStringView< size64_t, const char32_t >;
 //  - "_sv64" -> uint64_t index
 // Overloads are selected by the string literal prefix: "", L"", u8"", u"", U""
 //------------------------------------------------------------------------------
-inline StringView_t operator""_sv( const char *pszString, size_t nLength ) { return StringView_t( static_cast< size_t >( nLength - 1 ), pszString ); }
-inline WStringView_t operator""_sv( const wchar_t *pszString, size_t nLength ) { return WStringView_t( static_cast< size_t >( nLength - 1 ), pszString ); }
-inline UTF8StringView_t operator""_sv( const char8_t *pszString, size_t nLength ) { return UTF8StringView_t( static_cast< size_t >( nLength - 1 ), pszString ); }
-inline UTF16StringView_t operator""_sv( const char16_t *pszString, size_t nLength ) { return UTF16StringView_t( static_cast< size_t >( nLength - 1 ), pszString ); }
-inline UTF32StringView_t operator""_sv( const char32_t *pszString, size_t nLength ) { return UTF32StringView_t( static_cast< size_t >( nLength - 1 ), pszString ); }
+inline StringView_t operator""_sv( const char *pszString, size_t nLength ) { return StringView_t( nLength - 1, pszString ); }
+inline WStringView_t operator""_sv( const wchar_t *pszString, size_t nLength ) { return WStringView_t( nLength - 1, pszString ); }
+inline UTF8StringView_t operator""_sv( const char8_t *pszString, size_t nLength ) { return UTF8StringView_t( nLength - 1, pszString ); }
+inline UTF16StringView_t operator""_sv( const char16_t *pszString, size_t nLength ) { return UTF16StringView_t( nLength - 1, pszString ); }
+inline UTF32StringView_t operator""_sv( const char32_t *pszString, size_t nLength ) { return UTF32StringView_t( nLength - 1, pszString ); }
 
-inline StringView8_t operator""_sv8( const char *pszString, size_t nLength ) { return StringView8_t( static_cast< uint8_t >( nLength - 1 ), pszString ); }
-inline WStringView8_t operator""_sv8( const wchar_t *pszString, size_t nLength ) { return WStringView8_t( static_cast< uint8_t >( nLength - 1 ), pszString ); }
-inline UTF8StringView8_t operator""_sv8( const char8_t *pszString, size_t nLength ) { return UTF8StringView8_t( static_cast< uint8_t >( nLength - 1 ), pszString ); }
-inline UTF16StringView8_t operator""_sv8( const char16_t *pszString, size_t nLength ) { return UTF16StringView8_t( static_cast< uint8_t >( nLength - 1 ), pszString ); }
-inline UTF32StringView8_t operator""_sv8( const char32_t *pszString, size_t nLength ) { return UTF32StringView8_t( static_cast< uint8_t >( nLength - 1 ), pszString ); }
+inline StringView8_t operator""_sv8( const char *pszString, size_t nLength ) { return StringView8_t( static_cast< size8_t >( nLength - 1 ), pszString ); }
+inline WStringView8_t operator""_sv8( const wchar_t *pszString, size_t nLength ) { return WStringView8_t( static_cast< size8_t >( nLength - 1 ), pszString ); }
+inline UTF8StringView8_t operator""_sv8( const char8_t *pszString, size_t nLength ) { return UTF8StringView8_t( static_cast< size8_t >( nLength - 1 ), pszString ); }
+inline UTF16StringView8_t operator""_sv8( const char16_t *pszString, size_t nLength ) { return UTF16StringView8_t( static_cast< size8_t >( nLength - 1 ), pszString ); }
+inline UTF32StringView8_t operator""_sv8( const char32_t *pszString, size_t nLength ) { return UTF32StringView8_t( static_cast< size8_t >( nLength - 1 ), pszString ); }
 
-inline StringView16_t operator""_sv16( const char *pszString, size_t nLength ) { return StringView16_t( static_cast< uint16_t >( nLength - 1 ), pszString ); }
-inline WStringView16_t operator""_sv16( const wchar_t *pszString, size_t nLength ) { return WStringView16_t( static_cast< uint16_t >( nLength - 1 ), pszString ); }
-inline UTF8StringView16_t operator""_sv16( const char8_t *pszString, size_t nLength ) { return UTF8StringView16_t( static_cast< uint16_t >( nLength - 1 ), pszString ); }
-inline UTF16StringView16_t operator""_sv16( const char16_t *pszString, size_t nLength ) { return UTF16StringView16_t( static_cast< uint16_t >( nLength - 1 ), pszString ); }
-inline UTF32StringView16_t operator""_sv16( const char32_t *pszString, size_t nLength ) { return UTF32StringView16_t( static_cast< uint16_t >( nLength - 1 ), pszString ); }
+inline StringView16_t operator""_sv16( const char *pszString, size_t nLength ) { return StringView16_t( static_cast< size16_t >( nLength - 1 ), pszString ); }
+inline WStringView16_t operator""_sv16( const wchar_t *pszString, size_t nLength ) { return WStringView16_t( static_cast< size16_t >( nLength - 1 ), pszString ); }
+inline UTF8StringView16_t operator""_sv16( const char8_t *pszString, size_t nLength ) { return UTF8StringView16_t( static_cast< size16_t >( nLength - 1 ), pszString ); }
+inline UTF16StringView16_t operator""_sv16( const char16_t *pszString, size_t nLength ) { return UTF16StringView16_t( static_cast< size16_t >( nLength - 1 ), pszString ); }
+inline UTF32StringView16_t operator""_sv16( const char32_t *pszString, size_t nLength ) { return UTF32StringView16_t( static_cast< size16_t >( nLength - 1 ), pszString ); }
 
-inline StringView32_t operator""_sv32( const char *pszString, size_t nLength ) { return StringView32_t( static_cast< uint32_t >( nLength - 1 ), pszString ); }
-inline WStringView32_t operator""_sv32( const wchar_t *pszString, size_t nLength ) { return WStringView32_t( static_cast< uint32_t >( nLength - 1 ), pszString ); }
-inline UTF8StringView32_t operator""_sv32( const char8_t *pszString, size_t nLength ) { return UTF8StringView32_t( static_cast< uint32_t >( nLength - 1 ), pszString ); }
-inline UTF16StringView32_t operator""_sv32( const char16_t *pszString, size_t nLength ) { return UTF16StringView32_t( static_cast< uint32_t >( nLength - 1 ), pszString ); }
-inline UTF32StringView32_t operator""_sv32( const char32_t *pszString, size_t nLength ) { return UTF32StringView32_t( static_cast< uint32_t >( nLength - 1 ), pszString ); }
+inline StringView32_t operator""_sv32( const char *pszString, size_t nLength ) { return StringView32_t( static_cast< size32_t >( nLength - 1 ), pszString ); }
+inline WStringView32_t operator""_sv32( const wchar_t *pszString, size_t nLength ) { return WStringView32_t( static_cast< size32_t >( nLength - 1 ), pszString ); }
+inline UTF8StringView32_t operator""_sv32( const char8_t *pszString, size_t nLength ) { return UTF8StringView32_t( static_cast< size32_t >( nLength - 1 ), pszString ); }
+inline UTF16StringView32_t operator""_sv32( const char16_t *pszString, size_t nLength ) { return UTF16StringView32_t( static_cast< size32_t >( nLength - 1 ), pszString ); }
+inline UTF32StringView32_t operator""_sv32( const char32_t *pszString, size_t nLength ) { return UTF32StringView32_t( static_cast< size32_t >( nLength - 1 ), pszString ); }
 
-inline StringView64_t operator""_sv64( const char *pszString, size_t nLength ) { return StringView64_t( static_cast< uint64_t >( nLength - 1 ), pszString ); }
-inline WStringView64_t operator""_sv64( const wchar_t *pszString, size_t nLength ) { return WStringView64_t( static_cast< uint64_t >( nLength - 1 ), pszString ); }
-inline UTF8StringView64_t operator""_sv64( const char8_t *pszString, size_t nLength ) { return UTF8StringView64_t( static_cast< uint64_t >( nLength - 1 ), pszString ); }
-inline UTF16StringView64_t operator""_sv64( const char16_t *pszString, size_t nLength ) { return UTF16StringView64_t( static_cast< uint64_t >( nLength - 1 ), pszString ); }
-inline UTF32StringView64_t operator""_sv64( const char32_t *pszString, size_t nLength ) { return UTF32StringView64_t( static_cast< uint64_t >( nLength - 1 ), pszString ); }
+inline StringView64_t operator""_sv64( const char *pszString, size_t nLength ) { return StringView64_t( static_cast< size64_t >( nLength - 1 ), pszString ); }
+inline WStringView64_t operator""_sv64( const wchar_t *pszString, size_t nLength ) { return WStringView64_t( static_cast< size64_t >( nLength - 1 ), pszString ); }
+inline UTF8StringView64_t operator""_sv64( const char8_t *pszString, size_t nLength ) { return UTF8StringView64_t( static_cast< size64_t >( nLength - 1 ), pszString ); }
+inline UTF16StringView64_t operator""_sv64( const char16_t *pszString, size_t nLength ) { return UTF16StringView64_t( static_cast< size64_t >( nLength - 1 ), pszString ); }
+inline UTF32StringView64_t operator""_sv64( const char32_t *pszString, size_t nLength ) { return UTF32StringView64_t( static_cast< size64_t >( nLength - 1 ), pszString ); }
 
 #endif // !defined( _INCLUDE_BALL_TYPES_STRINGVIEW_HPP_ )
