@@ -82,35 +82,10 @@ public:
 			return static_cast< size_t >( Capacity() ) * sizeof( Element_t );
 	}
 
-	constexpr I FixedCount() const noexcept
-	{
-		if constexpr ( IS_PACKED_STORAGE )
-			return I( 0 );
-		else
-			return FIXED_COUNT;
-	}
-	constexpr size_t FixedSize() const noexcept
-	{
-		if constexpr ( IS_PACKED_STORAGE )
-			return size_t( 0 );
-		else
-			return FixedCount() * sizeof( Element_t );
-	}
-
-	constexpr I FixedCapacity() const noexcept
-	{
-		if constexpr ( IS_PACKED_STORAGE )
-			return I( 0 );
-		else
-			return NextPowerOfTwo_Unified( FixedCount() );
-	}
-	constexpr size_t FixedCapacitySize() const noexcept
-	{
-		if constexpr ( IS_PACKED_STORAGE )
-			return size_t( 0 );
-		else
-			return FixedCapacity() * sizeof( Element_t );
-	}
+	using Base_t::FixedCount;
+	using Base_t::FixedSize;
+	using Base_t::FixedCapacity;
+	using Base_t::FixedCapacitySize;
 
 protected:
 	///-----------------------------------------------------------------------------

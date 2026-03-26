@@ -85,6 +85,10 @@ public:
 	static constexpr size_t Stride() noexcept { return ( size_t( 0 ) + ... + BYTES< Ts > ); }
 	constexpr size_t Size() const noexcept { return static_cast< size_t >( m_nCount ) * Stride(); }
 	constexpr I Count() const noexcept { return m_nCount; }
+	constexpr I FixedCount() const noexcept { return FIXED_COUNT; }
+	template < typename T >  constexpr size_t FixedSizeBy() const noexcept { return FixedCount() * sizeof( T ); }
+	constexpr I FixedCapacity() const noexcept { return BitCeil_Const( FixedCount() ); }
+	template < typename T > constexpr size_t FixedCapacitySizeBy() const noexcept { return FixedCapacity() * sizeof( T ); }
 	constexpr bool Empty() const noexcept { return Count() == FIRST_INDEX; }
 	template < typename T > constexpr bool IsOverflowBy( I nCount ) const noexcept
 	{

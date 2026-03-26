@@ -60,6 +60,8 @@ public:
 	// --------- sizes / count / base ----------
 	using Base_t::Size;
 	using Base_t::Count;
+	constexpr size_t FixedSize() const noexcept                 { return Base_t::template FixedSizeBy< T >(); }
+	constexpr size_t FixedCapacitySize() const noexcept         { return Base_t::template FixedCapacitySizeBy< T >(); }
 	constexpr const bool IsOverflow( I nCount ) const           { return Base_t::template IsOverflowBy< T >( nCount ); }
 	constexpr const bool IsOverflow() const                     { return IsOverflow( Count() ); }
 	constexpr const bool IsPackedOverflow( I nCount ) const     { return Base_t::template IsPackedOverflowBy< T >( nCount ); }
