@@ -144,11 +144,8 @@ public:
 		template < typename V >
 		constexpr PackedRef_t &operator+=( const V &value ) noexcept
 		{
-			m_pOwner->template PackedSetValue< T >
-			(
-				m_i,
-				static_cast< T >( static_cast< T >( *this ) + static_cast< T >( value ) )
-			);
+			m_pOwner->template PackedSetValueBy< T >( m_i, static_cast< T >( static_cast< T >( *this ) + static_cast< T >( value ) ) );
+
 			return *this;
 		}
 
@@ -174,7 +171,7 @@ public:
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
 
-		PackedSetValue< T >( i, value );
+		PackedSetValueBy< T >( i, value );
 	}
 
 	template < typename T, Enable_t< T > = 0 >
