@@ -16,6 +16,7 @@ add_executable(${PROJECT_TESTS_NAME}
 	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed/uncertain.cpp
 	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed/unsiged.cpp
 	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed.cpp
+	${SOURCE_DIR}/ball/types/tests/case10_delegate.cpp
 )
 
 target_link_libraries(${PROJECT_TESTS_NAME} PRIVATE ${PROJECT_NAME})

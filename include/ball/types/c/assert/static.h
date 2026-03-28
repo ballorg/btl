@@ -5,7 +5,7 @@
 #	define BALL_STATIC_ASSERT_JOIN( a, b ) BALL_STATIC_ASSERT_JOIN_IMPL( a, b )
 
 #	ifndef BALL_STATIC_ASSERT
-#		if defined( __cplusplus ) && __cplusplus >= 201103L
+#		if defined( __cplusplus ) && ( __cplusplus >= 201103L || ( defined( _MSVC_LANG ) && _MSVC_LANG >= 201103L ) )
 #			define BALL_STATIC_ASSERT( expression, msg ) static_assert( expression, msg )
 #		elif defined( __STDC_VERSION__ ) && __STDC_VERSION__ >= 201112L
 #			define BALL_STATIC_ASSERT( expression, msg ) _Static_assert( expression, msg )

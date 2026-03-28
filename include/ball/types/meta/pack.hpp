@@ -7,16 +7,16 @@
 #	include "issame.hpp"
 
 ///-----------------------------------------------------------------------------
-/// @brief Compile-time pack of pointers to types Ts...
-///        MPack< A, B, C >  stores: A, B, C
+/// @brief Compile-time value pack of Ts...
+///        MPack< size_t, A, B, C > stores values A, B, C
 ///
 /// API:
-///   - BaseBy< T >()     -> pointer by type (T must be unique in Ts...)
-///   - BaseBy< K >()    -> pointer by index (0..N-1)
-///   - Reset()              -> null all pointers
+///   - BaseBy< T >()        -> value by type (T must be unique in Ts...)
+///   - BaseBy< K >()        -> value by index (0..N-1)
+///   - Reset()              -> value-initialize all nodes
 ///   - Swap( other )        -> swap pointers
-///   - CopyFrom( other )    -> shallow copy of pointers
-///   - MoveFrom( other )    -> shallow move of pointers
+///   - CopyFrom( other )    -> copy values
+///   - MoveFrom( other )    -> move values
 ///-----------------------------------------------------------------------------
 template < typename TI, typename ...Ts >
 class MPack;
@@ -28,7 +28,9 @@ class MPack< TI, T0 >
 public:
 	using Type = T0;
 
-	constexpr MPack() noexcept : m_Node( nullptr ) {}
+	constexpr MPack() noexcept : m_Node() {}
+	template < typename U0 >
+	explicit constexpr MPack( U0 &&value ) noexcept : m_Node( Forward< U0 >( value ) ) {}
 
 	constexpr MPack( const MPack &copyFrom ) noexcept : MPack() { CopyFrom( copyFrom ); }
 	constexpr MPack( MPack &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
@@ -70,13 +72,15 @@ public:
 	// utilities
 	constexpr void Reset() noexcept
 	{
-		m_Node = nullptr;
+		m_Node = T0();
 	}
 
-protected:
+public:
 	constexpr void Swap( MPack &other ) noexcept
 	{
-		Swap( m_Node, other.m_Node );
+		T0 temp( Move( m_Node ) );
+		m_Node = Move( other.m_Node );
+		other.m_Node = Move( temp );
 	}
 
 	constexpr MPack &CopyFrom( const MPack &other ) noexcept
@@ -105,7 +109,9 @@ public:
 	using Type = T0;
 	using Tail_t = MPack< TI, Ts... >;
 
-	constexpr MPack() noexcept : m_Node( nullptr ), m_Tail() {}
+	constexpr MPack() noexcept : m_Node(), m_Tail() {}
+	template < typename U0, typename ...Us >
+	explicit constexpr MPack( U0 &&value, Us &&...tail ) noexcept : m_Node( Forward< U0 >( value ) ), m_Tail( Forward< Us >( tail )... ) {}
 
 	constexpr MPack( const MPack &copyFrom ) noexcept : MPack() { CopyFrom( copyFrom ); }
 	constexpr MPack( MPack &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
@@ -147,14 +153,16 @@ public:
 	// utilities
 	constexpr void Reset() noexcept
 	{
-		m_Node = nullptr;
+		m_Node = T0();
 		m_Tail.Reset();
 	}
 
-protected:
+public:
 	constexpr void Swap( MPack &other ) noexcept
 	{
-		Swap( m_Node, other.m_Node );
+		T0 temp( Move( m_Node ) );
+		m_Node = Move( other.m_Node );
+		other.m_Node = Move( temp );
 		m_Tail.Swap( other.m_Tail );
 	}
 
@@ -190,10 +198,10 @@ public:
 };
 
 template < typename TI, typename T0, typename ...Ts >
-class MPointerPack< TI, T0, Ts... > : public MPointerPack< TI, T0 *, Ts... >
+class MPointerPack< TI, T0, Ts... > : public MPack< TI, T0 *, Ts *... >
 {
 public:
-	using Base_t = MPointerPack< TI, T0 *, Ts... >;
+	using Base_t = MPack< TI, T0 *, Ts *... >;
 	using Base_t::Base_t;
 };
 

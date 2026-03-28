@@ -12,6 +12,7 @@
 #	include "meta/isintegral.hpp"
 #	include "meta/ispointer.hpp"
 #	include "meta/issame.hpp"
+#	include "meta/memberfunction.hpp"
 #	include "meta/pack.hpp"
 #	include "meta/removecv.hpp"
 #	include "meta/removereference.hpp"

@@ -55,12 +55,15 @@ struct MFixedMask
 		else
 			return ( 1ull << NBIT ) - 1ull;
 	}
+
 	static constexpr ullong_t SignValue()
 	{
 		if constexpr ( NBIT <= 1 )
 			return 1ull;
+		else if constexpr ( NBIT >= 64 )
+			return 1ull << 63;
 		else
-			return VALUE ^ MFixedMask< NBIT - bits_t( 1 ) >::VALUE;
+			return 1ull << ( NBIT - bits_t( 1 ) );
 	}
 
 	static constexpr ullong_t VALUE = Value();
@@ -282,8 +285,6 @@ struct MFixedMetadataBase : public MFixedPackedBase< T >
 	using Base_t::IS_UNSIGNED;
 	using Base_t::BITS;
 
-	static constexpr bool IS_PACKED = ( BITS % 8 ) != 0;
-
 	static constexpr bool ComputeSigned() noexcept
 	{
 		if constexpr ( IS_SIGNED )
@@ -295,10 +296,11 @@ struct MFixedMetadataBase : public MFixedPackedBase< T >
 	}
 
 	static constexpr bits_t STORAGE_BITS = bits_t( sizeof( Raw_t ) * 8ull );
+	static constexpr bool IS_PACKED = BITS < STORAGE_BITS;
 	static constexpr bits_t UNSIGNED_BITS = bits_t( sizeof( Unsigned_t ) * 8ull );
 	static constexpr size_t BYTES = static_cast< size_t >( BITS + bits_t( 7ull ) ) / bits_t( 8ull );
 
-	static constexpr Unsigned_t VALUE_MASK = MFixedMask< BITS >::VALUE;
+	static constexpr Unsigned_t VALUE_MASK = static_cast< Unsigned_t >( MFixedMask< BITS >::VALUE );
 };
 
 template < typename T >

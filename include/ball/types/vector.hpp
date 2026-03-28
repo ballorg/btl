@@ -40,6 +40,11 @@ public:
 	using Base_t::FIXED_COUNT;
 	using Base_t::IS_PACKED_STORAGE;
 	using Base_t::Count;
+	using Base_t::Size;
+	using Base_t::FixedCount;
+	using Base_t::FixedSize;
+	using Base_t::FixedCapacity;
+	using Base_t::FixedCapacitySize;
 	using Base_t::IsOverflow;
 	using Base_t::IsPackedOverflow;
 	using Base_t::FixedData;
@@ -81,11 +86,6 @@ public:
 		else
 			return static_cast< size_t >( Capacity() ) * sizeof( Element_t );
 	}
-
-	using Base_t::FixedCount;
-	using Base_t::FixedSize;
-	using Base_t::FixedCapacity;
-	using Base_t::FixedCapacitySize;
 
 protected:
 	///-----------------------------------------------------------------------------
@@ -849,6 +849,11 @@ protected:
 		T *pData = EnsureCapacity( nNew );
 
 		Set( nNew, pData );
+
+		if ( !pData )
+		{
+			return;
+		}
 
 		if constexpr ( IS_PACKED_STORAGE )
 		{

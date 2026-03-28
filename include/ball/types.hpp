@@ -5,10 +5,11 @@
 
 BALL_EXPORT namespace BTL
 {
-#	include "types/base.h"
 #	include "types/allocator.hpp"
-#	include "types/vector.hpp"
-#	include "types/multivector.hpp"
+#	include "types/array.hpp"
+#	include "types/base.hpp"
+#	include "types/bits.hpp"
+#	include "types/delegate.hpp"
 #	include "types/elements.hpp"
 #	include "types/elementspack.hpp"
 #	include "types/fixed.hpp"

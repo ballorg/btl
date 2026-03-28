@@ -427,6 +427,7 @@ public:
 	constexpr CMultiVectorImpl( const View_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
 	constexpr CMultiVectorImpl( const ConstView_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
 	constexpr CMultiVectorImpl( View_t &&moveFrom ) noexcept { Base_t::MoveFrom( Move( moveFrom ) ); }
+	~CMultiVectorImpl() noexcept { ( DestructAllBy< Ts >(), ... ); }
 
 	CMultiVectorImpl &operator=( const View_t &copyFrom ) { Base_t::CopyFrom( copyFrom ); return *this; }
 	CMultiVectorImpl &operator=( const ConstView_t &copyFrom ) { Base_t::CopyFrom( copyFrom ); return *this; }
@@ -435,17 +436,30 @@ public:
 	// ---------------------------
 	// Size management
 	// ---------------------------
-	void SetCount( I nNew )
+	constexpr void SetCount( I nNew )
 	{
+		const I nOld = Count();
+
 		Set( nNew, Base_t::template EnsureCapacityBy< Ts >( nNew )... );
+		( ResizeRangeBy< Ts >( nOld, nNew ), ... );
 	}
 
-	void Grow( I delta )
+	constexpr void Grow( I delta )
 	{
 		const I nNew = Count() + delta;
 
 		BALL_ASSERT( nNew >= I( 0 ) );
 		SetCount( nNew );
+	}
+
+	constexpr void RemoveAll()
+	{
+		SetCount( I( 0 ) );
+	}
+
+	constexpr void Purge()
+	{
+		RemoveAll();
 	}
 
 	// ---------------------------
@@ -522,6 +536,7 @@ public:
 		const I nCount = Count();
 		const I nNewCount = nCount - nRemove;
 
+		( DestructRangeBy< Ts >( i, nRemove ), ... );
 		( Base_t::template ShiftLeftBaseBy< Ts >( i, nRemove, nCount ), ... );
 		Set( nNewCount, Base_t::template EnsureCapacityBy< Ts >( nNewCount )... );
 	}
@@ -545,6 +560,54 @@ protected:
 	}
 
 private:
+	template < typename T >
+	constexpr void ResizeRangeBy( I nOld, I nNew )
+	{
+		T *pData = Base_t::template BaseBy< T >();
+
+		if ( !pData )
+			return;
+
+		if constexpr ( IS_PACKED_STORAGE< T > )
+		{
+			if ( nOld < nNew )
+				Base_t::template PackedClearRowsBy< T >( nOld, nNew - nOld );
+			else if ( nOld > nNew )
+				Base_t::template PackedClearRowsBy< T >( nNew, nOld - nNew );
+
+			return;
+		}
+
+		if ( nOld < nNew )
+			ConstructElements( &pData[ nOld ], &pData[ nNew ] );
+		else if ( nOld > nNew )
+			DestructElements( &pData[ nNew ], &pData[ nOld ] );
+	}
+
+	template < typename T >
+	constexpr void DestructRangeBy( I i, I nCount )
+	{
+		if constexpr ( IS_PACKED_STORAGE< T > )
+			return;
+
+		T *pData = Base_t::template BaseBy< T >();
+
+		if ( !pData )
+			return;
+
+		DestructElements( &pData[ i ], &pData[ i + nCount ] );
+	}
+
+	template < typename T >
+	constexpr void DestructAllBy()
+	{
+		if constexpr ( IS_PACKED_STORAGE< T > )
+			return;
+
+		T *pData = Base_t::template BaseBy< T >();
+		DestructElements( pData, pData + Count() );
+	}
+
 	template < typename T >
 	constexpr void CopyFromViewBy( I i, const ConstView_t &v )
 	{

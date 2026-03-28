@@ -34,13 +34,13 @@ public:
 	/// @brief Construct from a C-array (string literal).
 	template < size_t CN >
 	constexpr CStringView( const T ( &str )[ CN ] ) noexcept : 
-		Base_t( CN - 1, reinterpret_cast< const T *>( str ) )
+		Base_t( CN - 1, str )
 	{
 	}
 
 	template < size_t CN >
 	constexpr CStringView( T ( &&str )[ CN ] ) noexcept : 
-		Base_t( CN - 1, reinterpret_cast< const T *>( str ) )
+		Base_t( CN - 1, str )
 	{
 	}
 
