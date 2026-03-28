@@ -23,7 +23,7 @@
 #	include "vector.hpp"
 
 #	ifndef DELEGATE_INLINE_ALLOCATION_SIZE
-#		define DELEGATE_INLINE_ALLOCATION_SIZE 32
+#		define DELEGATE_INLINE_ALLOCATION_SIZE 64
 #	endif
 
 #	define BALL_DECLARE_DELEGATE( name, ... ) \
