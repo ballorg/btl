@@ -204,7 +204,16 @@ struct MFixedPackedBase
 
 	static constexpr bool IS_SIGNED = IS_INT && IS_SAME< Raw_t, Signed_t >;
 	static constexpr bool IS_UNSIGNED = IS_INT && IS_SAME< Raw_t, Unsigned_t >;
-	static constexpr bits_t BITS = bits_t( sizeof( Raw_t ) * 8u );
+
+	static constexpr bits_t ComputeBits( const size_t nBytes ) noexcept
+	{
+		const size_t nBits = nBytes * size_t( 8 );
+		constexpr size_t nMaxBits = static_cast< size_t >( ~bits_t( 0 ) );
+
+		return static_cast< bits_t >( nBits < nMaxBits ? nBits : nMaxBits );
+	}
+
+	static constexpr bits_t BITS = ComputeBits( sizeof( Raw_t ) );
 };
 
 template <> struct MFixedPackedBase< bool >
@@ -295,10 +304,10 @@ struct MFixedMetadataBase : public MFixedPackedBase< T >
 			return static_cast< Raw_t >( -1 ) < static_cast< Raw_t >( 0 );
 	}
 
-	static constexpr bits_t STORAGE_BITS = bits_t( sizeof( Raw_t ) * 8ull );
+	static constexpr bits_t STORAGE_BITS = Base_t::ComputeBits( sizeof( Raw_t ) );
 	static constexpr bool IS_PACKED = BITS < STORAGE_BITS;
-	static constexpr bits_t UNSIGNED_BITS = bits_t( sizeof( Unsigned_t ) * 8ull );
-	static constexpr size_t BYTES = static_cast< size_t >( BITS + bits_t( 7ull ) ) / bits_t( 8ull );
+	static constexpr bits_t UNSIGNED_BITS = Base_t::ComputeBits( sizeof( Unsigned_t ) );
+	static constexpr size_t BYTES = IS_PACKED ? ( static_cast< size_t >( BITS + bits_t( 7ull ) ) / bits_t( 8ull ) ) : sizeof( Raw_t );
 
 	static constexpr Unsigned_t VALUE_MASK = static_cast< Unsigned_t >( MFixedMask< BITS >::VALUE );
 };
