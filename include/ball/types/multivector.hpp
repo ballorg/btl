@@ -59,11 +59,6 @@ public:
 	// ---------------------------
 	constexpr I Capacity() const noexcept { return BitCeil< I >( Count() ); }
 
-	// ---------------------------
-	// Typed storage access
-	// ---------------------------
-	// Typed element access is inherited from CViewBase.
-
 	///-----------------------------------------------------------------------------
 	/// @brief Find first row equal to (args...) starting from @p iFrom.
 	/// @return Row index or INVALID_INDEX.
@@ -180,6 +175,64 @@ public:
 	CMultiVectorBase &operator=( const View_t &rhs ) { return CopyFrom( rhs ); }
 
 protected:
+	// ---------------------------
+	// Typed storage access
+	// ---------------------------
+	// Typed element access is inherited from CViewBase.
+	template < typename T0, typename... TRest >
+	constexpr uint8_t *DataBy() noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE< T0 > )
+		{
+			if ( Base_t::template IsPackedOverflowBy< T0 >() )
+				return reinterpret_cast< uint8_t * >( Base_t::template PackedDataBy< T0 >() );
+		}
+		else if ( Base_t::template IsOverflowBy< T0 >() )
+		{
+			return reinterpret_cast< uint8_t * >( Base_t::template DataBy< T0 >() );
+		}
+
+		if constexpr ( 0 < sizeof...( TRest ) )
+			return DataBy< TRest... >();
+		else
+			return nullptr;
+	}
+
+	template < typename T0, typename... TRest >
+	constexpr const uint8_t *DataBy() const noexcept
+	{
+		if constexpr ( IS_PACKED_STORAGE< T0 > )
+		{
+			if ( Base_t::template IsPackedOverflowBy< T0 >() )
+				return reinterpret_cast< const uint8_t * >( Base_t::template PackedDataBy< T0 >() );
+		}
+		else if ( Base_t::template IsOverflowBy< T0 >() )
+		{
+			return reinterpret_cast< const uint8_t * >( Base_t::template DataBy< T0 >() );
+		}
+
+		if constexpr ( 0 < sizeof...( TRest ) )
+			return DataBy< TRest... >();
+		else
+			return nullptr;
+	}
+
+	constexpr uint8_t *Data() noexcept
+	{
+		if constexpr ( 0 < sizeof...( Ts ) )
+			return DataBy< Ts... >();
+		else
+			return nullptr;
+	}
+
+	constexpr const uint8_t *Data() const noexcept
+	{
+		if constexpr ( 0 < sizeof...( Ts ) )
+			return DataBy< Ts... >();
+		else
+			return nullptr;
+	}
+
 	template < typename T >
 	T *EnsureCapacityBy( I nRequest )
 	{
