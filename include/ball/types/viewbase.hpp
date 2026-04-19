@@ -1,7 +1,6 @@
 #ifndef _INCLUDE_BALL_TYPES_VIEWBASE_HPP_
 #	define _INCLUDE_BALL_TYPES_VIEWBASE_HPP_
 
-#include "meta/select.hpp"
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/assert.h"
@@ -9,6 +8,8 @@
 #	include "meta/indexof.hpp"
 #	include "meta/isintegral.hpp"
 #	include "meta/issame.hpp"
+#	include "meta/select.hpp"
+#	include "meta/xvalue.hpp"
 #	include "elements.hpp"
 #	include "elementspack.hpp"
 #	include "fixed.hpp"
@@ -34,7 +35,8 @@ public:
 	template< I GN = N > using Growable_t = CViewBase< Index_t, GN, TypeIndex_t, Ts ... >;
 
 	static constexpr I FIRST_INDEX = I( 0 );
-	static constexpr I FIXED_COUNT = Pack_t::FIXED_COUNT;
+	static constexpr I FIXED_COUNT = N;
+	static constexpr I FIRST_FIXED_COUNT = Pack_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
 	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
@@ -97,7 +99,7 @@ public:
 		else
 			return m_Elements.template IsOverflowBy< T >( nCount );
 	}
-	template < typename T > constexpr bool IsOverflowBy() const noexcept { return m_Elements.template IsOverflowBy< T >( Count() ); }
+	template < typename T > constexpr bool IsOverflowBy() const noexcept { return IsOverflowBy< T >( Count() ); }
 	template < typename T > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept { return m_Elements.template IsPackedOverflowBy< T >( nCount ); }
 	template < typename T > constexpr bool IsPackedOverflowBy() const noexcept { return IsPackedOverflowBy< T >( Count() ); }
 
@@ -150,8 +152,8 @@ public:
 		}
 
 	private:
-		CViewBase *m_pOwner;
 		I m_i;
+		CViewBase *m_pOwner;
 	};
 
 	template < typename T, Enable_t< T > = 0 >
@@ -408,10 +410,7 @@ protected:
 		if ( this == &other )
 			return *this;
 
-		Swap( m_nCount, other.m_nCount );
-		SwapElementsFrom( static_cast< CViewBase & >( other ) );
-
-		return *this;
+		return SwapSelf( other );
 	}
 
 protected: // Packed methods.
@@ -724,10 +723,12 @@ protected: // Packed methods.
 			SetElements( pElements... );
 	}
 
-	constexpr void Swap( CViewBase &other ) noexcept
+	constexpr CViewBase &SwapSelf( CViewBase &other ) noexcept
 	{
 		Swap( m_nCount, other.m_nCount );
 		SwapElementsFrom( other );
+
+		return *this;
 	}
 
 private:

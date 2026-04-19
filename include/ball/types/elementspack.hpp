@@ -50,7 +50,7 @@ struct MElementsPack : MElementsPackBase< I, T >
 	;
 	using PackedData_t = Packed_t *;
 
-	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount >= FIXED_COUNT; }
+	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > FIXED_COUNT; }
 
 	static constexpr size_t PackedBytesForCount( I nCount ) noexcept
 	{
@@ -392,7 +392,7 @@ public:
 
 	constexpr CElementsPack() noexcept : m_Node() {};
 
-	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount >= FIXED_COUNT; }
+	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > FIXED_COUNT; }
 	template < typename T > constexpr bool IsOverflowBy( I nCount ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )

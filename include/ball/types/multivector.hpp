@@ -6,6 +6,7 @@
 #	include "base/arch.h"
 #	include "c/assert.h"
 #	include "meta/fixed.hpp"
+#	include "meta/get.hpp"
 #	include "allocator.hpp"
 #	include "bits.hpp"
 #	include "elements.hpp"
@@ -41,7 +42,7 @@ public:
 	using Base_t::FIRST_INDEX;
 	using Base_t::FIXED_COUNT;
 	using Base_t::INVALID_INDEX;
-	static constexpr bool IS_GROWABLE = FIXED_COUNT > 0;
+	static constexpr const bool IS_GROWABLE = FIXED_COUNT > 0;
 	template < typename T > static constexpr size_t ALIGNED_SIZE = alignof( T );
 	template < typename T > static constexpr bool IS_PACKED_STORAGE = Base_t::template TYPE_HAS_PACKED_BITS< T >;
 
@@ -213,13 +214,10 @@ protected:
 					pElements = reinterpret_cast< uchar_t * >( BaseAllocator_t< T >::Alloc( nNewCapacityBytes, ALIGNED_SIZE< uchar_t > ) );
 					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate packed elements" );
 
-					if constexpr ( IS_GROWABLE )
-					{
-						const size_t nBytes = Base_t::template PackedBytesForCountBy< T >( nCount );
+					const size_t nBytes = Base_t::template PackedBytesForCountBy< T >( nCount );
 
-						if ( nBytes > size_t( 0 ) )
-							CopyElements( nBytes, pElements, Base_t::template PackedFixedDataBy< T >() );
-					}
+					if ( nBytes > size_t( 0 ) )
+						CopyElements( nBytes, pElements, Base_t::template PackedFixedDataBy< T >() );
 				}
 
 				return reinterpret_cast< T * >( pElements );
@@ -227,13 +225,10 @@ protected:
 
 			if ( bWasOverflow )
 			{
-				if constexpr ( IS_GROWABLE )
-				{
-					const size_t nBytes = Base_t::template PackedBytesForCountBy< T >( nRequest );
+				const size_t nBytes = Base_t::template PackedBytesForCountBy< T >( nRequest );
 
-					if ( nBytes > size_t( 0 ) )
-						memcpy( Base_t::template PackedFixedDataBy< T >(), pElements, nBytes );
-				}
+				if ( nBytes > size_t( 0 ) )
+					memcpy( Base_t::template PackedFixedDataBy< T >(), pElements, nBytes );
 
 				BaseAllocator_t< T >::Free( pElements );
 				return reinterpret_cast< T * >( Base_t::template PackedFixedDataBy< T >() );
@@ -269,7 +264,7 @@ protected:
 					pElements = Allocator_t< T >::Alloc( nNewCapacity, ALIGNED_SIZE< uchar_t > );
 					BALL_ASSERT_MESSAGE( pElements != nullptr, "Failed to allocate elements" );
 
-					if constexpr ( IS_GROWABLE )
+					if ( nCount > I( 0 ) )
 						CopyElements( nCount, pElements, Base_t::template FixedDataBy< T >() );
 				}
 			}
@@ -277,7 +272,7 @@ protected:
 			{
 				T *pFixedData = Base_t::template FixedDataBy< T >();
 
-				if constexpr ( IS_GROWABLE )
+				if ( nRequest > I( 0 ) )
 					CopyElements( nRequest, pFixedData, pElements );
 
 				Allocator_t< T >::Free( pElements );
@@ -403,8 +398,8 @@ protected:
 
 		if constexpr ( sizeof...( TRest ) > 0 )
 			return RowEquals< TRest... >( i, urest... );
-
-		return true;
+		else
+			return true;
 	}
 };
 

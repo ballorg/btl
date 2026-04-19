@@ -66,11 +66,11 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 	funcRemove( 3u );
 
 	bool bOk = vec.Count() == static_cast< size_t >( arrFirst.size() );
-	const char *pszFailStage = "count";
+	BTL::StringView_t svFailStage = "count";
 
 	if ( bOk )
 	{
-		pszFailStage = "values";
+		svFailStage = "values";
 
 		for ( size_t i = 0; i < arrFirst.size(); ++i )
 		{
@@ -87,15 +87,14 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 
 	if ( bOk && !arrFirst.empty() )
 	{
-		pszFailStage = "front_back";
+		svFailStage = "front_back";
 
 		const F nFront0 = vec.template Front< F >();
 		const float nFront1 = vec.template Front< float >();
 		const F nBack0 = vec.template Back< F >();
 		const float nBack1 = vec.template Back< float >();
 
-		if ( !( nFront0 == arrFirst.front() ) || !( nFront1 == arrSecond.front() )
-			|| !( nBack0 == arrFirst.back() ) || !( nBack1 == arrSecond.back() ) )
+		if ( !( nFront0 == arrFirst.front() ) || !( nFront1 == arrSecond.front() ) || !( nBack0 == arrFirst.back() ) || !( nBack1 == arrSecond.back() ) )
 		{
 			bOk = false;
 		}
@@ -103,7 +102,7 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 
 	if ( bOk && !arrFirst.empty() )
 	{
-		pszFailStage = "finds";
+		svFailStage = "finds";
 
 		const size_t iProbe = arrFirst.size() / 2u;
 		const F nProbeFirst = arrFirst[ iProbe ];
@@ -145,18 +144,7 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 	}
 
 	if ( !bOk )
-	{
-		sOut.AppendMultiple
-		(
-			"BTL::MultiVector_t fixed case mismatch: ",
-			svFamily,
-			"<",
-			BITS,
-			"> stage=",
-			BTL::StringView_t( pszFailStage ),
-			"\n"
-		);
-	}
+		sOut.AppendMultiple( "BTL::MultiVector_t fixed case mismatch: ", svFamily, "<", BITS, "> stage=", svFailStage, "\n" );
 
 	return bOk;
 }

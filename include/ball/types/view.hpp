@@ -29,7 +29,7 @@ public:
 	using Base_t::Base_t;
 	using Base_t::operator=;
 	using Base_t::FIRST_INDEX;
-	using Base_t::FIXED_COUNT;
+	static constexpr I FIXED_COUNT = Base_t::FIRST_FIXED_COUNT;
 
 	/// @brief Special "not found" value.
 	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
@@ -522,7 +522,7 @@ protected:
 		Base_t::Set( nCount, pElements );
 	}
 
-	using Base_t::Swap;
+	using Base_t::SwapSelf;
 	using Base_t::CopyFrom;
 	using Base_t::MoveFrom;
 }; // class CView
