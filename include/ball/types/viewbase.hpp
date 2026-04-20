@@ -415,7 +415,7 @@ protected:
 
 protected: // Packed methods.
 	template < typename T, Enable_t< T > = 0 >
-	static constexpr size_t PackedBytesForCountBy( I nCount ) noexcept
+	static constexpr size_t PackedSizeBy( I nCount ) noexcept
 	{
 		const bits_t nBits = static_cast< bits_t >( nCount ) * PACKED_BITS< T >;
 
@@ -622,7 +622,7 @@ protected: // Packed methods.
 			else
 				CopyElements
 				(
-					PackedBytesForCountBy< T0 >( nCount ),
+					PackedSizeBy< T0 >( nCount ),
 					m_Elements.template PackedFixedBy< K, T0 >(),
 					reinterpret_cast< const uchar_t * >( pFirstElement )
 				);
@@ -652,7 +652,7 @@ protected: // Packed methods.
 			else
 				CopyElements
 				(
-					PackedBytesForCountBy< T0 >( nCount ),
+					PackedSizeBy< T0 >( nCount ),
 					m_Elements.template PackedFixedBy< K, T0 >(),
 					other.m_Elements.template PackedFixedBy< K, T0 >()
 				);
@@ -694,7 +694,7 @@ protected: // Packed methods.
 			{
 				uchar_t *pLeft = m_Elements.template PackedFixedBy< K, T0 >();
 				uchar_t *pRight = other.m_Elements.template PackedFixedBy< K, T0 >();
-				const size_t nBytes = PackedBytesForCountBy< T0 >( nCount );
+				const size_t nBytes = PackedSizeBy< T0 >( nCount );
 
 				for ( size_t n = size_t( 0 ); n < nBytes; ++n )
 					Swap( pLeft[ n ], pRight[ n ] );

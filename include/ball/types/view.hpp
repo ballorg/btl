@@ -81,7 +81,7 @@ public:
 	constexpr const uchar_t *PackedBase() const noexcept        { return Base_t::template PackedBaseBy< T >(); }
 
 	static constexpr bits_t PackedBits() noexcept               { return Base_t::template PackedBitsBy< T >(); }
-	static constexpr size_t PackedBytesForCount( I nCount ) noexcept { return Base_t::template PackedBytesForCountBy< T >( nCount ); }
+	static constexpr size_t PackedSize( I nCount ) noexcept { return Base_t::template PackedSizeBy< T >( nCount ); }
 	constexpr void PackedClearRows( I iFrom, I nRows ) noexcept { return Base_t::template PackedClearRowsBy< T >( iFrom, nRows ); }
 	constexpr void PackedShiftRowsLeft( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsLeftBy< T >( iFrom, nRows, nShiftRows ); }
 	constexpr void PackedShiftRowsRight( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsRightBy< T >( iFrom, nRows, nShiftRows ); }

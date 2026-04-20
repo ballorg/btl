@@ -11,12 +11,12 @@
 class CAllocatorBase
 {
 public:
-	static void *Alloc( size_t nSize, size_t nAligned )
+	static ptr_t Alloc( size_t nSize, size_t nAligned )
 	{
 		return Ball_AllocAlign( nSize, nAligned );
 	}
 
-	static void *Realloc( ptr_t pMem, size_t nSize, size_t nAligned )
+	static ptr_t Realloc( ptr_t pMem, size_t nSize, size_t nAligned )
 	{
 		return Ball_ReallocAlign( pMem, nSize, nAligned );
 	}

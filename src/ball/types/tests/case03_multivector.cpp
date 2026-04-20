@@ -7,7 +7,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	C vec;
 	std::vector< TestPair_t > ref;
 
-	auto funcCheck = [&]( const char *pszLabel )
+	auto funcCheck = [&]( BTL::StringView_t svLabel )
 	{
 		const size_t nVec = vec.Count();
 		const size_t nRef = ref.size();
@@ -31,7 +31,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 			}
 		}
 
-		sOut.AppendMultiple( "BTL::MultiVector_t: ", BTL::StringView_t( pszLabel ), ": " );
+		sOut.AppendMultiple( "BTL::MultiVector_t: ", svLabel, ": " );
 
 		if ( bOk )
 			sOut.AppendMultiple( "ok (", nVec, " elements)\n" );

@@ -33,6 +33,7 @@ struct MElementsPack : MElementsPackBase< I, T >
 	static constexpr size_t FIXED_SIZE = FIXED_COUNT * Base_t::FIXED_ELEMENT_SIZE;
 
 	using Element_t = RemoveCV_t< Type >;
+	using Traits_t = MFixedMetadata< Element_t >;
 	using Fixed_t = MSelect< FIXED_COUNT == 0 >::template Apply_t
 		<
 			CEmptyArray< I, Element_t >,
@@ -50,15 +51,19 @@ struct MElementsPack : MElementsPackBase< I, T >
 	;
 	using PackedData_t = Packed_t *;
 
+	static constexpr bool IS_PACKED = Traits_t::IS_PACKED;
+	static constexpr bits_t PACKED_BITS = Traits_t::BITS;
+	static constexpr I STORAGE_FIXED_COUNT = IS_PACKED ? static_cast< I >( ( FIXED_SIZE * size_t( 8 ) ) / static_cast< size_t >( PACKED_BITS ) ) : FIXED_COUNT;
+
 	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > FIXED_COUNT; }
 
-	static constexpr size_t PackedBytesForCount( I nCount ) noexcept
+	static constexpr size_t PackedSize( I nCount ) noexcept
 	{
 		const bits_t nBits = static_cast< bits_t >( nCount ) * MFixedMetadata< Element_t >::BITS;
 
 		return static_cast< size_t >( ( nBits + bits_t( 7 ) ) / bits_t( 8 ) );
 	}
-	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return PackedBytesForCount( nCount ) > FIXED_SIZE; }
+	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return PackedSize( nCount ) > FIXED_SIZE; }
 };
 
 template < typename I, I N, typename TI, typename ...Ts >
@@ -70,6 +75,7 @@ class CElementsPack< I, N, TI, T0 > : public MElementsPack< I, N, T0 >
 public:
 	using Type = T0;
 	using Base_t = MElementsPack< I, N, T0 >;
+	static constexpr I COMMON_FIXED_COUNT = Base_t::STORAGE_FIXED_COUNT;
 	using Base_t::FIXED_COUNT;
 	using Base_t::FIXED_SIZE;
 	using typename Base_t::Element_t;
@@ -83,7 +89,8 @@ public:
 
 	constexpr CElementsPack() noexcept : m_Node() {}
 
-	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > FIXED_COUNT; }
+	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
+	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
 	template < typename T > constexpr bool IsOverflowBy( I nCount ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
@@ -379,6 +386,7 @@ public:
 	using Type = T0;
 	using Base_t = MElementsPack< I, N, T0 >;
 	using Tail_t = CElementsPack< I, N, TI, Ts... >;
+	static constexpr I COMMON_FIXED_COUNT = Base_t::STORAGE_FIXED_COUNT < Tail_t::COMMON_FIXED_COUNT ? Base_t::STORAGE_FIXED_COUNT : Tail_t::COMMON_FIXED_COUNT;
 	using Base_t::FIXED_COUNT;
 	using Base_t::FIXED_SIZE;
 	using typename Base_t::Element_t;
@@ -392,7 +400,8 @@ public:
 
 	constexpr CElementsPack() noexcept : m_Node() {};
 
-	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > FIXED_COUNT; }
+	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
+	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
 	template < typename T > constexpr bool IsOverflowBy( I nCount ) const noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )

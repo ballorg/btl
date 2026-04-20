@@ -53,7 +53,7 @@ public:
 	using Base_t::PackedData;
 	using Base_t::PackedBase;
 	using Base_t::PackedFixedData;
-	using Base_t::PackedBytesForCount;
+	using Base_t::PackedSize;
 	using Base_t::Set;
 
 	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
@@ -82,7 +82,7 @@ public:
 	constexpr size_t CapacitySize() const noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedBytesForCount( Capacity() );
+			return PackedSize( Capacity() );
 		else
 			return static_cast< size_t >( Capacity() ) * sizeof( Element_t );
 	}
@@ -143,9 +143,9 @@ protected:
 			uchar_t *pData = PackedBase();
 			uchar_t *pCurrent = pData;
 
-			const size_t nOldBytes = PackedBytesForCount( nCapacity );
-			const size_t nNewBytes = PackedBytesForCount( nNewCapacity );
-			const size_t nLiveBytes = PackedBytesForCount( nCount );
+			const size_t nOldBytes = PackedSize( nCapacity );
+			const size_t nNewBytes = PackedSize( nNewCapacity );
+			const size_t nLiveBytes = PackedSize( nCount );
 
 			if ( bWillOverflow )
 			{
@@ -272,7 +272,7 @@ protected:
 		{
 			Set( nNewCount, pElements );
 
-			const size_t nBytes = PackedBytesForCount( nNewCount );
+			const size_t nBytes = PackedSize( nNewCount );
 
 			if ( nBytes > size_t( 0 ) )
 				memmove( PackedBase(), other.PackedBase(), nBytes );
@@ -295,7 +295,7 @@ protected:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			Set( nNewCount, pElements );
-			const size_t nBytes = PackedBytesForCount( nNewCount );
+			const size_t nBytes = PackedSize( nNewCount );
 
 			if ( nBytes > size_t( 0 ) )
 				memmove( PackedBase(), other.PackedBase(), nBytes );
@@ -331,7 +331,7 @@ public:
 	using Base_t::CopyFrom;
 	using Base_t::MoveFrom;
 	using Base_t::PackedBase;
-	using Base_t::PackedBytesForCount;
+	using Base_t::PackedSize;
 	using Base_t::PackedSetValue;
 	using Base_t::PackedShiftRowsLeft;
 	using Base_t::PackedShiftRowsRight;

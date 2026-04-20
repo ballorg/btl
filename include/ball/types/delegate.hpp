@@ -307,7 +307,7 @@ protected:
 		return nSize == 0 ? 0 : ( nSize + STORAGE_BLOCK_SIZE - 1 ) / STORAGE_BLOCK_SIZE;
 	}
 
-	static constexpr size_t StorageSizeForCount( size_t nBlocks ) noexcept
+	static constexpr size_t StorageSize( size_t nBlocks ) noexcept
 	{
 		return nBlocks * STORAGE_BLOCK_SIZE;
 	}
@@ -315,7 +315,7 @@ protected:
 	void *Allocate( size_t nSize )
 	{
 		const size_t nBlocks = BlockCountForSize( nSize );
-		const size_t nStorageSize = StorageSizeForCount( nBlocks );
+		const size_t nStorageSize = StorageSize( nBlocks );
 
 		if ( m_Storage.Size() != nStorageSize )
 		{
