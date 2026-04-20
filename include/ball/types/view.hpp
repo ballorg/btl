@@ -85,8 +85,8 @@ public:
 	constexpr void PackedClearRows( I iFrom, I nRows ) noexcept { return Base_t::template PackedClearRowsBy< T >( iFrom, nRows ); }
 	constexpr void PackedShiftRowsLeft( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsLeftBy< T >( iFrom, nRows, nShiftRows ); }
 	constexpr void PackedShiftRowsRight( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsRightBy< T >( iFrom, nRows, nShiftRows ); }
-	constexpr T PackedGetValue( I i ) const noexcept { return Base_t::template PackedGetValueBy< T >( i ); }
-	constexpr void PackedSetValue( I i, const T &value ) noexcept { return Base_t::template PackedSetValueBy< T >( i, value ); }
+	constexpr T PackedGetValue( I i ) const noexcept { return Base_t::template PackedGetBy< T >( i ); }
+	constexpr void PackedSetValue( I i, const T &value ) noexcept { return Base_t::template PackedSetBy< T >( i, value ); }
 
 	// --------- basic access ----------
 	using Base_t::Empty;
@@ -290,61 +290,50 @@ public:
 		if ( nStart > nCount || nViewCount > nCount - nStart )
 			return INVALID_INDEX;
 
+		const I iLastStart = nCount - nViewCount;
+
 		if constexpr ( IS_PACKED_STORAGE )
 		{
-			const I iLastStart = nCount - nViewCount;
-			const T needleFirst = v.PackedGetValue( 0 );
+			I i = nStart;
 
-			for ( I i = nStart; i <= iLastStart; ++i )
+			for ( ; i + Base_t::FIND_BATCH_LAST <= iLastStart; i += Base_t::FIND_BATCH_COUNT )
 			{
-				// Quick check on the first element.
-				if ( !( PackedGetValue( i ) == needleFirst ) )
-					continue;
+				const I iBatchEnd = static_cast< I >( i + Base_t::FIND_BATCH_COUNT );
+				const I iFound = Base_t::FindBatchForward( i, iBatchEnd, [this, &v]( I j ) constexpr noexcept { return MatchAt( j, v ); } );
 
-				// Verify the rest of the needle.
-				I k = I( 1 );
-
-				for ( ; k < nViewCount; ++k )
-				{
-					if ( !( PackedGetValue( i + k ) == v.PackedGetValue( k ) ) )
-						break;
-				}
-
-				if ( k == nViewCount )
-					return i;
+				if ( iFound != iBatchEnd )
+					return iFound;
 			}
 
-			return INVALID_INDEX;
+			for ( ; i <= iLastStart; ++i )
+			{
+				if ( MatchAt( i, v ) )
+					return i;
+			}
 		}
 		else
 		{
-			const T *pHay = Base();
-			const T *pNeedle = v.Base();
-			const T *pCur = pHay + nStart;
-			const T *pLastStart = pHay + ( nCount - nViewCount );
-			const T needleFirst = pNeedle[ 0 ];
+			const T *pBase = Base();
+			const T *it = pBase + nStart;
+			const T *itLast = pBase + static_cast< I >( iLastStart + I( 1 ) );
 
-			for ( ; pCur <= pLastStart; ++pCur )
+			for ( ; it + Base_t::FIND_BATCH_COUNT <= itLast; it += Base_t::FIND_BATCH_COUNT )
 			{
-				if ( !( *pCur == needleFirst ) )
-					continue;
+				const T *itBatchEnd = it + Base_t::FIND_BATCH_COUNT;
+				const T *itFound = Base_t::FindBatchForward( it, itBatchEnd, [this, &v]( const T *itCheck ) constexpr noexcept { return MatchAt( itCheck, v ); } );
 
-				const T *pHayIt = pCur + I( 1 );
-				const T *pNeedleIt = pNeedle + I( 1 );
-				const T *pNeedleEnd = pNeedle + nViewCount;
-
-				while ( pNeedleIt < pNeedleEnd && ( *pHayIt == *pNeedleIt ) )
-				{
-					++pHayIt;
-					++pNeedleIt;
-				}
-
-				if ( pNeedleIt == pNeedleEnd )
-					return static_cast< I >( pCur - pHay );
+				if ( itFound != itBatchEnd )
+					return static_cast< I >( itFound - pBase );
 			}
 
-			return INVALID_INDEX;
+			for ( ; it < itLast; ++it )
+			{
+				if ( MatchAt( it, v ) )
+					return static_cast< I >( it - pBase );
+			}
 		}
+
+		return INVALID_INDEX;
 	}
 
 	///-----------------------------------------------------------------------------
@@ -406,65 +395,61 @@ public:
 
 		if constexpr ( IS_PACKED_STORAGE )
 		{
-			const T needleFirst = v.PackedGetValue( 0 );
+			I i = iStart;
 
-			// Backward scan: iStart .. 0
-			for ( I i = iStart; ; --i )
+			for ( ; i >= Base_t::FIND_BATCH_LAST; )
 			{
-				// Quick check on the first element at this start.
-				if ( PackedGetValue( i ) == needleFirst )
-				{
-					// Verify the rest of the needle forward from i.
-					I k = I( 1 );
+				const I iBatchEnd = static_cast< I >( i + I( 1 ) );
+				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return MatchAt( j, v ); } );
 
-					for ( ; k < nViewCount; ++k )
-					{
-						if ( !( PackedGetValue( i + k ) == v.PackedGetValue( k ) ) )
-							break;
-					}
+				if ( iFound != iBatchEnd )
+					return iFound;
 
-					if ( k == nViewCount )
-						return i;
-				}
+				if ( i < Base_t::FIND_BATCH_COUNT )
+					return INVALID_INDEX;
 
-				// Stop when i == 0 to avoid unsigned underflow.
+				i -= Base_t::FIND_BATCH_COUNT;
+			}
+
+			for ( ; ; --i )
+			{
+				if ( MatchAt( i, v ) )
+					return i;
+
 				if ( i == FIRST_INDEX )
 					break;
 			}
-
-			return INVALID_INDEX;
 		}
 		else
 		{
-			const T *pHay = Base();
-			const T *pNeedle = v.Base();
-			const T needleFirst = pNeedle[ 0 ];
-			const T *pCur = pHay + iStart;
+			const T *pBase = Base();
+			const T *it = pBase + iStart;
 
-			for ( ; ; --pCur )
+			for ( ; pBase + Base_t::FIND_BATCH_LAST <= it; )
 			{
-				if ( *pCur == needleFirst )
-				{
-					const T *pHayIt = pCur + I( 1 );
-					const T *pNeedleIt = pNeedle + I( 1 );
-					const T *pNeedleEnd = pNeedle + nViewCount;
+				const T *itBatchEnd = it + I( 1 );
+				const T *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [this, &v]( const T *itCheck ) constexpr noexcept { return MatchAt( itCheck, v ); } );
 
-					while ( pNeedleIt < pNeedleEnd && ( *pHayIt == *pNeedleIt ) )
-					{
-						++pHayIt;
-						++pNeedleIt;
-					}
+				if ( itFound != itBatchEnd )
+					return static_cast< I >( itFound - pBase );
 
-					if ( pNeedleIt == pNeedleEnd )
-						return static_cast< I >( pCur - pHay );
-				}
+				if ( it < pBase + Base_t::FIND_BATCH_COUNT )
+					return INVALID_INDEX;
 
-				if ( pCur == pHay )
-					break;
+				it -= Base_t::FIND_BATCH_COUNT;
 			}
 
-			return INVALID_INDEX;
+			for ( ; ; --it )
+			{
+				if ( MatchAt( it, v ) )
+					return static_cast< I >( it - pBase );
+
+				if ( it == pBase )
+					break;
+			}
 		}
+
+		return INVALID_INDEX;
 	}
 
 	// --------- comparisons ----------
@@ -509,6 +494,40 @@ public:
 	friend constexpr bool operator>=( const CView &a, const CView &b ) noexcept { return !( a < b ); }
 
 protected:
+	constexpr bool MatchAt( const T *pHay, ConstView_t v ) const noexcept
+	{
+		const T *pNeedle = v.Base();
+		const I nViewCount = v.Count();
+
+		for ( I k = FIRST_INDEX; k < nViewCount; ++k )
+		{
+			if ( !( pHay[ k ] == pNeedle[ k ] ) )
+				return false;
+		}
+
+		return true;
+	}
+
+	constexpr bool MatchAt( I i, ConstView_t v ) const noexcept
+	{
+		const I nViewCount = v.Count();
+
+		if constexpr ( IS_PACKED_STORAGE )
+		{
+			for ( I k = FIRST_INDEX; k < nViewCount; ++k )
+			{
+				if ( !( PackedGetValue( i + k ) == v.PackedGetValue( k ) ) )
+					return false;
+			}
+		}
+		else
+		{
+			return MatchAt( Base() + i, v );
+		}
+
+		return true;
+	}
+
 	constexpr void SetValue( I i, const T &value ) noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE )

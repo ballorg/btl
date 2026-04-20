@@ -164,15 +164,24 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		sOut.AppendMultiple( "Find: element not found " );
 
 	if ( bReferenceFound )
-		sOut.AppendMultiple( "(ref index ", iReference, ")\n" );
+		sOut.AppendMultiple( "(ref index ", iReference, ")" );
 	else
-		sOut.AppendMultiple( "(reference missing)\n" );
+		sOut.AppendMultiple( "(reference missing)" );
+
+	if ( nsFind.IsValid() )
+		sOut.AppendMultiple( " - elapsed ", nsFind.AsMillisF(), " ms\n" );
+	else
+		sOut += "\n";
 
 	if ( bContainerFound != bReferenceFound || ( bContainerFound && bReferenceFound && iFound != iReference ) )
 		sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), " - Find mismatch between container and reference\n" );
 
+	BALL_PROF_BEGIN( MissFind );
+
 	const TestPair_t missing{ 0xFFFF, 0xFFFF };
 	const size_t iMissing = A::Find( vecContainer, missing );
+
+	auto nsMissFind = BALL_PROF_END( MissFind );
 
 	sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": " );
 
@@ -182,7 +191,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		sOut.AppendMultiple( "Missing element not found as expected" );
 
 	if ( nsFind.IsValid() )
-		sOut.AppendMultiple( " - elapsed ", nsFind.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - elapsed ", nsMissFind.AsMillisF(), " ms\n" );
 	else
 		sOut += "\n";
 

@@ -5,6 +5,7 @@
 
 #	include "meta/conditional.hpp"
 #	include "meta/enableif.hpp"
+#	include "meta/first.hpp"
 #	include "meta/fixed.hpp"
 #	include "meta/get.hpp"
 #	include "meta/indexof.hpp"

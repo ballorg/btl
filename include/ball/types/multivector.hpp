@@ -5,6 +5,7 @@
 
 #	include "base/arch.h"
 #	include "c/assert.h"
+#	include "meta/first.hpp"
 #	include "meta/fixed.hpp"
 #	include "meta/get.hpp"
 #	include "allocator.hpp"
@@ -40,11 +41,14 @@ public:
 
 	using Base_t::FIRST_INDEX;
 	using Base_t::INVALID_INDEX;
+	using Base_t::FIND_BATCH_COUNT;
+	using Base_t::FIND_BATCH_LAST;
 	static constexpr I COMMON_FIXED_COUNT = Pack_t::COMMON_FIXED_COUNT;
 	static constexpr const bool IS_GROWABLE = COMMON_FIXED_COUNT > 0;
 	template < typename T > static constexpr size_t ALIGNED_SIZE = alignof( T );
 	template < typename T > static constexpr bool IS_PACKED_STORAGE = Base_t::template TYPE_HAS_PACKED_BITS< T >;
 	template < typename T > static constexpr size_t STORAGE_ALIGNMENT = IS_PACKED_STORAGE< T > ? alignof( uchar_t ) : alignof( RemoveCV_t< T > );
+	using FirstColumn_t = typename MFirst< Ts... >::Type;
 
 	using Base_t::Count;
 
@@ -73,10 +77,45 @@ public:
 		if ( iFrom >= nCount )
 			return INVALID_INDEX;
 
-		for ( I i = iFrom; i < nCount; ++i )
+		if constexpr ( IS_PACKED_STORAGE< FirstColumn_t > )
 		{
-			if ( RowEquals< Ts... >( i, args... ) )
-				return i;
+			I i = iFrom;
+
+			for ( ; i + FIND_BATCH_LAST < nCount; i += FIND_BATCH_COUNT )
+			{
+				const I iBatchEnd = static_cast< I >( i + FIND_BATCH_COUNT );
+				const I iFound = Base_t::FindBatchForward( i, iBatchEnd, [&]( I j ) constexpr noexcept { return RowEquals< Ts... >( j, args... ); } );
+
+				if ( iFound != iBatchEnd )
+					return iFound;
+			}
+
+			for ( ; i < nCount; ++i )
+			{
+				if ( RowEquals< Ts... >( i, args... ) )
+					return i;
+			}
+		}
+		else
+		{
+			const FirstColumn_t *pFirst = Base_t::template BaseBy< FirstColumn_t >();
+			const FirstColumn_t *it = pFirst + iFrom;
+			const FirstColumn_t *itEnd = pFirst + nCount;
+
+			for ( ; it + FIND_BATCH_COUNT <= itEnd; it += FIND_BATCH_COUNT )
+			{
+				const FirstColumn_t *itBatchEnd = it + FIND_BATCH_COUNT;
+				const FirstColumn_t *itFound = Base_t::FindBatchForward( it, itBatchEnd, [&]( const FirstColumn_t *itCheck ) constexpr noexcept { return RowEquals< Ts... >( itCheck, args... ); } );
+
+				if ( itFound != itBatchEnd )
+					return static_cast< I >( itFound - pFirst );
+			}
+
+			for ( ; it < itEnd; ++it )
+			{
+				if ( RowEquals< Ts... >( it, args... ) )
+					return static_cast< I >( it - pFirst );
+			}
 		}
 
 		return INVALID_INDEX;
@@ -109,13 +148,60 @@ public:
 		if ( iStart == INVALID_INDEX || iStart >= nCount )
 			iStart = nCount - I( 1 );
 
-		for ( I i = iStart; ; --i )
+		if constexpr ( IS_PACKED_STORAGE< FirstColumn_t > )
 		{
-			if ( RowEquals< Ts... >( i, args... ) )
-				return i;
+			I i = iStart;
 
-			if ( i == FIRST_INDEX )
-				break;
+			for ( ; i >= Base_t::FIND_BATCH_LAST; )
+			{
+				const I iBatchEnd = static_cast< I >( i + I( 1 ) );
+				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return RowEquals< Ts... >( j, args... ); } );
+
+				if ( iFound != iBatchEnd )
+					return iFound;
+
+				if ( i < Base_t::FIND_BATCH_COUNT )
+					return INVALID_INDEX;
+
+				i -= Base_t::FIND_BATCH_COUNT;
+			}
+
+			for ( ; ; --i )
+			{
+				if ( RowEquals< Ts... >( i, args... ) )
+					return i;
+
+				if ( i == FIRST_INDEX )
+					break;
+			}
+		}
+		else
+		{
+			const FirstColumn_t *pFirst = Base_t::template BaseBy< FirstColumn_t >();
+			const FirstColumn_t *it = pFirst + iStart;
+
+			for ( ; pFirst + Base_t::FIND_BATCH_LAST <= it; )
+			{
+				const FirstColumn_t *itBatchEnd = it + I( 1 );
+				const FirstColumn_t *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [&]( const FirstColumn_t *itCheck ) constexpr noexcept { return RowEquals< Ts... >( itCheck, args... ); } );
+
+				if ( itFound != itBatchEnd )
+					return static_cast< I >( itFound - pFirst );
+
+				if ( it < pFirst + Base_t::FIND_BATCH_COUNT )
+					return INVALID_INDEX;
+
+				it -= Base_t::FIND_BATCH_COUNT;
+			}
+
+			for ( ; ; --it )
+			{
+				if ( RowEquals< Ts... >( it, args... ) )
+					return static_cast< I >( it - pFirst );
+
+				if ( it == pFirst )
+					break;
+			}
 		}
 
 		return INVALID_INDEX;
@@ -450,7 +536,7 @@ protected:
 	{
 		if constexpr ( IS_PACKED_STORAGE< T0 > )
 		{
-			if ( !( Base_t::template PackedGetValueBy< T0 >( i ) == static_cast< T0 >( u0 ) ) )
+			if ( !( Base_t::template PackedGetBy< T0 >( i ) == static_cast< T0 >( u0 ) ) )
 				return false;
 		}
 		else if ( !( Base_t::template BaseBy< T0 >()[ i ] == u0 ) )
@@ -462,6 +548,24 @@ protected:
 			return RowEquals< TRest... >( i, urest... );
 		else
 			return true;
+	}
+
+	template < typename T0, typename... TRest, typename U0, typename... URest >
+	constexpr bool RowEquals( const T0 *it0, const U0 &u0, const URest &...urest ) const noexcept
+	{
+		if ( !( *it0 == u0 ) )
+			return false;
+
+		if constexpr ( sizeof...( TRest ) > 0 )
+		{
+			const I i = static_cast< I >( it0 - Base_t::template BaseBy< T0 >() );
+
+			return RowEquals< TRest... >( i, urest... );
+		}
+		else
+		{
+			return true;
+		}
 	}
 };
 
@@ -679,7 +783,7 @@ private:
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
 			for ( I n = I( 0 ); n < nAdd; ++n )
-				Base_t::template PackedSetValueBy< T >( static_cast< I >( i + n ), v.template PackedGetValueBy< T >( n ) );
+				Base_t::template PackedSetBy< T >( static_cast< I >( i + n ), v.template PackedGetBy< T >( n ) );
 		}
 		else
 		{
@@ -691,7 +795,7 @@ private:
 	constexpr void AssignRow( I i, U0 &&u0, URest &&...urest )
 	{
 		if constexpr ( IS_PACKED_STORAGE< T0 > )
-			Base_t::template PackedSetValueBy< T0 >( i, static_cast< T0 >( Forward< U0 >( u0 ) ) );
+			Base_t::template PackedSetBy< T0 >( i, static_cast< T0 >( Forward< U0 >( u0 ) ) );
 		else
 			Base_t::template BaseBy< T0 >()[ i ] = Forward< U0 >( u0 );
 

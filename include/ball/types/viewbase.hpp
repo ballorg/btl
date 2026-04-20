@@ -3,18 +3,26 @@
 
 #	include "base/arch.h"
 #	include "base/fixed.h"
+#	include "c/assert/static.h"
 #	include "c/assert.h"
 #	include "meta/enableif.hpp"
 #	include "meta/indexof.hpp"
 #	include "meta/isintegral.hpp"
 #	include "meta/issame.hpp"
 #	include "meta/select.hpp"
+#	include "meta/sequence.hpp"
 #	include "meta/xvalue.hpp"
 #	include "elements.hpp"
 #	include "elementspack.hpp"
 #	include "fixed.hpp"
 #	include "math.hpp"
 #	include "number.hpp"
+
+#	ifndef BALL_FIND_BATCH_COUNT
+#		define BALL_FIND_BATCH_COUNT 4
+#	endif
+
+BALL_STATIC_ASSERT( 0 < BALL_FIND_BATCH_COUNT, "BALL_FIND_BATCH_COUNT must be greater than zero" );
 
 ///-----------------------------------------------------------------------------
 /// @brief View over multiple parallel arrays with different element types,
@@ -58,6 +66,9 @@ public:
 	template < typename T > static constexpr bool IS_PACKED_STORAGE = TYPE_HAS_PACKED_BITS< T >;
 
 	template< typename T > static constexpr size_t BYTES = static_cast< size_t >( PackedTraits_t< T >::BYTES );
+	static constexpr I FIND_BATCH_COUNT = static_cast< I >( BALL_FIND_BATCH_COUNT );
+	static constexpr I FIND_BATCH_LAST = static_cast< I >( BALL_FIND_BATCH_COUNT - 1 );
+	using FindBatchSequence_t = typename MMakeSequence< BALL_FIND_BATCH_COUNT >::Type;
 
 	// --------- state ----------
 public:
@@ -139,14 +150,14 @@ public:
 	{
 	public:
 		constexpr PackedRef_t( CViewBase *pOwner, I i ) noexcept : m_pOwner( pOwner ), m_i( i ) {}
-		constexpr operator T() const noexcept { return m_pOwner->template PackedGetValueBy< T >( m_i ); }
-		constexpr PackedRef_t &operator=( const T &value ) noexcept { m_pOwner->template PackedSetValueBy< T >( m_i, value ); return *this; }
+		constexpr operator T() const noexcept { return m_pOwner->template PackedGetBy< T >( m_i ); }
+		constexpr PackedRef_t &operator=( const T &value ) noexcept { m_pOwner->template PackedSetBy< T >( m_i, value ); return *this; }
 		constexpr PackedRef_t &operator=( const PackedRef_t &other ) noexcept { return operator=( static_cast< T >( other ) ); }
 
 		template < typename V >
 		constexpr PackedRef_t &operator+=( const V &value ) noexcept
 		{
-			m_pOwner->template PackedSetValueBy< T >( m_i, static_cast< T >( static_cast< T >( *this ) + static_cast< T >( value ) ) );
+			m_pOwner->template PackedSetBy< T >( m_i, static_cast< T >( static_cast< T >( *this ) + static_cast< T >( value ) ) );
 
 			return *this;
 		}
@@ -163,7 +174,7 @@ public:
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
 
-		return PackedGetValueBy< T >( i );
+		return PackedGetBy< T >( i );
 	}
 
 	template < typename T, Enable_t< T > = 0 >
@@ -173,7 +184,7 @@ public:
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
 
-		PackedSetValueBy< T >( i, value );
+		PackedSetBy< T >( i, value );
 	}
 
 	template < typename T, Enable_t< T > = 0 >
@@ -195,7 +206,7 @@ public:
 		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
 
 		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
-			return PackedGetValueBy< T >( i );
+			return PackedGetBy< T >( i );
 		else
 			return BaseBy< T >()[ i ];
 	}
@@ -209,7 +220,7 @@ public:
 		BALL_ASSERT( Count() > FIRST_INDEX );
 
 		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
-			return PackedGetValueBy< T >( FIRST_INDEX );
+			return PackedGetBy< T >( FIRST_INDEX );
 		else
 			return BaseBy< T >()[ FIRST_INDEX ];
 	}
@@ -220,7 +231,7 @@ public:
 		BALL_ASSERT( Count() > FIRST_INDEX );
 
 		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
-			return PackedGetValueBy< T >( Count() - I( 1 ) );
+			return PackedGetBy< T >( Count() - I( 1 ) );
 		else
 			return BaseBy< T >()[ Count() - I( 1 ) ];
 	}
@@ -249,23 +260,43 @@ public:
 
 		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
 		{
-			if ( iFrom >= nCount )
-				return INVALID_INDEX;
+			I i = iFrom;
 
-			for ( I i = iFrom; i < nCount; ++i )
+			for ( ; i + FIND_BATCH_LAST < nCount; i += FIND_BATCH_COUNT )
 			{
-				if ( PackedGetValueBy< T >( i ) == value )
+				const I iBatchEnd = static_cast< I >( i + FIND_BATCH_COUNT );
+				const I iFound = FindBatchForward( i, iBatchEnd, [this, &value]( I j ) constexpr noexcept { return PackedGetBy< T >( j ) == value; } );
+
+				if ( iFound != iBatchEnd )
+					return iFound;
+			}
+
+			for ( ; i < nCount; ++i )
+			{
+				if ( PackedGetBy< T >( i ) == value )
 					return i;
 			}
 		}
 		else
 		{
 			const T *pBase = BaseBy< T >();
+			const T *itEnd = pBase + nCount;
 
 			if ( !pBase )
 				return INVALID_INDEX;
 
-			for ( const T *it = pBase + iFrom, *itEnd = pBase + nCount; it < itEnd; ++it )
+			const T *it = pBase + iFrom;
+
+			for ( ; it + FIND_BATCH_COUNT <= itEnd; it += FIND_BATCH_COUNT )
+			{
+				const T *itBatchEnd = it + FIND_BATCH_COUNT;
+				const T *itFound = FindBatchForward( it, itBatchEnd, [&value]( const T *itCheck ) constexpr noexcept { return *itCheck == value; } );
+
+				if ( itFound != itBatchEnd )
+					return static_cast< I >( itFound - pBase );
+			}
+
+			for ( ; it < itEnd; ++it )
 			{
 				if ( *it == value )
 					return static_cast< I >( it - pBase );
@@ -292,9 +323,25 @@ public:
 
 		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
 		{
-			for ( I i = iFrom; ; --i )
+			I i = iFrom;
+
+			for ( ; i >= FIND_BATCH_LAST; )
 			{
-				if ( PackedGetValueBy< T >( i ) == value )
+				const I iBatchEnd = static_cast< I >( i + I( 1 ) );
+				const I iFound = FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return PackedGetBy< T >( j ) == value; } );
+
+				if ( iFound != iBatchEnd )
+					return iFound;
+
+				if ( i < FIND_BATCH_COUNT )
+					return INVALID_INDEX;
+
+				i -= FIND_BATCH_COUNT;
+			}
+
+			for ( ; ; --i )
+			{
+				if ( PackedGetBy< T >( i ) == value )
 					return i;
 
 				if ( i == FIRST_INDEX )
@@ -310,7 +357,24 @@ public:
 			if ( !pBase )
 				return INVALID_INDEX;
 
-			for ( const T *it = pBase + iFrom, *itBegin = pBase; ; --it )
+			const T *it = pBase + iFrom;
+			const T *itBegin = pBase;
+
+			for ( ; itBegin + FIND_BATCH_LAST <= it; )
+			{
+				const T *itBatchEnd = it + I( 1 );
+				const T *itFound = FindBatchReverse( it, itBatchEnd, [&]( const T *itCheck ) constexpr noexcept { return *itCheck == value; } );
+
+				if ( itFound != itBatchEnd )
+					return static_cast< I >( itFound - pBase );
+
+				if ( it < itBegin + FIND_BATCH_COUNT )
+					return INVALID_INDEX;
+
+				it -= FIND_BATCH_COUNT;
+			}
+
+			for ( ; ; --it )
 			{
 				if ( *it == value )
 					return static_cast< I >( it - pBase );
@@ -383,6 +447,51 @@ public:
 	constexpr operator Const_t() const { return Const(); }
 
 protected:
+	template < typename Iter >
+	static constexpr Iter BatchOffset( Iter itBase, int nOffset ) noexcept
+	{
+		if constexpr ( IS_INTEGRAL< Iter > )
+		{
+			return nOffset < 0 ? static_cast< Iter >( itBase - static_cast< Iter >( -nOffset ) ) : static_cast< Iter >( itBase + static_cast< Iter >( nOffset ) );
+		}
+		else
+		{
+			return nOffset < 0 ? itBase - static_cast< int >( -nOffset ) : itBase + static_cast< int >( nOffset );
+		}
+	}
+
+	template < typename Iter, typename Pred, size_t ...Is >
+	static constexpr Iter FindBatchForwardBy( Iter itBase, Iter itEnd, Pred &&funcCheck, MSequence< Is... > ) noexcept
+	{
+		Iter itFound = itEnd;
+
+		( ( itFound == itEnd && funcCheck( BatchOffset( itBase, static_cast< int >( Is ) ) ) ? ( itFound = BatchOffset( itBase, static_cast< int >( Is ) ), 0 ) : 0 ), ...);
+
+		return itFound;
+	}
+
+	template < typename Iter, typename Pred >
+	static constexpr Iter FindBatchForward( Iter itBase, Iter itEnd, Pred &&funcCheck ) noexcept
+	{
+		return FindBatchForwardBy( itBase, itEnd, Forward< Pred >( funcCheck ), FindBatchSequence_t() );
+	}
+
+	template < typename Iter, typename Pred, size_t ...Is >
+	static constexpr Iter FindBatchReverseBy( Iter itBase, Iter itEnd, Pred &&funcCheck, MSequence< Is... > ) noexcept
+	{
+		Iter itFound = itEnd;
+
+		( ( itFound == itEnd && funcCheck( BatchOffset( itBase, -static_cast< int >( Is ) ) ) ? ( itFound = BatchOffset( itBase, -static_cast< int >( Is ) ), 0 ) : 0 ), ... );
+
+		return itFound;
+	}
+
+	template < typename Iter, typename Pred >
+	static constexpr Iter FindBatchReverse( Iter itBase, Iter itEnd, Pred &&funcCheck ) noexcept
+	{
+		return FindBatchReverseBy( itBase, itEnd, Forward< Pred >( funcCheck ), FindBatchSequence_t() );
+	}
+
 	// --------- copying / moving ----------
 	/// @brief Replace this view with another view (shallow copy of pointer + length).
 	constexpr CViewBase &CopyFrom( const CViewBase &other ) noexcept
@@ -535,79 +644,73 @@ protected: // Packed methods.
 	}
 
 	template < typename T, Enable_t< T > = 0 >
-	constexpr PackedUnsigned_t< T > PackedGetRawBy( I i ) const noexcept
+	constexpr T PackedGetBy( I i ) const noexcept
 	{
 		using Packed_t = PackedTraits_t< T >;
 		using U = PackedUnsigned_t< T >;
 
-		U nRaw = U( 0 );
+		constexpr bits_t nBits = Packed_t::BITS;
 		const bits_t iFromBit = PackedBitOffsetBy< T >( i );
-		const bits_t nValueBits = Packed_t::BITS;
-
 		const uchar_t *pData = PackedBaseBy< T >();
 
 		BALL_ASSERT( pData != nullptr );
 
-		for ( bits_t n = bits_t( 0 ); n < nValueBits; ++n )
+		const uchar_t *pByte = pData + ( iFromBit >> 3 );
+		bits_t iShift = iFromBit & bits_t( 7 );
+
+		U nRaw = U( 0 );
+
+		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
 		{
-			if ( PackedGetDataBitBy< T >( pData, iFromBit + n ) )
-				nRaw = static_cast< U >( nRaw | static_cast< U >( U( 1 ) << n ) );
+			nRaw = static_cast< U >( nRaw | ( static_cast< U >( ( *pByte >> iShift ) & uchar_t( 1 ) ) << n ) );
+
+			++iShift;
+
+			if ( iShift == bits_t( 8 ) )
+			{
+				iShift = bits_t( 0 );
+				++pByte;
+			}
 		}
 
-		return static_cast< U >( nRaw & Packed_t::VALUE_MASK );
+		return static_cast< T >( nRaw & Packed_t::VALUE_MASK );
 	}
 
 	template < typename T, Enable_t< T > = 0 >
-	constexpr void PackedSetRawBy( I i, PackedUnsigned_t< T > nRaw ) noexcept
+	constexpr void PackedSetBy( I i, const T &value ) noexcept
 	{
 		using Packed_t = PackedTraits_t< T >;
 		using U = PackedUnsigned_t< T >;
 
+		constexpr bits_t nBits = Packed_t::BITS;
 		const bits_t iFromBit = PackedBitOffsetBy< T >( i );
-		const bits_t nValueBits = Packed_t::BITS;
-
-		nRaw = static_cast< U >( nRaw & Packed_t::VALUE_MASK );
 
 		uchar_t *pData = PackedBaseBy< T >();
 
 		BALL_ASSERT( pData != nullptr );
 
-		for ( bits_t n = bits_t( 0 ); n < nValueBits; ++n )
+		uchar_t *pByte = pData + ( iFromBit >> 3 );
+		bits_t iShift = iFromBit & bits_t( 7 );
+
+		const U nRaw = static_cast< U >( value ) & Packed_t::VALUE_MASK;
+
+		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
 		{
-			PackedSetDataBitBy< T >( pData, iFromBit + n, ( ( nRaw >> n ) & U( 1 ) ) != U( 0 ) );
-		}
-	}
+			const uchar_t nMask = static_cast< uchar_t >( uchar_t( 1 ) << iShift );
 
-	template < typename T, Enable_t< T > = 0 >
-	constexpr T PackedGetValueBy( I i ) const noexcept
-	{
-		using Packed_t = PackedTraits_t< T >;
-		using U = PackedUnsigned_t< T >;
+			if ( ( nRaw >> n ) & U( 1 ) )
+				*pByte = static_cast< uchar_t >( *pByte | nMask );
+			else
+				*pByte = static_cast< uchar_t >( *pByte & static_cast< uchar_t >( ~nMask ) );
 
-		U nRaw = PackedGetRawBy< T >( i );
+			++iShift;
 
-		if constexpr ( Packed_t::IS_SIGNED )
-		{
-			if constexpr ( Packed_t::BITS < Packed_t::STORAGE_BITS )
+			if ( iShift == bits_t( 8 ) )
 			{
-				const U nSignBit = static_cast< U >( U( 1 ) << ( Packed_t::BITS - bits_t( 1 ) ) );
-
-				if ( ( nRaw & nSignBit ) != U( 0 ) )
-					nRaw = static_cast< U >( nRaw | static_cast< U >( ~Packed_t::VALUE_MASK ) );
+				iShift = bits_t( 0 );
+				++pByte;
 			}
 		}
-
-		return static_cast< T >( nRaw );
-	}
-
-	template < typename T, Enable_t< T > = 0 >
-	constexpr void PackedSetValueBy( I i, const T &value ) noexcept
-	{
-		using U = PackedUnsigned_t< T >;
-
-		U nRaw = static_cast< U >( value );
-
-		PackedSetRawBy< T >( i, nRaw );
 	}
 
 	template < TI K = 0, typename T0, typename ...Rest >
