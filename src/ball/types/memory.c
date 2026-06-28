@@ -2,8 +2,8 @@
 #include <ball/types/base/fixed.h>
 #include <ball/types/c/assert.h>
 #include <ball/types/c/macros.h>
-#include <ball/types/c/memory.h>
 #include <ball/types/c/math.h>
+#include <ball/types/memory.h>
 
 #define BALL_MAGIC 0x42414C4C // "BALL" (without null-terminated)
 #define BALL_DEFAULT_PAGE_SIZE 4096u

@@ -62,10 +62,10 @@ public:
 	using Base_t::Count;
 	constexpr size_t FixedSize() const noexcept                 { return Base_t::template FixedSizeBy< T >(); }
 	constexpr size_t FixedCapacitySize() const noexcept         { return Base_t::template FixedCapacitySizeBy< T >(); }
-	constexpr const bool IsOverflow( I nCount ) const           { return Base_t::template IsOverflowBy< T >( nCount ); }
-	constexpr const bool IsOverflow() const                     { return IsOverflow( Count() ); }
-	constexpr const bool IsPackedOverflow( I nCount ) const     { return Base_t::template IsPackedOverflowBy< T >( nCount ); }
-	constexpr const bool IsPackedOverflow() const               { return IsPackedOverflow( Count() ); }
+	constexpr bool IsOverflow( I nCount ) const                 { return Base_t::template IsOverflowBy< T >( nCount ); }
+	constexpr bool IsOverflow() const                           { return IsOverflow( Count() ); }
+	constexpr bool IsPackedOverflow( I nCount ) const           { return Base_t::template IsPackedOverflowBy< T >( nCount ); }
+	constexpr bool IsPackedOverflow() const                     { return IsPackedOverflow( Count() ); }
 
 	constexpr T *FixedData() noexcept                           { return Base_t::template FixedDataBy< T >(); }
 	constexpr const T *FixedData() const noexcept               { return Base_t::template FixedDataBy< T >(); }
@@ -198,20 +198,17 @@ public:
 
 	constexpr CView Last( I nCount ) const noexcept
 	{
-		return ( nCount >= Count() ) ? *this
-		                             : CView( nCount, Base() + ( Count() - nCount ) );
+		return ( nCount >= Count() ) ? *this : CView( nCount, Base() + ( Count() - nCount ) );
 	}
 
 	constexpr CView DropFront( I nCount ) const noexcept
 	{
-		return ( nCount >= Count() ) ? CView()
-		                             : CView( static_cast< I >( Count() - nCount ), Base() + nCount );
+		return ( nCount >= Count() ) ? CView() : CView( static_cast< I >( Count() - nCount ), Base() + nCount );
 	}
 
 	constexpr CView DropBack( I nCount ) const noexcept
 	{
-		return ( nCount >= Count() ) ? CView()
-		                             : CView( static_cast< I >( Count() - nCount ), Base() );
+		return ( nCount >= Count() ) ? CView() : CView( static_cast< I >( Count() - nCount ), Base() );
 	}
 
 	// --------- prefix / suffix checks ----------
@@ -315,7 +312,7 @@ public:
 		{
 			const T *pBase = Base();
 			const T *it = pBase + nStart;
-			const T *itLast = pBase + static_cast< I >( iLastStart + I( 1 ) );
+			const T *itLast = pBase + static_cast< I >( iLastStart + 1 );
 
 			for ( ; it + Base_t::FIND_BATCH_COUNT <= itLast; it += Base_t::FIND_BATCH_COUNT )
 			{
@@ -399,7 +396,7 @@ public:
 
 			for ( ; i >= Base_t::FIND_BATCH_LAST; )
 			{
-				const I iBatchEnd = static_cast< I >( i + I( 1 ) );
+				const I iBatchEnd = static_cast< I >( i + 1 );
 				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return MatchAt( j, v ); } );
 
 				if ( iFound != iBatchEnd )
@@ -427,7 +424,7 @@ public:
 
 			for ( ; pBase + Base_t::FIND_BATCH_LAST <= it; )
 			{
-				const T *itBatchEnd = it + I( 1 );
+				const T *itBatchEnd = it + 1;
 				const T *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [this, &v]( const T *itCheck ) constexpr noexcept { return MatchAt( itCheck, v ); } );
 
 				if ( itFound != itBatchEnd )

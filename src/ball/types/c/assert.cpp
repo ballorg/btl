@@ -2,6 +2,8 @@
 #include <ball/types/c/debugbreak.h>
 #include <ball/types/c/io.h>
 
+BALL_EXTERN_C int fflush( void *stream );
+
 #ifdef BALL_ENABLE_MODULES
 import Ball.New;
 import Ball.Types;
@@ -64,4 +66,5 @@ void Ball_AssertFail(
 	const char *pszOut = sMessage.String();
 
 	puts( pszOut );
+	fflush( nullptr );
 }

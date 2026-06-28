@@ -63,7 +63,7 @@ struct MFixedMask
 		else if constexpr ( NBIT >= 64 )
 			return 1ull << 63;
 		else
-			return 1ull << ( NBIT - bits_t( 1 ) );
+			return 1ull << ( NBIT - 1 );
 	}
 
 	static constexpr ullong_t VALUE = Value();
@@ -207,7 +207,7 @@ struct MFixedPackedBase
 
 	static constexpr bits_t ComputeBits( const size_t nBytes ) noexcept
 	{
-		const size_t nBits = nBytes * size_t( 8 );
+		const size_t nBits = nBytes * 8;
 		constexpr size_t nMaxBits = static_cast< size_t >( ~bits_t( 0 ) );
 
 		return static_cast< bits_t >( nBits < nMaxBits ? nBits : nMaxBits );
@@ -240,6 +240,37 @@ template <> struct MFixedPackedBase< FixedTag_t >
 	static constexpr bits_t BITS = 2;
 };
 
+///-----------------------------------------------------------------------------
+/// @brief Fixed-width metadata adapter for enum-backed packed storage.
+///
+/// `Type` remains the user-facing enum, while `Raw_t` points at the declared
+/// underlying integral storage. This keeps `MultiVector` column access strongly
+/// typed and still allows packed bit operations to work on a deterministic
+/// unsigned/signed raw domain.
+///-----------------------------------------------------------------------------
+template < typename T, typename TRaw, bits_t TBITS, bool TIS_SIGNED, bool TIS_UNSIGNED >
+struct MFixedPackedEnumBase
+{
+	using Type = T;
+	using Raw_t = TRaw;
+	using Signed_t = typename MSigned< Raw_t >::Type;
+	using Unsigned_t = typename MUnsigned< Raw_t >::Type;
+
+	static constexpr bool IS_INT = false;
+	static constexpr bool IS_SIGNED = TIS_SIGNED;
+	static constexpr bool IS_UNSIGNED = TIS_UNSIGNED;
+
+	static constexpr bits_t ComputeBits( const size_t nBytes ) noexcept
+	{
+		const size_t nBits = nBytes * 8;
+		constexpr size_t nMaxBits = static_cast< size_t >( ~bits_t( 0 ) );
+
+		return static_cast< bits_t >( nBits < nMaxBits ? nBits : nMaxBits );
+	}
+
+	static constexpr bits_t BITS = TBITS;
+};
+
 #	define BALL_FIXED_DECLARE_SIGNED_BASE_TRAIT( typeDef, bits, typeName ) \
 	template <> struct MFixedPackedBase< typeName > : public MFixedPackedBase< typeDef > \
 	{ \
@@ -268,14 +299,31 @@ template <> struct MFixedPackedBase< FixedTag_t >
 #	define BALL_FIXED_DECLARE_UNCERTAIN_TRAIT( bits ) BALL_FIXED_DECLARE_UNCERTAIN_BASE_TRAIT( int##bits##_t, bits, FixedUncertain##bits##_t )
 #	define BALL_FIXED_DECLARE_UNSIGNED_TRAIT( bits ) BALL_FIXED_DECLARE_UNSIGNED_BASE_TRAIT( uint##bits##_t, bits, FixedUnsiged##bits##_t )
 
-#	define BALL_FIXED_DECLARE_SIGNED_ENUM_TRAIT( enumName, bits ) BALL_FIXED_DECLARE_SIGNED_BASE_TRAIT( sint##bits##_t, bits, enumName )
-#	define BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT( enumName, bits ) BALL_FIXED_DECLARE_UNCERTAIN_BASE_TRAIT( int##bits##_t, bits, enumName )
-#	define BALL_FIXED_DECLARE_UNSIGNED_ENUM_TRAIT( enumName, bits ) BALL_FIXED_DECLARE_UNSIGNED_BASE_TRAIT( uint##bits##_t, bits, enumName )
+#	define BALL_FIXED_DECLARE_SIGNED_ENUM_TRAIT( enumName, bits ) \
+	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, sint##bits##_t, bits_t( bits ), true, false > {};
 
-#	define BALL_FIXED_DECLARE_ENUM_BASE( M, enumName, typeDef, bits ) M( enumName, bits ) enum enumName : typeDef
+#	define BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT( enumName, bits ) \
+	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, int##bits##_t, bits_t( bits ), true, false > {};
+
+#	define BALL_FIXED_DECLARE_UNSIGNED_ENUM_TRAIT( enumName, bits ) \
+	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, uint##bits##_t, bits_t( bits ), false, true > {};
+
+#	define BALL_FIXED_DECLARE_ENUM_BASE( M, enumName, typeDef, bits ) enum enumName : typeDef; M( enumName, bits ) enum enumName : typeDef
+#	define BALL_FIXED_DECLARE_ENUM_CLASS_BASE( M, enumName, typeDef, bits ) enum class enumName : typeDef; M( enumName, bits ) enum class enumName : typeDef
 #	define BALL_FIXED_SIGNED_ENUM( enumName, bits ) BALL_FIXED_DECLARE_ENUM_BASE( BALL_FIXED_DECLARE_SIGNED_ENUM_TRAIT, enumName, sint##bits##_t, bits )
 #	define BALL_FIXED_UNCERTAIN_ENUM( enumName, bits ) BALL_FIXED_DECLARE_ENUM_BASE( BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT, enumName, int##bits##_t, bits )
-#	define BALL_FIXED_UNSIGNED_ENUM( enumName, bits ) BALL_FIXED_DECLARE_ENUM_BASE( BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT, enumName, uint##bits##_t, bits )
+#	define BALL_FIXED_UNSIGNED_ENUM( enumName, bits ) BALL_FIXED_DECLARE_ENUM_BASE( BALL_FIXED_DECLARE_UNSIGNED_ENUM_TRAIT, enumName, uint##bits##_t, bits )
+#	define BALL_FIXED_SIGNED_ENUM_CLASS( enumName, bits ) BALL_FIXED_DECLARE_ENUM_CLASS_BASE( BALL_FIXED_DECLARE_SIGNED_ENUM_TRAIT, enumName, sint##bits##_t, bits )
+#	define BALL_FIXED_UNCERTAIN_ENUM_CLASS( enumName, bits ) BALL_FIXED_DECLARE_ENUM_CLASS_BASE( BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT, enumName, int##bits##_t, bits )
+#	define BALL_FIXED_UNSIGNED_ENUM_CLASS( enumName, bits ) BALL_FIXED_DECLARE_ENUM_CLASS_BASE( BALL_FIXED_DECLARE_UNSIGNED_ENUM_TRAIT, enumName, uint##bits##_t, bits )
+#	define BALL_FIXED_SIGNED_ENUM_TRAIT( enumName, bits ) \
+	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, sint##bits##_t, bits_t( bits ), true, false > {};
+
+#	define BALL_FIXED_UNCERTAIN_ENUM_TRAIT( enumName, bits ) \
+	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, int##bits##_t, bits_t( bits ), true, false > {};
+
+#	define BALL_FIXED_UNSIGNED_ENUM_TRAIT( enumName, bits ) \
+	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, uint##bits##_t, bits_t( bits ), false, true > {};
 
 BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_SIGNED_TRAIT )
 BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_UNCERTAIN_TRAIT )
@@ -304,9 +352,17 @@ struct MFixedMetadataBase : public MFixedPackedBase< T >
 			return static_cast< Raw_t >( -1 ) < static_cast< Raw_t >( 0 );
 	}
 
-	static constexpr bits_t STORAGE_BITS = Base_t::ComputeBits( sizeof( Raw_t ) );
+	static constexpr bits_t ComputeBits( const size_t nBytes ) noexcept
+	{
+		const size_t nBits = nBytes * 8;
+		constexpr size_t nMaxBits = static_cast< size_t >( ~bits_t( 0 ) );
+
+		return static_cast< bits_t >( nBits < nMaxBits ? nBits : nMaxBits );
+	}
+
+	static constexpr bits_t STORAGE_BITS = ComputeBits( sizeof( Raw_t ) );
 	static constexpr bool IS_PACKED = BITS < STORAGE_BITS;
-	static constexpr bits_t UNSIGNED_BITS = Base_t::ComputeBits( sizeof( Unsigned_t ) );
+	static constexpr bits_t UNSIGNED_BITS = ComputeBits( sizeof( Unsigned_t ) );
 	static constexpr size_t BYTES = IS_PACKED ? ( static_cast< size_t >( BITS + bits_t( 7ull ) ) / bits_t( 8ull ) ) : sizeof( Raw_t );
 
 	static constexpr Unsigned_t VALUE_MASK = static_cast< Unsigned_t >( MFixedMask< BITS >::VALUE );
@@ -324,6 +380,12 @@ struct MFixedMetadata : public MFixedMetadataBase< RemoveCV_t< T > >
 #	undef BALL_FIXED_DECLARE_UNSIGNED_TRAIT
 #	undef BALL_FIXED_DECLARE_UNCERTAIN_TRAIT
 #	undef BALL_FIXED_DECLARE_SIGNED_TRAIT
+#	undef BALL_FIXED_DECLARE_UNSIGNED_ENUM_TRAIT
+#	undef BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT
+#	undef BALL_FIXED_DECLARE_SIGNED_ENUM_TRAIT
+#	undef BALL_FIXED_DECLARE_UNSIGNED_BASE_TRAIT
+#	undef BALL_FIXED_DECLARE_UNCERTAIN_BASE_TRAIT
+#	undef BALL_FIXED_DECLARE_SIGNED_BASE_TRAIT
 #	undef BALL_FIXED_DECLARE_UNSIGNED
 #	undef BALL_FIXED_DECLARE_UNCERTAIN
 #	undef BALL_FIXED_DECLARE_SIGNED

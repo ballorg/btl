@@ -6,19 +6,19 @@
 #	include "removereference.hpp"
 
 template < class T >
-constexpr MRemoveReference< T >::Type &&Move( T &&obj ) noexcept
+constexpr RemoveReference_t< T > &&Move( T &&obj ) noexcept
 {
-	return static_cast< MRemoveReference< T >::Type &&>( obj );
+	return static_cast< RemoveReference_t< T > && >( obj );
 }
 
 template < typename T >
-constexpr T &&Forward( typename MRemoveReference< T >::Type &obj ) noexcept
+constexpr T &&Forward( RemoveReference_t< T > &obj ) noexcept
 {
 	return static_cast< T && >( obj );
 }
 
 template < typename T >
-constexpr T &&Forward( typename MRemoveReference< T >::Type &&obj ) noexcept
+constexpr T &&Forward( RemoveReference_t< T > &&obj ) noexcept
 {
 	return static_cast< T && >( obj );
 }

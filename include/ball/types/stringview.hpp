@@ -32,13 +32,13 @@ public:
 	/// @brief Construct from zero-terminated string.
 
 	/// @brief Construct from a C-array (string literal).
-	template < size_t CN >
+	template < I CN >
 	constexpr CStringView( const T ( &str )[ CN ] ) noexcept : 
 		Base_t( CN - 1, str )
 	{
 	}
 
-	template < size_t CN >
+	template < I CN >
 	constexpr CStringView( T ( &&str )[ CN ] ) noexcept : 
 		Base_t( CN - 1, str )
 	{
@@ -86,19 +86,20 @@ public:
 
 	static constexpr const CStringView EmptyView() noexcept { return CStringView( "" ); }
 	static constexpr const CStringView NullView() noexcept { return CStringView( "(null)" ); }
+
+	// A persistent lone null terminator, so String() can return a valid empty
+	// C-string without taking the address of a temporary view's storage.
+	static constexpr T s_chEmpty{};
 	constexpr const T *String() const noexcept
 	{
 		const T *p = Base_t::Get();
 
-		return p ? p : EmptyView().String();
+		return p ? p : &s_chEmpty;
 	}
 
 	static bool_t IsSpaceASCII( T ch ) noexcept
 	{
-		return ch == static_cast< T >( ' ' ) 
-		    || ch == static_cast< T >( '\t' ) 
-		    || ch == static_cast< T >( '\n' ) 
-		    || ch == static_cast< T >( '\r' );
+		return ch == static_cast< T >( ' ' ) || ch == static_cast< T >( '\t' ) || ch == static_cast< T >( '\n' ) || ch == static_cast< T >( '\r' );
 	}
 
 	constexpr CStringView SubString( I nPos, I nCount = INVALID_INDEX ) const noexcept
@@ -114,16 +115,12 @@ public:
 
 	constexpr CStringView RemovePrefix( I nCount ) const noexcept
 	{
-		return ( nCount >= Length() )
-			? CStringView()
-			: CStringView( Length() - nCount, String() + nCount );
+		return ( nCount >= Length() ) ? CStringView() : CStringView( Length() - nCount, String() + nCount );
 	}
 
 	constexpr CStringView RemoveSuffix( I nCount ) const noexcept
 	{
-		return ( nCount >= Length() )
-			? CStringView()
-			: CStringView( Length() - nCount, String() );
+		return ( nCount >= Length() ) ? CStringView() : CStringView( Length() - nCount, String() );
 	}
 
 	/// @brief constexpr memcmp implementation.

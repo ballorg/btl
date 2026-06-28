@@ -7,7 +7,6 @@ import Ball.Types;
 #endif // defined( BALL_ENABLE_MODULES )
 
 // Macros section.
-#define BALL_STATIC_ASSERT_SIZEOF( type, size ) static_assert( sizeof( type ) == ( size ), "sizeof( " #type " ) must be " #size " bytes")
 #define BALL_STATIC_ASSERT_SIZEOF_BITS( type, bits ) BALL_STATIC_ASSERT_SIZEOF( type, bits / 8 )
 #define BALL_APPEND_SIZEOF( buffer, type ) \
 	buffer.AppendMultiple( "sizeof( " #type " ) = ", sizeof( type ), " bytes (", sizeof( type ) * 8 , " bits)\n" );
@@ -19,7 +18,7 @@ union Digit_t
 	char str[2];
 	char n;
 
-	Digit_t( const char num = 0 ) : str("0") { n += num; }
+	Digit_t( const char num = 0 ) : str( "0" ) { n += num; }
 };
 
 // Extern C section.

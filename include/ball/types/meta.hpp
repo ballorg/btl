@@ -20,7 +20,6 @@
 #	include "meta/select.hpp"
 #	include "meta/sequence.hpp"
 #	include "meta/signed.hpp"
-#	include "meta/traits.hpp"
 #	include "meta/unsigned.hpp"
 #	include "meta/xvalue.hpp"
 

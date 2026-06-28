@@ -53,13 +53,13 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 	};
 
 	const U nValueMask = static_cast< U >( Traits_t::VALUE_MASK );
-	const U nSignBit = Traits_t::IS_SIGNED ? static_cast< U >( U( 1 ) << ( Traits_t::BITS - BTL::bits_t( 1 ) ) ) : U( 0 );
-	const U nRawPositive = Traits_t::IS_SIGNED ? static_cast< U >( nSignBit - U( 1 ) ) : nValueMask;
-	const U nRawAlt = Traits_t::IS_SIGNED ? nValueMask : ( nValueMask > U( 0 ) ? static_cast< U >( nValueMask - U( 1 ) ) : U( 0 ) );
-	const U nRawEdge = Traits_t::IS_SIGNED ? nSignBit : ( nValueMask > U( 1 ) ? static_cast< U >( nValueMask >> 1 ) : nValueMask );
+	const U nSignBit = Traits_t::IS_SIGNED ? static_cast< U >( U( 1 ) << ( Traits_t::BITS - 1 ) ) : 0;
+	const U nRawPositive = Traits_t::IS_SIGNED ? static_cast< U >( nSignBit - 1 ) : nValueMask;
+	const U nRawAlt = Traits_t::IS_SIGNED ? nValueMask : ( nValueMask > 0 ? static_cast< U >( nValueMask - 1 ) : 0 );
+	const U nRawEdge = Traits_t::IS_SIGNED ? nSignBit : ( nValueMask > 1 ? static_cast< U >( nValueMask >> 1 ) : nValueMask );
 
-	funcAddToTail( static_cast< T >( U( 0 ) ), 10.0f );
-	funcAddToTail( static_cast< T >( U( 1 ) ), 20.0f );
+	funcAddToTail( static_cast< T >( 0 ), 10.0f );
+	funcAddToTail( static_cast< T >( 1 ), 20.0f );
 	funcAddToHead( static_cast< T >( nRawPositive ), 30.0f );
 	funcInsert( 1u, static_cast< T >( nRawAlt ), 40.0f );
 	funcInsertMultiple( 2u, 2u, static_cast< T >( nRawEdge ), 50.0f );

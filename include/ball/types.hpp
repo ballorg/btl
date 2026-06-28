@@ -1,7 +1,10 @@
 #ifndef _INCLUDE_BALL_TYPES_HPP_
 #	define _INCLUDE_BALL_TYPES_HPP_
 
+#	pragma once
+
 #	include "types/c/macros.h"
+#	include "types/memory.h"
 
 BALL_EXPORT namespace BTL
 {
@@ -18,6 +21,8 @@ BALL_EXPORT namespace BTL
 #	include "types/multivector.hpp"
 #	include "types/number.hpp"
 #	include "types/pair.hpp"
+#	include "types/rbtree.hpp"
+#	include "types/reflect.hpp"
 #	include "types/string.hpp"
 #	include "types/stringview.hpp"
 #	include "types/vector.hpp"

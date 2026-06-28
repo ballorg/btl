@@ -8,6 +8,8 @@
 #	include "meta/first.hpp"
 #	include "meta/fixed.hpp"
 #	include "meta/get.hpp"
+#	include "meta/indexsequence.hpp"
+#	include "meta/typeinfo.hpp"
 #	include "allocator.hpp"
 #	include "bits.hpp"
 #	include "elements.hpp"
@@ -50,13 +52,14 @@ public:
 	template < typename T > static constexpr size_t STORAGE_ALIGNMENT = IS_PACKED_STORAGE< T > ? alignof( uchar_t ) : alignof( RemoveCV_t< T > );
 	using FirstColumn_t = typename MFirst< Ts... >::Type;
 
+	using Base_t::Set;
 	using Base_t::Count;
 
 	/// @brief Releases the shared overflow block, if any, and resets the view storage pointers.
 	~CMultiVectorBase() noexcept
 	{
 		Free();
-		Base_t::Set( I( 0 ), ( static_cast< Ts * >( nullptr ) )... );
+		Set( 0, ( static_cast< Ts * >( nullptr ) )... );
 	}
 
 	// ---------------------------
@@ -146,7 +149,7 @@ public:
 		I iStart = iFrom;
 
 		if ( iStart == INVALID_INDEX || iStart >= nCount )
-			iStart = nCount - I( 1 );
+			iStart = nCount - 1;
 
 		if constexpr ( IS_PACKED_STORAGE< FirstColumn_t > )
 		{
@@ -154,7 +157,7 @@ public:
 
 			for ( ; i >= Base_t::FIND_BATCH_LAST; )
 			{
-				const I iBatchEnd = static_cast< I >( i + I( 1 ) );
+				const I iBatchEnd = static_cast< I >( i + 1 );
 				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return RowEquals< Ts... >( j, args... ); } );
 
 				if ( iFound != iBatchEnd )
@@ -182,7 +185,7 @@ public:
 
 			for ( ; pFirst + Base_t::FIND_BATCH_LAST <= it; )
 			{
-				const FirstColumn_t *itBatchEnd = it + I( 1 );
+				const FirstColumn_t *itBatchEnd = it + 1;
 				const FirstColumn_t *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [&]( const FirstColumn_t *itCheck ) constexpr noexcept { return RowEquals< Ts... >( itCheck, args... ); } );
 
 				if ( itFound != itBatchEnd )
@@ -229,7 +232,7 @@ public:
 		const I nNew = other.Count();
 		uint8_t *pData = EnsureCapacity( nNew );
 
-		Base_t::Set( nNew, StorageBy< Ts >( nNew, pData )... );
+		Set( nNew, StorageBy< Ts >( nNew, pData )... );
 		( CopyFromViewBy< Ts >( FIRST_INDEX, other ), ... );
 
 		return *this;
@@ -250,7 +253,7 @@ public:
 		const I nNew = other.Count();
 		uint8_t *pData = EnsureCapacity( nNew );
 
-		Base_t::Set( nNew, StorageBy< Ts >( nNew, pData )... );
+		Set( nNew, StorageBy< Ts >( nNew, pData )... );
 		( CopyFromViewBy< Ts >( FIRST_INDEX, other.Const() ), ... );
 
 		return *this;
@@ -345,7 +348,7 @@ protected:
 
 	/// @brief Computes the total byte size of the shared overflow block for @p nCapacity rows.
 	template < typename T0, typename... TRest >
-	static constexpr size_t BlockSizeBy( I nCapacity, size_t nOffset = size_t( 0 ) ) noexcept
+	static constexpr size_t BlockSizeBy( I nCapacity, size_t nOffset = 0 ) noexcept
 	{
 		nOffset = Math_RoundUp( nOffset, STORAGE_ALIGNMENT< T0 > );
 		nOffset += StorageSize< T0 >( nCapacity );
@@ -362,12 +365,12 @@ protected:
 		if constexpr ( 0 < sizeof...( Ts ) )
 			return BlockSizeBy< Ts... >( nCount );
 		else
-			return size_t( 0 );
+			return 0;
 	}
 
 	/// @brief Computes the byte offset of column @p TTarget within the shared overflow block.
 	template < typename T, typename T0, typename... TRest >
-	static constexpr size_t BlockOffsetBy( I nCapacity, size_t nOffset = size_t( 0 ) ) noexcept
+	static constexpr size_t BlockOffsetBy( I nCapacity, size_t nOffset = 0 ) noexcept
 	{
 		nOffset = Math_RoundUp( nOffset, STORAGE_ALIGNMENT< T0 > );
 
@@ -401,7 +404,7 @@ protected:
 
 	/// @brief Copies the current contents of column T into a newly allocated shared overflow block.
 	template < typename T >
-	constexpr void CopyToDataBy( uint8_t *pData, I nCapacity, I nCount ) const noexcept
+	constexpr void CopyToDataBy( uint8_t *pData, I nCapacity, I nCount ) noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
@@ -410,7 +413,7 @@ protected:
 			const size_t nSize = Base_t::template PackedSizeBy< T >( nCount );
 			const size_t nCapacitySize = Base_t::template PackedSizeBy< T >( nCapacity );
 
-			if ( nSize > size_t( 0 ) )
+			if ( nSize > 0 )
 				memcpy( pDest, pSrc, nSize );
 
 			if ( nSize < nCapacitySize )
@@ -419,10 +422,10 @@ protected:
 		else
 		{
 			T *pDest = reinterpret_cast< T * >( pData + BlockOffsetBy< T, Ts... >( nCapacity ) );
-			const T *pSrc = Base_t::template BaseBy< T >();
+			T *pSrc = Base_t::template BaseBy< T >();
 
-			if ( nCount > I( 0 ) )
-				CopyElements( nCount, pDest, pSrc );
+			if ( nCount > 0 )
+				RelocateColumn( pDest, pSrc, nCount );
 		}
 	}
 
@@ -434,12 +437,37 @@ protected:
 		{
 			const size_t nBytes = Base_t::template PackedSizeBy< T >( nCount );
 
-			if ( nBytes > size_t( 0 ) )
+			if ( nBytes > 0 )
 				memcpy( Base_t::template PackedFixedDataBy< T >(), Base_t::template PackedBaseBy< T >(), nBytes );
 		}
-		else if ( nCount > I( 0 ) )
+		else if ( nCount > 0 )
 		{
-			CopyElements( nCount, Base_t::template FixedDataBy< T >(), Base_t::template BaseBy< T >() );
+			RelocateColumn( Base_t::template FixedDataBy< T >(), Base_t::template BaseBy< T >(), nCount );
+		}
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Relocate @p nCount elements of a non-packed column from @p pSrc into
+	/// uninitialized storage at @p pDest (disjoint ranges).
+	/// @details Trivially-copyable types are byte-copied; otherwise each element is
+	/// move-constructed into the destination and the source is destroyed, which is
+	/// required for types whose move/copy is not equivalent to a raw byte copy
+	/// (e.g. a delegate that re-homes its payload on move).
+	///-----------------------------------------------------------------------------
+	template < typename T >
+	static constexpr void RelocateColumn( T *pDest, T *pSrc, I nCount ) noexcept
+	{
+		if constexpr ( MTypeInfo< T >::IS_MEMMOVE_SAFE )
+		{
+			CopyElements( nCount, pDest, pSrc );
+		}
+		else
+		{
+			for ( I n = 0; n < nCount; ++n )
+			{
+				ConstructElement( &pDest[ n ], Move( pSrc[ n ] ) );
+				DestructElement( &pSrc[ n ] );
+			}
 		}
 	}
 
@@ -487,7 +515,7 @@ protected:
 		{
 			const I nRows = static_cast< I >( nCount - i );
 
-			if ( nRows > I( 0 ) )
+			if ( nRows > 0 )
 				Base_t::template PackedShiftRowsRightBy< T >( i, nRows, nAdd );
 		}
 		else
@@ -495,7 +523,22 @@ protected:
 			T *p = Base_t::template BaseBy< T >();
 
 			if ( i < nCount )
-				ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nCount ] );
+			{
+				if constexpr ( MTypeInfo< T >::IS_MEMMOVE_SAFE )
+				{
+					ShiftElementsRight( &p[ i + nAdd ], &p[ i ], &p[ nCount ] );
+				}
+				else
+				{
+					// Relocate the tail backwards into raw slots, leaving the gap
+					// [i, i + nAdd) destroyed for the caller to construct into.
+					for ( I n = nCount; n-- > i; )
+					{
+						ConstructElement( &p[ n + nAdd ], Move( p[ n ] ) );
+						DestructElement( &p[ n ] );
+					}
+				}
+			}
 		}
 	}
 
@@ -517,7 +560,24 @@ protected:
 			const I nTailBegin = i + nRemove;
 
 			if ( nTailBegin < nOld )
-				ShiftElementsLeft( &p[ i ], &p[ nTailBegin ], &p[ nOld ] );
+			{
+				if constexpr ( MTypeInfo< T >::IS_MEMMOVE_SAFE )
+				{
+					ShiftElementsLeft( &p[ i ], &p[ nTailBegin ], &p[ nOld ] );
+				}
+				else
+				{
+					// The removed range [i, nTailBegin) is already destroyed; relocate
+					// the surviving tail forwards into those raw slots.
+					const I nTail = nOld - nTailBegin;
+
+					for ( I n = 0; n < nTail; ++n )
+					{
+						ConstructElement( &p[ i + n ], Move( p[ nTailBegin + n ] ) );
+						DestructElement( &p[ nTailBegin + n ] );
+					}
+				}
+			}
 		}
 	}
 
@@ -588,6 +648,14 @@ public:
 	constexpr CMultiVectorImpl( const View_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
 	constexpr CMultiVectorImpl( const ConstView_t &copyFrom ) noexcept { Base_t::CopyFrom( copyFrom ); }
 	constexpr CMultiVectorImpl( View_t &&moveFrom ) noexcept { Base_t::MoveFrom( Move( moveFrom ) ); }
+
+	// Construct a one-row container in place (one value per column) via InitFirst,
+	// so the first row is established as part of construction. Constrained to the
+	// exact column arity (and >1 column) to never shadow the single-argument view
+	// constructors above.
+	template < typename... Us, EnableIf_t< ( sizeof...( Us ) == sizeof...( Ts ) ) && ( sizeof...( Ts ) > 1 ), int > = 0 >
+	constexpr explicit CMultiVectorImpl( Us &&...args ) noexcept : Base_t() { InitFirst( Forward< Us >( args )... ); }
+
 	~CMultiVectorImpl() noexcept { ( DestructAllBy< Ts >(), ... ); }
 
 	CMultiVectorImpl &operator=( const View_t &copyFrom ) { Base_t::CopyFrom( copyFrom ); return *this; }
@@ -597,26 +665,51 @@ public:
 	// ---------------------------
 	// Size management
 	// ---------------------------
+	///-----------------------------------------------------------------------------
+	/// @brief Changes the logical row count while keeping all columns synchronized.
+	///-----------------------------------------------------------------------------
 	constexpr void SetCount( I nNew )
 	{
 		const I nOld = Count();
+
+		// On shrink, destruct the dropped rows [nNew, nOld) in the CURRENT buffer before
+		// EnsureCapacity may reallocate to a smaller capacity. EnsureCapacity only copies
+		// [0, nNew) into the new buffer, so doing the destruct afterwards would index past
+		// the shrunken column (and, for the packed column, clear a bit one byte into the
+		// next column). Growth still constructs the new rows after (re)allocation.
+		if ( nNew < nOld )
+			( ResizeRangeBy< Ts >( nOld, nNew ), ... );
+
 		uint8_t *pData = Base_t::EnsureCapacity( nNew );
 
 		Set( nNew, Base_t::template StorageBy< Ts >( nNew, pData )... );
-		( ResizeRangeBy< Ts >( nOld, nNew ), ... );
+
+		if ( nNew > nOld )
+			( ResizeRangeBy< Ts >( nOld, nNew ), ... );
+	}
+
+	constexpr void Resize( I nNew )
+	{
+		SetCount( nNew );
 	}
 
 	constexpr void Grow( I delta )
 	{
 		const I nNew = Count() + delta;
 
-		BALL_ASSERT( nNew >= I( 0 ) );
+		BALL_ASSERT( nNew >= 0 );
 		SetCount( nNew );
 	}
 
 	constexpr void RemoveAll()
 	{
-		SetCount( I( 0 ) );
+		SetCount( 0 );
+	}
+
+	/// @brief Standard clear alias for `RemoveAll()`.
+	constexpr void Clear()
+	{
+		RemoveAll();
 	}
 
 	constexpr void Purge()
@@ -635,7 +728,7 @@ public:
 	{
 		const I nAdd = v.Count();
 
-		BALL_ASSERT( nAdd > I( 0 ) );
+		BALL_ASSERT( nAdd > 0 );
 		EnsureInsert( i, nAdd );
 		( CopyFromViewBy< Ts >( i, v ), ... );
 
@@ -654,12 +747,12 @@ public:
 	template < typename... Us >
 	constexpr I Insert( I i, Us &&...args )
 	{
-		static_assert( sizeof...( Us ) == sizeof...( Ts ), "Insert requires exactly one value per type" );
+		BALL_STATIC_ASSERT( sizeof...( Us ) == sizeof...( Ts ), "Insert requires exactly one value per type" );
 
-		EnsureInsert( i, I( 1 ) );
+		EnsureInsert( i, 1 );
 		AssignRow< Ts... >( i, Forward< Us >( args )... );
 
-		return i + I( 1 );
+		return i + 1;
 	}
 
 	///-----------------------------------------------------------------------------
@@ -669,31 +762,53 @@ public:
 	template < typename... Us >
 	constexpr I InsertMultiple( I i, I nCount, const Us &...args )
 	{
-		static_assert( sizeof...( Us ) == sizeof...( Ts ), "InsertMultiple requires exactly one value per type" );
+		BALL_STATIC_ASSERT( sizeof...( Us ) == sizeof...( Ts ), "InsertMultiple requires exactly one value per type" );
 
-		BALL_ASSERT( nCount > I( 0 ) );
+		BALL_ASSERT( nCount > 0 );
 		EnsureInsert( i, nCount );
 
-		for ( I n = I( 0 ); n < nCount; ++n )
+		for ( I n = 0; n < nCount; ++n )
 			AssignRow< Ts... >( i + n, args... );
 
 		return i + nCount;
 	}
 
-	constexpr I AddToHead( const ConstView_t &v ) { return Insert( I( 0 ), v ); }
-	constexpr I AddToHead( const View_t &v ) { return Insert( I( 0 ), v ); }
-	template < typename... Us > constexpr I AddToHead( Us &&...args ) { return Insert( I( 0 ), Forward< Us >( args )... ); }
-	template < typename... Us > constexpr I AddMultipleToHead( I nCount, const Us &...args ) { return InsertMultiple( I( 0 ), nCount, args... ); }
+	constexpr I AddToHead( const ConstView_t &v ) { return Insert( 0, v ); }
+	constexpr I AddToHead( const View_t &v ) { return Insert( 0, v ); }
+	template < typename... Us > constexpr I AddToHead( Us &&...args ) { return Insert( 0, Forward< Us >( args )... ); }
+	template < typename... Us > constexpr I AddMultipleToHead( I nCount, const Us &...args ) { return InsertMultiple( 0, nCount, args... ); }
 
 	constexpr I AddToTail( const ConstView_t &v ) { return Insert( Count(), v ); }
 	constexpr I AddToTail( const View_t &v ) { return Insert( Count(), v ); }
 	template < typename... Us > constexpr I AddToTail( Us &&...args ) { return Insert( Count(), Forward< Us >( args )... ); }
 	template < typename... Us > constexpr I AddMultipleToTail( I nCount, const Us &...args ) { return InsertMultiple( Count(), nCount, args... ); }
 
-	void Remove( I i, I nRemove = I( 1 ) )
+	///-----------------------------------------------------------------------------
+	/// @brief One-time initialization of the very first row (index 0) of an empty
+	/// container.
+	/// @details When the row fits the inline buffer this constructs it in place via
+	/// a constant-expression-safe path (no grow/shift machinery), so it can run at
+	/// compile time. Otherwise it falls back to the regular append, which is only
+	/// reachable at run time (overflow needs heap storage). Requires `Count() == 0`.
+	///-----------------------------------------------------------------------------
+	template < typename... Us >
+	constexpr I InitFirst( Us &&...args )
 	{
-		BALL_ASSERT( nRemove > I( 0 ) );
-		BALL_ASSERT( I( 0 ) <= i && i + nRemove <= Count() );
+		BALL_STATIC_ASSERT( sizeof...( Us ) == sizeof...( Ts ), "InitFirst requires exactly one value per type" );
+		BALL_ASSERT_MESSAGE( !Count(), "InitFirst requires an empty container" );
+
+		if ( Base_t::IsDataOverflow( 1 ) )
+			return AddToTail( Forward< Us >( args )... );
+
+		Base_t::template StoreFirstElement< 0, Ts... >( static_cast< Ts >( Forward< Us >( args ) )... );
+
+		return 1;
+	}
+
+	void Remove( I i, I nRemove = 1 )
+	{
+		BALL_ASSERT( nRemove > 0 );
+		BALL_ASSERT( 0 <= i && i + nRemove <= Count() );
 
 		const I nCount = Count();
 		const I nNewCount = nCount - nRemove;
@@ -712,8 +827,8 @@ protected:
 	///-----------------------------------------------------------------------------
 	void EnsureInsert( I i, I nAdd )
 	{
-		BALL_ASSERT( nAdd > I( 0 ) );
-		BALL_ASSERT( I( 0 ) <= i && i <= Count() );
+		BALL_ASSERT( nAdd > 0 );
+		BALL_ASSERT( 0 <= i && i <= Count() );
 
 		const I nOld = Count();
 		const I nNew = nOld + nAdd;
@@ -782,7 +897,7 @@ private:
 
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
-			for ( I n = I( 0 ); n < nAdd; ++n )
+			for ( I n = 0; n < nAdd; ++n )
 				Base_t::template PackedSetBy< T >( static_cast< I >( i + n ), v.template PackedGetBy< T >( n ) );
 		}
 		else
@@ -794,10 +909,19 @@ private:
 	template < typename T0, typename... TRest, typename U0, typename... URest >
 	constexpr void AssignRow( I i, U0 &&u0, URest &&...urest )
 	{
+		// Address the column by positional index, not by type: distinct columns
+		// may share a type (e.g. a key and value column of the same type), which
+		// would make type-based access ambiguous and clobber the wrong column.
+		constexpr TI COLUMN = static_cast< TI >( sizeof...( Ts ) - 1 - sizeof...( TRest ) );
+
 		if constexpr ( IS_PACKED_STORAGE< T0 > )
 			Base_t::template PackedSetBy< T0 >( i, static_cast< T0 >( Forward< U0 >( u0 ) ) );
 		else
-			Base_t::template BaseBy< T0 >()[ i ] = Forward< U0 >( u0 );
+			// The slot is freshly opened (uninitialized) gap memory, so construct in
+			// place rather than assign: a move/copy assignment would first release the
+			// destination's prior contents, which here are garbage (tail growth) or a
+			// raw memmove duplicate (middle insert) and not a live object.
+			ConstructElement( &Base_t::template BaseBy< COLUMN >()[ i ], static_cast< T0 >( Forward< U0 >( u0 ) ) );
 
 		if constexpr ( sizeof...( TRest ) > 0 )
 			AssignRow< TRest... >( i, Forward< URest >( urest )... );

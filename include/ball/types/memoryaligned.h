@@ -3,9 +3,8 @@
 
 #	include "base/arch.h"
 #	include "base/fixed.h"
-#	include "c/memory.h"
-
 #	include "c/macros.h"
+#	include "memory.h"
 
 BALL_EXTERN_C ptr_t Ball_AllocAlign( size_t nSize, size_t nAlign );
 BALL_EXTERN_C void Ball_FreeAlign( ptr_t pMem );

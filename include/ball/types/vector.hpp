@@ -5,8 +5,6 @@
 
 #	include "base/arch.h"
 #	include "c/assert.h"
-#	include "c/memory.h"
-#	include "c/memoryaligned.h"
 #	include "fixed.hpp"
 #	include "meta/fixed.hpp"
 #	include "meta/isintegral.hpp"
@@ -14,6 +12,7 @@
 #	include "allocator.hpp"
 #	include "bits.hpp"
 #	include "elements.hpp"
+#	include "memory.h"
 #	include "math.hpp"
 #	include "view.hpp"
 
@@ -169,7 +168,7 @@ protected:
 					BALL_ASSERT_IF_MESSAGE( pData == nullptr, "Failed to allocate packed storage" )
 						return reinterpret_cast< T * >( pCurrent );
 
-					if ( nLiveBytes > size_t( 0 ) )
+					if ( nLiveBytes > 0 )
 						memmove( pData, PackedFixedData(), nLiveBytes );
 
 					if ( nLiveBytes < nNewBytes )
@@ -187,7 +186,7 @@ protected:
 
 			if ( bWasOverflow )
 			{
-				if ( nLiveBytes > size_t( 0 ) )
+				if ( nLiveBytes > 0 )
 					memmove( pNew, pData, nLiveBytes );
 
 				BaseAllocator_t::Free( pData );
@@ -274,7 +273,7 @@ protected:
 
 			const size_t nBytes = PackedSize( nNewCount );
 
-			if ( nBytes > size_t( 0 ) )
+			if ( nBytes > 0 )
 				memmove( PackedBase(), other.PackedBase(), nBytes );
 		}
 		else
@@ -297,7 +296,7 @@ protected:
 			Set( nNewCount, pElements );
 			const size_t nBytes = PackedSize( nNewCount );
 
-			if ( nBytes > size_t( 0 ) )
+			if ( nBytes > 0 )
 				memmove( PackedBase(), other.PackedBase(), nBytes );
 		}
 		else
@@ -552,7 +551,7 @@ public:
 		{
 			const I nTailCount = nCount - ( nIndex + n );
 
-			if ( nTailCount > I( 0 ) )
+			if ( nTailCount > 0 )
 				PackedShiftRowsLeft( nIndex, nTailCount, n );
 			else
 				PackedClearRows( nIndex, n );
@@ -586,12 +585,10 @@ public:
 			const I nWith = svRepl.Count();
 			Remove( i, nRemove );
 
-			if ( nWith > I( 0 ) )
+			if ( nWith > 0 )
 				Insert( i, svRepl );
 
-			return ( nWith == I( 0 ) )
-				? ( ( i == I( 0 ) ) ? INVALID_INDEX : ( i - I( 1 ) ) )
-				: ( i + nWith - I( 1 ) );
+			return ( nWith == 0 ) ? ( ( i == 0 ) ? INVALID_INDEX : ( i - 1 ) ) : ( i + nWith - 1 );
 		}
 
 		const I nCount = Count();
@@ -604,17 +601,16 @@ public:
 		T *pData        = const_cast< T * >( Base() );
 
 		// Case 1: exact-size replace -> copy over the window and done.
-		if ( nDelta == I( 0 ) )
+		if ( nDelta == 0 )
 		{
 			for ( I k = 0; k < nWith; ++k )
 				pData[ i + k ] = svRepl[ k ];
 
-			return ( nWith == I( 0 ) ) ? ( ( i == I( 0 ) ) ? INVALID_INDEX : ( i - 1 ) )
-			                           : ( i + nWith - 1 );
+			return ( nWith == 0 ) ? ( ( i == 0 ) ? INVALID_INDEX : ( i - 1 ) ) : ( i + nWith - 1 );
 		}
 
 		// Case 2: shrink (nWith < nRemove) -> move suffix left, shrink logical size.
-		if ( nDelta < I( 0 ) )
+		if ( nDelta < 0 )
 		{
 			const I nShrink = -nDelta; // amount to pull left
 			// 2.1 Copy replacement into its final spot [i .. i + nWith)
@@ -630,8 +626,7 @@ public:
 			// 2.3 Commit new logical size.
 			Set( nCount - nShrink, pData );
 
-			return ( nWith == I( 0 ) ) ? ( ( i == I( 0 ) ) ? INVALID_INDEX : i )
-			                           : ( i + nWith );
+			return ( nWith == 0 ) ? ( ( i == 0 ) ? INVALID_INDEX : i ) : ( i + nWith );
 		}
 
 		// Case 3: grow (nWith > nRemove) -> ensure capacity, shift suffix right, then copy.
@@ -692,11 +687,11 @@ public:
 	{
 		const I nWhat = svWhat.Count();
 
-		if ( nWhat == I( 0 ) )
-			return I( 0 );
+		if ( nWhat == 0 )
+			return 0;
 
 		I nReplaced = 0;
-		I nFrom     = I( 0 );
+		I nFrom     = 0;
 
 		for ( ; ; )
 		{
@@ -710,7 +705,7 @@ public:
 			// Advance beyond the just-inserted region to avoid re-matching inside replacement.
 			const I nWith = svWith.Count();
 
-			nFrom = iFound + ( nWith > 0 ? nWith : I( 1 ) ); // ensure forward progress even when nWith == 0
+			nFrom = iFound + ( nWith > 0 ? nWith : 1 ); // ensure forward progress even when nWith == 0
 
 			// Clamp in case of pathological inputs.
 			if ( nFrom > Count() )
@@ -788,7 +783,7 @@ public:
 
 	constexpr void RemoveAll()
 	{
-		SetCount( I( 0 ) );
+		SetCount( 0 );
 	}
 
 	constexpr void Purge()

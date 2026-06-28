@@ -5,7 +5,7 @@ endif()
 enable_testing()
 
 set(PROJECT_TESTS_NAME ${PROJECT_NAME}-tests)
-set(PROJECT_BASE_TESTS_OUTPUT_NAME ${PROJECT_OUTPUT_NAME}-tests)
+set(PROJECT_TESTS_OUTPUT_NAME ${PROJECT_OUTPUT_NAME}-tests)
 
 add_executable(${PROJECT_TESTS_NAME}
 	${SOURCE_DIR}/ball/types/tests/main.cpp
@@ -16,13 +16,26 @@ add_executable(${PROJECT_TESTS_NAME}
 	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed/uncertain.cpp
 	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed/unsiged.cpp
 	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed.cpp
+	${SOURCE_DIR}/ball/types/tests/case05_rbtree.cpp
+	${SOURCE_DIR}/ball/types/tests/case06_reflection.cpp
 	${SOURCE_DIR}/ball/types/tests/case10_delegate.cpp
 )
+
+if(MSVC)
+	target_compile_options(${PROJECT_TESTS_NAME} PRIVATE
+		/W4
+		/bigobj
+		/GS
+		/sdl
+		/FS
+		$<$<CONFIG:Debug>:/RTC1>
+	)
+endif()
 
 target_link_libraries(${PROJECT_TESTS_NAME} PRIVATE ${PROJECT_NAME})
 
 set_target_properties(${PROJECT_TESTS_NAME} PROPERTIES
-	OUTPUT_NAME ${PROJECT_BASE_TESTS_OUTPUT_NAME}
+	OUTPUT_NAME ${PROJECT_TESTS_OUTPUT_NAME}
 
 	CXX_EXTENSIONS OFF
 	CXX_STANDARD 20

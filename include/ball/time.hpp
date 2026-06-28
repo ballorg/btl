@@ -1,6 +1,10 @@
 #ifndef _INCLUDE_BALL_TIME_HPP_
 #	define _INCLUDE_BALL_TIME_HPP_
 
+#	define BALL_SIZE_DEFINE_GLOBAL 1
+#	include "types/base/arch/size.h"
+#	undef BALL_SIZE_DEFINE_GLOBAL
+
 // Simple profiling helpers:
 //   - BALL_PROF_BEGIN( tag ): capture start CPU time of current thread
 //   - BALL_PROF_END( tag ):   create CTimeNS with elapsed CPU time since BEGIN

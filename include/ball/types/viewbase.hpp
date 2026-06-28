@@ -1,12 +1,15 @@
 #ifndef _INCLUDE_BALL_TYPES_VIEWBASE_HPP_
 #	define _INCLUDE_BALL_TYPES_VIEWBASE_HPP_
 
+#	pragma once
+
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/assert/static.h"
 #	include "c/assert.h"
 #	include "meta/enableif.hpp"
 #	include "meta/indexof.hpp"
+#	include "meta/indextype.hpp"
 #	include "meta/isintegral.hpp"
 #	include "meta/issame.hpp"
 #	include "meta/select.hpp"
@@ -42,22 +45,21 @@ public:
 	using Const_t       = CViewBase< Index_t, N, TypeIndex_t, const Ts... >;
 	template< I GN = N > using Growable_t = CViewBase< Index_t, GN, TypeIndex_t, Ts ... >;
 
-	static constexpr I FIRST_INDEX = I( 0 );
+	static constexpr I FIRST_INDEX = 0;
 	static constexpr I FIXED_COUNT = N;
 	static constexpr I FIRST_FIXED_COUNT = Pack_t::FIXED_COUNT;
 
 	/// @brief Special "not found" value.
-	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
-	static constexpr I INVALID_TYPE_INDEX = TypeNumber_t::INVALID;
+	static constexpr I INVALID_INDEX = I( -1 );
 
 	// --------- meta helpers ----------
 	template< typename T > using IndexOf_t = MIndexOf< TI, T, Ts... >;
+	template< TI K > using TypeByIndex_t = typename MIndexType< TI, K, Ts... >::Type;
 
-	static constexpr TI NUM_TYPES = sizeof...( Ts );
+	static constexpr size_t NUM_TYPES = sizeof...( Ts );
 
-	template < typename T > static constexpr TI TYPE_INDEX = IndexOf_t< T >::VALUE;
-	template < typename T > static constexpr bool TYPE_IN_PACK = ( TYPE_INDEX< T > != INVALID_TYPE_INDEX );
-
+	template < typename T > static constexpr int TYPE_INDEX = IndexOf_t< T >::VALUE;
+	template < typename T > static constexpr bool TYPE_IN_PACK = ( TYPE_INDEX< T > >= 0 );
 	template < typename T > using Enable_t = EnableIf_t< TYPE_IN_PACK< T >, int >;
 	template < typename T > using PackedTraits_t = MFixedMetadata< RemoveCV_t< T > >;
 	template < typename T > using PackedUnsigned_t = PackedTraits_t< T >::Unsigned_t;
@@ -83,19 +85,13 @@ public:
 		SetElements( pElements... );
 	}
 
-	/// @brief Construct from fixed-size C-arrays (all N must match implicitly).
-	template < I CN >
-	explicit constexpr CViewBase( const Ts ( &...arrays )[ CN ] ) noexcept
-		: CViewBase( CN, static_cast< Ts * >( arrays )... )
-	{}
-
 	constexpr CViewBase( const CViewBase &copyFrom ) noexcept { CopyFrom( copyFrom ); }
 	constexpr CViewBase( CViewBase &&moveFrom ) noexcept { MoveFrom( Move( moveFrom ) ); }
 	constexpr CViewBase &operator=( const CViewBase &copyFrom ) noexcept { return CopyFrom( copyFrom ); }
 	constexpr CViewBase &operator=( CViewBase &&moveFrom ) noexcept { return MoveFrom( Move( moveFrom ) ); }
 
 	// --------- sizes / byte sizes ----------
-	static constexpr size_t Stride() noexcept { return ( size_t( 0 ) + ... + BYTES< Ts > ); }
+	static constexpr size_t Stride() noexcept { return ( 0 + ... + BYTES< Ts > ); }
 	constexpr size_t Size() const noexcept { return static_cast< size_t >( m_nCount ) * Stride(); }
 	constexpr I Count() const noexcept { return m_nCount; }
 	constexpr I FixedCount() const noexcept { return FIXED_COUNT; }
@@ -125,6 +121,8 @@ public:
 	template < typename T, Enable_t< T > = 0 > constexpr const uchar_t *PackedDataBy() const noexcept { return m_Elements.template PackedDataBy< T >(); }
 	template < typename T, Enable_t< T > = 0 > constexpr T *BaseBy() noexcept { return IsOverflowBy< T >() ? DataBy< T >() : FixedDataBy< T >(); }
 	template < typename T, Enable_t< T > = 0 > constexpr const T *BaseBy() const noexcept { return IsOverflowBy< T >() ? DataBy< T >() : FixedDataBy< T >(); }
+	template < TI K > constexpr auto BaseBy() noexcept { using T = TypeByIndex_t< K >; return m_Elements.template BaseBy< K, T >( Count() ); }
+	template < TI K > constexpr auto BaseBy() const noexcept { using T = TypeByIndex_t< K >; return m_Elements.template BaseBy< K, T >( Count() ); }
 	template < typename T, Enable_t< T > = 0 > constexpr uchar_t *PackedBaseBy( I nCount ) noexcept { return m_Elements.template PackedBaseBy< T >( nCount ); }
 	template < typename T, Enable_t< T > = 0 > constexpr const uchar_t *PackedBaseBy( I nCount ) const noexcept { return m_Elements.template PackedBaseBy< T >( nCount ); }
 	template < typename T, Enable_t< T > = 0 > constexpr uchar_t *PackedBaseBy() noexcept
@@ -149,7 +147,7 @@ public:
 	class PackedRef_t
 	{
 	public:
-		constexpr PackedRef_t( CViewBase *pOwner, I i ) noexcept : m_pOwner( pOwner ), m_i( i ) {}
+		constexpr PackedRef_t( CViewBase *pOwner, I i ) noexcept : m_i( i ), m_pOwner( pOwner ) {}
 		constexpr operator T() const noexcept { return m_pOwner->template PackedGetBy< T >( m_i ); }
 		constexpr PackedRef_t &operator=( const T &value ) noexcept { m_pOwner->template PackedSetBy< T >( m_i, value ); return *this; }
 		constexpr PackedRef_t &operator=( const PackedRef_t &other ) noexcept { return operator=( static_cast< T >( other ) ); }
@@ -231,9 +229,9 @@ public:
 		BALL_ASSERT( Count() > FIRST_INDEX );
 
 		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
-			return PackedGetBy< T >( Count() - I( 1 ) );
+			return PackedGetBy< T >( Count() - 1 );
 		else
-			return BaseBy< T >()[ Count() - I( 1 ) ];
+			return BaseBy< T >()[ Count() - 1 ];
 	}
 
 	// --------- iterators (typed) ----------
@@ -319,7 +317,7 @@ public:
 			return INVALID_INDEX;
 
 		if ( iFrom == INVALID_INDEX || iFrom >= nCount )
-			iFrom = nCount - I( 1 );
+			iFrom = nCount - 1;
 
 		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
 		{
@@ -327,7 +325,7 @@ public:
 
 			for ( ; i >= FIND_BATCH_LAST; )
 			{
-				const I iBatchEnd = static_cast< I >( i + I( 1 ) );
+				const I iBatchEnd = static_cast< I >( i + 1 );
 				const I iFound = FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return PackedGetBy< T >( j ) == value; } );
 
 				if ( iFound != iBatchEnd )
@@ -362,7 +360,7 @@ public:
 
 			for ( ; itBegin + FIND_BATCH_LAST <= it; )
 			{
-				const T *itBatchEnd = it + I( 1 );
+				const T *itBatchEnd = it + 1;
 				const T *itFound = FindBatchReverse( it, itBatchEnd, [&]( const T *itCheck ) constexpr noexcept { return *itCheck == value; } );
 
 				if ( itFound != itBatchEnd )
@@ -528,7 +526,7 @@ protected: // Packed methods.
 	{
 		const bits_t nBits = static_cast< bits_t >( nCount ) * PACKED_BITS< T >;
 
-		return static_cast< size_t >( ( nBits + bits_t( 7 ) ) / bits_t( 8 ) );
+		return static_cast< size_t >( ( nBits + 7 ) / 8 );
 	}
 
 	template < typename T, Enable_t< T > = 0 >
@@ -543,9 +541,9 @@ protected: // Packed methods.
 		BALL_ASSERT( pData != nullptr );
 
 		const bits_t iByte = iBit >> 3;
-		const bits_t iShift = iBit & bits_t( 7 );
+		const bits_t iShift = iBit & 7;
 
-		return ( ( pData[ iByte ] >> iShift ) & uchar_t( 1 ) ) != 0;
+		return ( ( pData[ iByte ] >> iShift ) & 1 ) != 0;
 	}
 
 	template < typename T, Enable_t< T > = 0 >
@@ -560,7 +558,7 @@ protected: // Packed methods.
 		BALL_ASSERT( pData != nullptr );
 
 		const bits_t iByte = iBit >> 3;
-		const bits_t iShift = iBit & bits_t( 7 );
+		const bits_t iShift = iBit & 7;
 		const uchar_t nMask = static_cast< uchar_t >( uchar_t( 1 ) << iShift );
 
 		if ( bValue )
@@ -588,7 +586,7 @@ protected: // Packed methods.
 		const bits_t nBits = static_cast< bits_t >( nRows ) * PACKED_BITS< T >;
 		const bits_t iFromBit = PackedBitOffsetBy< T >( iFrom );
 
-		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
+		for ( bits_t n = 0; n < nBits; ++n )
 			PackedSetDataBitBy< T >( pData, iFromBit + n, false );
 	}
 
@@ -607,14 +605,14 @@ protected: // Packed methods.
 
 		BALL_ASSERT( pData != nullptr );
 
-		for ( bits_t n = nBits; n > bits_t( 0 ); --n )
+		for ( bits_t n = nBits; n > 0; --n )
 		{
-			const bits_t iSrc = iFromBit + ( n - bits_t( 1 ) );
+			const bits_t iSrc = iFromBit + ( n - 1 );
 
 			PackedSetDataBitBy< T >( pData, iSrc + nShiftBits, PackedGetDataBitBy< T >( pData, iSrc ) );
 		}
 
-		for ( bits_t n = bits_t( 0 ); n < nShiftBits; ++n )
+		for ( bits_t n = 0; n < nShiftBits; ++n )
 			PackedSetDataBitBy< T >( pData, iFromBit + n, false );
 	}
 
@@ -633,13 +631,13 @@ protected: // Packed methods.
 
 		BALL_ASSERT( pData != nullptr );
 
-		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
+		for ( bits_t n = 0; n < nBits; ++n )
 		{
 			const bits_t iDest = iFromBit + n;
 			PackedSetDataBitBy< T >( pData, iDest, PackedGetDataBitBy< T >( pData, iDest + nShiftBits ) );
 		}
 
-		for ( bits_t n = bits_t( 0 ); n < nShiftBits; ++n )
+		for ( bits_t n = 0; n < nShiftBits; ++n )
 			PackedSetDataBitBy< T >( pData, iFromBit + nBits + n, false );
 	}
 
@@ -656,19 +654,19 @@ protected: // Packed methods.
 		BALL_ASSERT( pData != nullptr );
 
 		const uchar_t *pByte = pData + ( iFromBit >> 3 );
-		bits_t iShift = iFromBit & bits_t( 7 );
+		bits_t iShift = iFromBit & 7;
 
-		U nRaw = U( 0 );
+		U nRaw = 0;
 
-		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
+		for ( bits_t n = 0; n < nBits; ++n )
 		{
-			nRaw = static_cast< U >( nRaw | ( static_cast< U >( ( *pByte >> iShift ) & uchar_t( 1 ) ) << n ) );
+			nRaw |= static_cast< U >( static_cast< U >( ( *pByte >> iShift ) & 1 ) << n );
 
 			++iShift;
 
-			if ( iShift == bits_t( 8 ) )
+			if ( iShift == 8 )
 			{
-				iShift = bits_t( 0 );
+				iShift = 0;
 				++pByte;
 			}
 		}
@@ -690,24 +688,24 @@ protected: // Packed methods.
 		BALL_ASSERT( pData != nullptr );
 
 		uchar_t *pByte = pData + ( iFromBit >> 3 );
-		bits_t iShift = iFromBit & bits_t( 7 );
+		bits_t iShift = iFromBit & 7;
 
 		const U nRaw = static_cast< U >( value ) & Packed_t::VALUE_MASK;
 
-		for ( bits_t n = bits_t( 0 ); n < nBits; ++n )
+		for ( bits_t n = 0; n < nBits; ++n )
 		{
 			const uchar_t nMask = static_cast< uchar_t >( uchar_t( 1 ) << iShift );
 
-			if ( ( nRaw >> n ) & U( 1 ) )
+			if ( ( nRaw >> n ) & 1 )
 				*pByte = static_cast< uchar_t >( *pByte | nMask );
 			else
 				*pByte = static_cast< uchar_t >( *pByte & static_cast< uchar_t >( ~nMask ) );
 
 			++iShift;
 
-			if ( iShift == bits_t( 8 ) )
+			if ( iShift == 8 )
 			{
-				iShift = bits_t( 0 );
+				iShift = 0;
 				++pByte;
 			}
 		}
@@ -736,11 +734,38 @@ protected: // Packed methods.
 		}
 		else
 		{
-			CopyElements( nCount, m_Elements.template FixedBy< K, T0 >(), pFirstElement );
+			m_Elements.template StoreFixedElements< K, T0 >( nCount, pFirstElement );
 		}
 
-		if constexpr ( K < sizeof...( Rest ) )
+		if constexpr ( 0 < sizeof...( Rest ) )
 			SetElements< K + 1 >( pNextElements... );
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief One-time, in-place construction of row 0 directly in the inline buffer.
+	/// @details Sets the count to one and writes one value per column into its fixed
+	/// buffer, activating the proper union member first so the whole operation is
+	/// valid inside a constant expression. The caller guarantees the single row fits
+	/// inline (no overflow), which holds for fixed-capacity buffers.
+	///-----------------------------------------------------------------------------
+	template < TI K = 0, typename T0, typename ...Rest >
+	constexpr void StoreFirstElement( const T0 &first, const Rest &...rest ) noexcept
+	{
+		if constexpr ( K == 0 )
+			m_nCount = 1;
+
+		if constexpr ( TYPE_HAS_PACKED_BITS< T0 > )
+		{
+			m_Elements.template ActivatePackedFixed< K >();
+			PackedSetBy< T0 >( 0, first );
+		}
+		else
+		{
+			m_Elements.template StoreFixedElements< K, T0 >( 1, &first );
+		}
+
+		if constexpr ( 0 < sizeof...( Rest ) )
+			StoreFirstElement< K + 1 >( rest... );
 	}
 
 	template < TI K = 0, typename T0, typename ...Rest >
@@ -799,7 +824,7 @@ protected: // Packed methods.
 				uchar_t *pRight = other.m_Elements.template PackedFixedBy< K, T0 >();
 				const size_t nBytes = PackedSizeBy< T0 >( nCount );
 
-				for ( size_t n = size_t( 0 ); n < nBytes; ++n )
+				for ( size_t n = 0; n < nBytes; ++n )
 					Swap( pLeft[ n ], pRight[ n ] );
 			}
 		}

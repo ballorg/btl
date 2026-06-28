@@ -14,6 +14,8 @@
 #		endif
 #	endif
 
+#	define BALL_STATIC_ASSERT_SIZEOF( type, size ) BALL_STATIC_ASSERT( sizeof( type ) == ( size ), "sizeof( " #type " ) must be " #size " bytes")
+
 #	undef BALL_STATIC_ASSERT_JOIN
 #	undef BALL_STATIC_ASSERT_JOIN_IMPL
 

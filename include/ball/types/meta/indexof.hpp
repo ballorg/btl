@@ -4,21 +4,25 @@
 #	pragma once
 
 #	include "issame.hpp"
-#	include "fixed.hpp"
 
-template < typename TI, typename T, typename T0, typename ...Ts >
-struct MIndexOf
+template < typename TI, typename T, typename... Ts > struct MIndexOf;
+
+template < typename TI, typename T, typename T0, typename... Ts >
+struct MIndexOf< TI, T, T0, Ts... >
 {
-	static constexpr TI VALUE = IS_SAME< T, T0 > ? TI( 0 ) : ( TI( 1 ) + MIndexOf< TI, T, Ts... >::VALUE );
+	static constexpr int VALUE = IS_SAME< T, T0 > ? 0 : MIndexOf< TI, T, Ts... >::VALUE;
 };
 
 template < typename TI, typename T, typename T0 >
 struct MIndexOf< TI, T, T0 >
 {
-	using Fixed_t = MFixed< TI >;
+	static constexpr int VALUE = IS_SAME< T, T0 > ? 0 : -1;
+};
 
-	static constexpr TI INVALID_TYPE_INDEX = Fixed_t::INVALID;
-	static constexpr TI VALUE = IS_SAME< T, T0 > ? TI( 0 ) : INVALID_TYPE_INDEX;
+template < typename TI, typename T >
+struct MIndexOf< TI, T >
+{
+	static constexpr int VALUE = -1;
 };
 
 #endif // !defined( _INCLUDE_BALL_TYPES_META_INDEXOF_HPP_ )

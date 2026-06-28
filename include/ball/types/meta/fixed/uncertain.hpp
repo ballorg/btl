@@ -8,9 +8,6 @@
 template < typename T, typename U, bits_t NBITS = sizeof( T ) * 8u >
 struct MFixedUncertainImpl
 {
-	static_assert( 0 < NBITS, "BITS_VALUE must be > 0" );
-	static_assert( NBITS <= sizeof( T ) * 8u, "BITS_VALUE exceeds storage width" );
-
 	static constexpr T SIZE = static_cast< T >( sizeof( T ) );
 	static constexpr T BYTES = SIZE;
 	static constexpr T BITS = static_cast< T >( NBITS );
@@ -29,6 +26,9 @@ struct MFixedUncertainImpl
 	static constexpr T INVALID = ALL_BITS;
 	static constexpr U MIN = IS_SIGNED ? static_cast< U >( MIN_SIGNED ) : MIN_UNSIGNED;
 	static constexpr U MAX = IS_SIGNED ? static_cast< U >( MAX_SIGNED ) : MAX_UNSIGNED;
+
+	static_assert( 0 < NBITS, "BITS_VALUE must be > 0" );
+	static_assert( NBITS <= sizeof( T ) * 8u, "BITS_VALUE exceeds storage width" );
 };
 
 #endif // !defined( _INCLUDE_BALL_TYPES_META_FIXED_UNCERTAIN_H_ )

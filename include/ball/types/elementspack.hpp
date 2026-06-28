@@ -61,7 +61,7 @@ struct MElementsPack : MElementsPackBase< I, T >
 	{
 		const bits_t nBits = static_cast< bits_t >( nCount ) * MFixedMetadata< Element_t >::BITS;
 
-		return static_cast< size_t >( ( nBits + bits_t( 7 ) ) / bits_t( 8 ) );
+		return static_cast< size_t >( ( nBits + 7 ) / 8 );
 	}
 	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return PackedSize( nCount ) > FIXED_SIZE; }
 };
@@ -323,6 +323,42 @@ public:
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
 	}
 
+	// Copy @p nCount elements into the fixed buffer. The fixed buffer is made the
+	// union's active member first so the copy is valid inside a constant
+	// expression (reading an inactive union member is ill-formed in constexpr).
+	template < TI K, typename T > constexpr void StoreFixedElements( I nCount, const T *pSrc ) noexcept
+	{
+		if constexpr ( K == 0 )
+		{
+			if ( BALL_IS_CONSTANT_EVALUATED() )
+			{
+				m_Node.m_Fixed = Fixed_t();
+
+				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), pSrc );
+			}
+			else
+			{
+				CopyElements( nCount, m_Node.m_Fixed.Data(), pSrc );
+			}
+		}
+		else
+			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
+	}
+
+	// Make the packed fixed buffer the union's active member so subsequent packed
+	// bit writes are valid inside a constant expression (the same activation rule
+	// as StoreFixedElements, but for the packed-storage member).
+	template < TI K > constexpr void ActivatePackedFixed() noexcept
+	{
+		if constexpr ( K == 0 )
+		{
+			if ( BALL_IS_CONSTANT_EVALUATED() )
+				m_Node.m_PackedFixed = PackedFixed_t();
+		}
+		else
+			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
+	}
+
 	template < typename T > constexpr void CopyBy( I nCount, const CElementsPack &other ) noexcept
 	{
 		if constexpr ( IS_SAME< Type, T > )
@@ -562,6 +598,20 @@ public:
 			return m_Tail.template BaseBy< T >( bOverflow );
 	}
 
+	template < TI K, typename T > constexpr T *BaseBy( I nCount ) noexcept
+	{
+		if constexpr ( K == 0 )
+			return IsOverflow( nCount ) ? DataBy< K, T >() : FixedBy< K, T >();
+		else
+			return m_Tail.template BaseBy< K - 1, T >( nCount );
+	}
+	template < TI K, typename T > constexpr const T *BaseBy( I nCount ) const noexcept
+	{
+		if constexpr ( K == 0 )
+			return IsOverflow( nCount ) ? DataBy< K, T >() : FixedBy< K, T >();
+		else
+			return m_Tail.template BaseBy< K - 1, T >( nCount );
+	}
 	template < TI K, typename T > constexpr T *BaseBy( bool bOverflow ) noexcept
 	{
 		if constexpr ( K == 0 )
@@ -631,6 +681,41 @@ public:
 			return bOverflow ? PackedDataBy< K, T >() : PackedFixedBy< K, T >();
 		else
 			return m_Tail.template PackedBaseBy< K - 1, T >( bOverflow );
+	}
+
+	// Copy @p nCount elements into the fixed buffer of the K-th column. The fixed
+	// buffer is made the union's active member first so the copy is valid inside
+	// a constant expression (reading an inactive union member is ill-formed in
+	// constexpr).
+	template < TI K, typename T > constexpr void StoreFixedElements( I nCount, const T *pSrc ) noexcept
+	{
+		if constexpr ( K == 0 )
+		{
+			if ( BALL_IS_CONSTANT_EVALUATED() )
+			{
+				m_Node.m_Fixed = Fixed_t();
+				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), pSrc );
+			}
+			else
+			{
+				CopyElements( nCount, m_Node.m_Fixed.Data(), pSrc );
+			}
+		}
+		else
+			m_Tail.template StoreFixedElements< K - 1, T >( nCount, pSrc );
+	}
+
+	// Make the K-th column's packed fixed buffer the union's active member so the
+	// following packed bit writes are valid inside a constant expression.
+	template < TI K > constexpr void ActivatePackedFixed() noexcept
+	{
+		if constexpr ( K == 0 )
+		{
+			if ( BALL_IS_CONSTANT_EVALUATED() )
+				m_Node.m_PackedFixed = PackedFixed_t();
+		}
+		else
+			m_Tail.template ActivatePackedFixed< K - 1 >();
 	}
 
 	template < typename T > constexpr void CopyBy( I nCount, const CElementsPack &other ) noexcept

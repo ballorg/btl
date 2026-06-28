@@ -54,29 +54,29 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	funcAppendRange( 0, 10'000'000 );
 	funcCheck( "Initial fill" );
 
-	vec.AddToTail( size_t( 1 ), uint32_t( 11 ) );
+	vec.AddToTail( 1, 11 );
 	ref.push_back( { 1, 11 } );
-	vec.AddToTail( size_t( 2 ), uint32_t( 22 ) );
+	vec.AddToTail( 2, 22 );
 	ref.push_back( { 2, 22 } );
 	funcCheck( "AddToTail" );
 
-	vec.AddToHead( size_t( 0 ), uint32_t( 0 ) );
+	vec.AddToHead( 0, 0 );
 	ref.insert( ref.begin(), { 0, 0 } );
 	funcCheck( "AddToHead" );
 
-	vec.Insert( 1, size_t( 9 ), uint32_t( 99 ) );
+	vec.Insert( 1, 9, 99 );
 	ref.insert( ref.begin() + 1, { 9, 99 } );
 	funcCheck( "Insert single row" );
 
-	vec.InsertMultiple( 2, 2, size_t( 5 ), uint32_t( 50 ) );
+	vec.InsertMultiple( 2, 2, 5, 50 );
 	ref.insert( ref.begin() + 2, 2, TestPair_t{ 5, 50 } );
 	funcCheck( "InsertMultiple" );
 
-	vec.AddMultipleToHead( 2, size_t( 8 ), uint32_t( 80 ) );
+	vec.AddMultipleToHead( 2, 8, 80 );
 	ref.insert( ref.begin(), 2, TestPair_t{ 8, 80 } );
 	funcCheck( "AddMultipleToHead" );
 
-	vec.AddMultipleToTail( 3, size_t( 7 ), uint32_t( 70 ) );
+	vec.AddMultipleToTail( 3, 7, 70 );
 	ref.insert( ref.end(), 3, TestPair_t{ 7, 70 } );
 	funcCheck( "AddMultipleToTail" );
 
@@ -108,8 +108,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	{
 		for ( size_t i = 0; i < vec.Count(); ++i )
 		{
-			if ( vec.template At< size_t >( i ) == nFirst
-				&& vec.template At< uint32_t >( i ) == nSecond )
+			if ( vec.template At< size_t >( i ) == nFirst && vec.template At< uint32_t >( i ) == nSecond )
 			{
 				return i;
 			}

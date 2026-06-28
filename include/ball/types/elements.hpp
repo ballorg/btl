@@ -6,10 +6,9 @@
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/assert.h"
-#	include "c/memory.h"
-#	include "meta/traits.hpp"
 #	include "meta/removereference.hpp"
 #	include "meta/xvalue.hpp"
+#	include "memory.h"
 
 template < typename T >
 constexpr T *ConstructElement( T *pMemory )
@@ -50,7 +49,7 @@ constexpr void DestructElement( T *pMemory )
 template < typename I, typename T, I N >
 constexpr void DestructElements( T ( *pMemory )[ N ] )
 {
-	BALL_ASSERT( pMemory != nullptr || N == I( 0 ) );
+	BALL_ASSERT( pMemory != nullptr || N == 0 );
 
 	for ( I n = 0; n < N; ++n )
 	{
@@ -87,11 +86,16 @@ constexpr T *CopyElements_Unified( const I nCount, T *pDest, const T *pSrc ) noe
 template < typename I, typename T >
 constexpr T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 {
-	BALL_ASSERT( I( 0 ) <= nCount );
-	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
-	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || pDest <= pSrc || pSrc + nCount <= pDest, "Unsafe overlap for forward copy" );
+	if ( BALL_IS_CONSTANT_EVALUATED() )
+		return CopyElements_Unified( nCount, pDest, pSrc );
 
-	return static_cast< T * >( memcpy( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
+	BALL_ASSERT( 0 <= nCount );
+	BALL_ASSERT_MESSAGE( nCount == 0 || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
+	BALL_ASSERT_MESSAGE( nCount == 0 || pDest <= pSrc || pSrc + nCount <= pDest, "Unsafe overlap for forward copy" );
+
+	// Cast to void* so the intentional raw-byte copy does not trip -Wclass-memaccess
+	// when T is not trivially copyable (callers guarantee a byte-copyable layout here).
+	return static_cast< T * >( memcpy( static_cast< void * >( pDest ), static_cast< const void * >( pSrc ), static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
 
 template < typename I, typename T >
@@ -112,9 +116,9 @@ constexpr T *CopyElementsFromEnd_Unified( I nCount, T *pDest, const T *pSrc ) no
 template < typename I, typename T >
 constexpr T *CopyElementsFromEnd( const I nCount, T *pDest, const T *pSrc ) noexcept
 {
-	BALL_ASSERT( I( 0 ) <= nCount );
-	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
-	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || pDest >= pSrc || pDest + nCount <= pSrc, "Unsafe overlap for backward copy" );
+	BALL_ASSERT( 0 <= nCount );
+	BALL_ASSERT_MESSAGE( !nCount || ( pDest && pSrc ), "Empty elements" );
+	BALL_ASSERT_MESSAGE( !nCount || pDest >= pSrc || pDest + nCount <= pSrc, "Unsafe overlap for backward copy" );
 
 	return static_cast< T * >( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
@@ -133,12 +137,12 @@ constexpr T *ShiftElementsRight_ByOne( T *pDest, const T *pSrc, const T *pSrcEnd
 	using Diff_t = decltype( pSrcEnd - pSrc );
 	const Diff_t nCount = pSrcEnd - pSrc;
 
-	if ( nCount <= Diff_t( 0 ) )
+	if ( nCount <= 0 )
 		return pDest;
 
 	T carry = pSrc[ 0 ];
 
-	for ( Diff_t i = Diff_t( 1 ); i < nCount; ++i )
+	for ( Diff_t i = 1; i < nCount; ++i )
 	{
 		const T next = pSrc[ i ];
 
@@ -166,7 +170,7 @@ constexpr T *ShiftElementsLeft( T *pDest, const T *pSrc, const T *pSrcEnd ) noex
 
 	const Diff_t nCount = pSrcEnd - pSrc;
 
-	if ( nCount <= Diff_t( 0 ) || pDest == pSrc )
+	if ( nCount <= 0 || pDest == pSrc )
 		return pDest;
 
 	return CopyElements( nCount, pDest, pSrc );
@@ -180,7 +184,7 @@ constexpr T *ShiftElementsRight_Unified( T *pDest, const T *pSrc, const T *pSrcE
 	const Diff_t nCount = pSrcEnd - pSrc;
 	const Diff_t nShift = pDest - pSrc;
 
-	if ( nCount <= Diff_t( 0 ) || nShift <= Diff_t( 0 ) )
+	if ( nCount <= 0 || nShift <= 0 )
 		return pDest;
 
 	// Non-overlapping right move: regular forward copy is safe.
@@ -188,7 +192,7 @@ constexpr T *ShiftElementsRight_Unified( T *pDest, const T *pSrc, const T *pSrcE
 		return CopyElements_Unified( nCount, pDest, pSrc );
 
 	// Common insert case: shift by one without reverse copy.
-	if ( nShift == Diff_t( 1 ) )
+	if ( nShift == 1 )
 		return ShiftElementsRight_ByOne( pDest, pSrc, pSrcEnd );
 
 	return CopyElementsFromEnd_Unified( nCount, pDest, pSrc );
@@ -205,15 +209,12 @@ constexpr T *ShiftElementsRight( T *pDest, const T *pSrc, const T *pSrcEnd ) noe
 	BALL_ASSERT_MESSAGE( pSrc <= pSrcEnd, "Invalid source range" );
 	BALL_ASSERT_MESSAGE( pDest >= pSrc, "Expects destination at/after source" );
 
-	using Diff_t = decltype( pSrcEnd - pSrc );
-
-	const Diff_t nCount = pSrcEnd - pSrc;
-	const Diff_t nShift = pDest - pSrc;
-
-	if ( nCount <= Diff_t( 0 ) || nShift <= Diff_t( 0 ) )
-		return pDest;
-
-	return static_cast< T *>( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
+	// Overlap-safe element-wise shift instead of a single bulk memmove: the element
+	// count is a pointer difference GCC's value-range analysis cannot bound once this
+	// is inlined into a fixed-size-buffer caller, so the memmove form drew a spurious
+	// -Wstringop-overflow. The dispatched copy keeps the by-one and non-overlapping
+	// fast paths and stays usable in constant evaluation.
+	return ShiftElementsRight_Unified( pDest, pSrc, pSrcEnd );
 }
 
 ///-----------------------------------------------------------------------------
@@ -248,7 +249,7 @@ constexpr T *ShiftElements( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
 
 	const Diff_t nCount = pSrcEnd - pSrc;
 
-	if ( nCount <= Diff_t( 0 ) )
+	if ( nCount <= 0 )
 		return pDest;
 
 	return static_cast< T *>( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
@@ -261,10 +262,10 @@ constexpr T *ShiftElements( T *pDest, const T *pSrc, const T *pSrcEnd ) noexcept
 template < typename I, typename T >
 constexpr int8_t CompareElements( const I nCount, const T *pLeft, const T *pRight )
 {
-	BALL_ASSERT( I( 0 ) <= nCount );
-	BALL_ASSERT_MESSAGE( nCount == I( 0 ) || ( pLeft != nullptr && pRight != nullptr ), "Empty elements" );
+	BALL_ASSERT( 0 <= nCount );
+	BALL_ASSERT_MESSAGE( nCount == 0 || ( pLeft != nullptr && pRight != nullptr ), "Empty elements" );
 
-	if ( pLeft == pRight || nCount == I( 0 ) )
+	if ( pLeft == pRight || nCount == 0 )
 		return 0;
 
 	const size_t nSize = static_cast< size_t >( nCount ) * sizeof( T );

@@ -20,6 +20,14 @@ int main()
 	Case04_MultiVector_Fixed( str );
 	auto nsCase04 = BALL_PROF_END( Case04 );
 
+	BALL_PROF_BEGIN( Case05 );
+	Case05_RBTree( str );
+	auto nsCase05 = BALL_PROF_END( Case05 );
+
+	BALL_PROF_BEGIN( Case06 );
+	Case06_Reflection( str );
+	auto nsCase06 = BALL_PROF_END( Case06 );
+
 	BALL_PROF_BEGIN( Case10 );
 	Case10_Delegate( str );
 	auto nsCase10 = BALL_PROF_END( Case10 );
@@ -29,6 +37,8 @@ int main()
 	str += "---\n";
 	str.AppendMultiple( "BTL::MultiVector_t", ": ", "Done in ", nsCase03.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::MultiVector_t fixed", ": ", "Done in ", nsCase04.AsMillisF(), " milliseconds\n" );
+	str.AppendMultiple( "BTL::RBTree_t", ": ", "Done in ", nsCase05.AsMillisF(), " milliseconds\n" );
+	str.AppendMultiple( "BTL::Reflection_t", ": ", "Done in ", nsCase06.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::Delegate_t", ": ", "Done in ", nsCase10.AsMillisF(), " milliseconds\0" );
 
 	puts( str.String() );

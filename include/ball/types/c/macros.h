@@ -2,6 +2,8 @@
 #	define _INCLUDE_BALL_TYPES_C_MACROS_H_
 
 #	include "platform.h"
+#	include "constevaluated.h"
+#	include "nouniqueaddress.h"
 
 #	ifdef BALL_ENABLE_MODULE
 #		define BALL_EXPORT export
@@ -12,13 +14,23 @@
 #	ifdef BALL_MSVC
 #		define BALL_DLL_EXPORT __declspec( dllexport )
 #		define BALL_DLL_IMPORT __declspec( dllimport )
+#		define BALL_DLL_RESTRICT __declspec( restrict )
 #	else // !defined( BALL_MSVC )
 #		define BALL_DLL_EXPORT
 #		define BALL_DLL_IMPORT
+#		define BALL_DLL_RESTRICT
 #	endif // defined( BALL_MSVC )
 
 #	define BALL_DLL_EXPORT_C BALL_EXTERN_C BALL_DLL_EXPORT
 #	define BALL_DLL_IMPORT_C BALL_EXTERN_C BALL_DLL_IMPORT
+#	define BALL_DLL_EXPORT_RESTRICT_C BALL_EXTERN_C BALL_DLL_EXPORT BALL_DLL_RESTRICT
+#	define BALL_DLL_IMPORT_RESTRICT_C BALL_EXTERN_C BALL_DLL_IMPORT BALL_DLL_RESTRICT
+
+#	if defined( BALL_CXX ) && !defined( BALL_MSVC )
+#		define BALL_CRT_NOEXCEPT noexcept
+#	else
+#		define BALL_CRT_NOEXCEPT
+#	endif
 
 #	if defined( BALL_MSVC )
 #		define BALL_DLL_CONSTRUCTOR

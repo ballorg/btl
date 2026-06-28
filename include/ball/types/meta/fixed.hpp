@@ -24,7 +24,7 @@ struct MFixed
 	static constexpr Type SIZE = sizeof( Raw_t );
 	static constexpr bool IS_BOOL = IS_SAME< Raw_t, bool >;
 	static constexpr Type BYTES = SIZE;
-	static constexpr bits_t BITS = IS_BOOL ? bits_t( 1ull ) : bits_t( BYTES * 8ull );
+	static constexpr bits_t BITS = IS_BOOL ? 1ull : BYTES * 8ull;
 	static constexpr bool IS_UNSIGNED = IS_SAME< Raw_t, Unsigned_t >;
 	static constexpr bool IS_SIGNED = !IS_UNSIGNED;
 
