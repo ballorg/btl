@@ -23,13 +23,13 @@ template < class B, typename I, typename T, class A = CAllocator< I, T > >
 class CVectorBase : public A, public B
 {
 public:
-	using Base_t      = B;
-	using Index_t     = I;
-	using Element_t   = T;
+	using Base_t = B;
+	using Index_t = I;
+	using Element_t = T;
 	using BaseAllocator_t = A::Base_t;
 	using Allocator_t = A;
-	using Fixed_t     = MFixed< Index_t >;
-	using Unsigned_t  = typename Fixed_t::Unsigned_t;
+	using Fixed_t = MFixed< Index_t >;
+	using Unsigned_t = typename Fixed_t::Unsigned_t;
 	using typename Base_t::View_t;
 	using typename Base_t::ConstView_t;
 	template < I N > using GrowableView_t = typename Base_t::template GrowableView_t< N >;
@@ -331,7 +331,7 @@ public:
 	using Base_t::MoveFrom;
 	using Base_t::PackedBase;
 	using Base_t::PackedSize;
-	using Base_t::PackedSetValue;
+	using Base_t::PackedSet;
 	using Base_t::PackedShiftRowsLeft;
 	using Base_t::PackedShiftRowsRight;
 	using Base_t::PackedClearRows;
@@ -378,7 +378,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I n = 0; n < nViewCount; ++n )
-				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
+				PackedSet( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
 		}
 		else
 		{
@@ -401,7 +401,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I n = 0; n < nViewCount; ++n )
-				PackedSetValue( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
+				PackedSet( nIndex + n, static_cast< T >( v.GetValue( n ) ) );
 		}
 		else
 		{
@@ -428,7 +428,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I n = 0; n < nCount; ++n )
-				PackedSetValue( nIndex + n, arrElements[ n ] );
+				PackedSet( nIndex + n, arrElements[ n ] );
 		}
 		else
 		{
@@ -459,7 +459,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I n = 0; n < nCount; ++n )
-				PackedSetValue( nIndex + n, Move( arrElements[ n ] ) );
+				PackedSet( nIndex + n, Move( arrElements[ n ] ) );
 		}
 		else
 		{
@@ -510,7 +510,7 @@ public:
 
 		if constexpr ( IS_PACKED_STORAGE )
 		{
-			( PackedSetValue( nIndex + nOffset++, static_cast< T >( Forward< Ts >( args ) ) ), ... );
+			( PackedSet( nIndex + nOffset++, static_cast< T >( Forward< Ts >( args ) ) ), ... );
 		}
 		else
 		{
@@ -731,7 +731,7 @@ public:
 
 			if ( nValue == from )
 			{
-				Base_t::SetValue( k, to );
+				Base_t::SetTo( k, to );
 				++n;
 			}
 		}

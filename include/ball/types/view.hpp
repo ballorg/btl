@@ -16,14 +16,14 @@ template < typename I, typename T, I N = 0 >
 class CView : public CViewBase< I, N, size8_t, T >
 {
 public:
-	using Base_t        = CViewBase< I, N, size8_t, T >;
-	using Element_t     = T;
-	using Index_t       = I;
-	using View_t        = CView< Index_t, Element_t, N >;
-	using ConstView_t   = CView< Index_t, const Element_t, N >;
+	using Base_t = CViewBase< I, N, size8_t, T >;
+	using Element_t = T;
+	using Index_t = I;
+	using View_t = CView< Index_t, Element_t, N >;
+	using ConstView_t = CView< Index_t, const Element_t, N >;
 	template< I GN > using GrowableView_t = CView< Index_t, Element_t, GN >;
 	template< I GN > using ConstGrowableView_t = CView< Index_t, const Element_t, GN >;
-	using Fixed_t       = MFixed< Index_t >;
+	using Fixed_t = MFixed< Index_t >;
 	using PackedTraits_t = typename Base_t::template PackedTraits_t< Element_t >;
 
 	using Base_t::Base_t;
@@ -36,13 +36,13 @@ public:
 	static constexpr bool IS_PACKED_STORAGE = Base_t::template TYPE_HAS_PACKED_BITS< Element_t >;
 
 	// --------- basic associated types ----------
-	using value_type      = T;
-	using size_type       = I;
-	using pointer         = const T *;
-	using const_pointer   = const T *;
-	using reference       = const T &;
+	using value_type = T;
+	using size_type = I;
+	using pointer = const T *;
+	using const_pointer = const T *;
+	using reference = const T &;
 	using const_reference = const T &;
-	using iterator        = const T *;
+	using iterator = const T *;
 	using const_iterator  = const T *;
 
 	// --------- ctors ----------
@@ -60,33 +60,33 @@ public:
 	// --------- sizes / count / base ----------
 	using Base_t::Size;
 	using Base_t::Count;
-	constexpr size_t FixedSize() const noexcept                 { return Base_t::template FixedSizeBy< T >(); }
-	constexpr size_t FixedCapacitySize() const noexcept         { return Base_t::template FixedCapacitySizeBy< T >(); }
-	constexpr bool IsOverflow( I nCount ) const                 { return Base_t::template IsOverflowBy< T >( nCount ); }
-	constexpr bool IsOverflow() const                           { return IsOverflow( Count() ); }
-	constexpr bool IsPackedOverflow( I nCount ) const           { return Base_t::template IsPackedOverflowBy< T >( nCount ); }
-	constexpr bool IsPackedOverflow() const                     { return IsPackedOverflow( Count() ); }
+	constexpr size_t FixedSize() const noexcept { return Base_t::template FixedSizeBy< T >(); }
+	constexpr size_t FixedCapacitySize() const noexcept { return Base_t::template FixedCapacitySizeBy< T >(); }
+	constexpr bool IsOverflow( I nCount ) const { return Base_t::template IsOverflowBy< T >( nCount ); }
+	constexpr bool IsOverflow() const { return IsOverflow( Count() ); }
+	constexpr bool IsPackedOverflow( I nCount ) const { return Base_t::template IsPackedOverflowBy< T >( nCount ); }
+	constexpr bool IsPackedOverflow() const { return IsPackedOverflow( Count() ); }
 
-	constexpr T *FixedData() noexcept                           { return Base_t::template FixedDataBy< T >(); }
-	constexpr const T *FixedData() const noexcept               { return Base_t::template FixedDataBy< T >(); }
-	constexpr uchar_t *PackedFixedData() noexcept               { return Base_t::template PackedFixedDataBy< T >(); }
-	constexpr const uchar_t *PackedFixedData() const noexcept   { return Base_t::template PackedFixedDataBy< T >(); }
-	constexpr T *Data() noexcept                                { return Base_t::template DataBy< T >(); }
-	constexpr const T *Data() const noexcept                    { return Base_t::template DataBy< T >(); }
-	constexpr uchar_t *PackedData() noexcept                    { return Base_t::template PackedDataBy< T >(); }
-	constexpr const uchar_t *PackedData() const noexcept        { return Base_t::template PackedDataBy< T >(); }
-	constexpr T *Base() noexcept                                { return Base_t::template BaseBy< T >(); }
-	constexpr const T *Base() const noexcept                    { return Base_t::template BaseBy< T >(); }
-	constexpr uchar_t *PackedBase() noexcept                    { return Base_t::template PackedBaseBy< T >(); }
-	constexpr const uchar_t *PackedBase() const noexcept        { return Base_t::template PackedBaseBy< T >(); }
+	constexpr T *FixedData() noexcept { return Base_t::template FixedDataBy< T >(); }
+	constexpr const T *FixedData() const noexcept { return Base_t::template FixedDataBy< T >(); }
+	constexpr uchar_t *PackedFixedData() noexcept { return Base_t::template PackedFixedDataBy< T >(); }
+	constexpr const uchar_t *PackedFixedData() const noexcept { return Base_t::template PackedFixedDataBy< T >(); }
+	constexpr T *Data() noexcept { return Base_t::template DataBy< T >(); }
+	constexpr const T *Data() const noexcept { return Base_t::template DataBy< T >(); }
+	constexpr uchar_t *PackedData() noexcept { return Base_t::template PackedDataBy< T >(); }
+	constexpr const uchar_t *PackedData() const noexcept { return Base_t::template PackedDataBy< T >(); }
+	constexpr T *Base() noexcept { return Base_t::template BaseBy< T >(); }
+	constexpr const T *Base() const noexcept { return Base_t::template BaseBy< T >(); }
+	constexpr uchar_t *PackedBase() noexcept { return Base_t::template PackedBaseBy< T >(); }
+	constexpr const uchar_t *PackedBase() const noexcept { return Base_t::template PackedBaseBy< T >(); }
 
-	static constexpr bits_t PackedBits() noexcept               { return Base_t::template PackedBitsBy< T >(); }
+	static constexpr bits_t PackedBits() noexcept { return Base_t::template PackedBitsBy< T >(); }
 	static constexpr size_t PackedSize( I nCount ) noexcept { return Base_t::template PackedSizeBy< T >( nCount ); }
 	constexpr void PackedClearRows( I iFrom, I nRows ) noexcept { return Base_t::template PackedClearRowsBy< T >( iFrom, nRows ); }
 	constexpr void PackedShiftRowsLeft( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsLeftBy< T >( iFrom, nRows, nShiftRows ); }
 	constexpr void PackedShiftRowsRight( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsRightBy< T >( iFrom, nRows, nShiftRows ); }
-	constexpr T PackedGetValue( I i ) const noexcept { return Base_t::template PackedGetBy< T >( i ); }
-	constexpr void PackedSetValue( I i, const T &value ) noexcept { return Base_t::template PackedSetBy< T >( i, value ); }
+	constexpr T PackedGet( I i ) const noexcept { return Base_t::template PackedGetBy< T >( i ); }
+	constexpr void PackedSet( I i, const T &value ) noexcept { return Base_t::template PackedSetBy< T >( i, value ); }
 
 	// --------- basic access ----------
 	using Base_t::Empty;
@@ -99,7 +99,7 @@ public:
 		constexpr operator T() const noexcept { return m_pOwner->GetValue( m_index ); }
 
 		template < typename Q = T, EnableIf_t< !IS_CONST< Q >, int > = 0 >
-		constexpr Ref_t &operator=( const T &value ) noexcept { m_pOwner->SetValue( m_index, value ); return *this; }
+		constexpr Ref_t &operator=( const T &value ) noexcept { m_pOwner->SetTo( m_index, value ); return *this; }
 
 		template < typename Q = T, EnableIf_t< !IS_CONST< Q >, int > = 0 >
 		constexpr Ref_t &operator=( const Ref_t &other ) noexcept { return operator=( static_cast< T >( other ) ); }
@@ -112,18 +112,18 @@ public:
 	constexpr decltype( auto ) GetValue( I i ) const noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGetValue( i );
+			return PackedGet( i );
 		else
 			return Base()[ i ];
 	}
 
 	// --------- iterators ----------
-	constexpr iterator begin()                        { return Base(); }
-	constexpr iterator end()                          { return Base() + Count(); }
-	constexpr const_iterator begin() const noexcept   { return Base(); }
-	constexpr const_iterator end() const noexcept     { return Base() + Count(); }
-	constexpr const_iterator cbegin() const noexcept  { return Base(); }
-	constexpr const_iterator cend() const noexcept    { return Base() + Count(); }
+	constexpr iterator begin() { return Base(); }
+	constexpr iterator end() { return Base() + Count(); }
+	constexpr const_iterator begin() const noexcept { return Base(); }
+	constexpr const_iterator end() const noexcept { return Base() + Count(); }
+	constexpr const_iterator cbegin() const noexcept { return Base(); }
+	constexpr const_iterator cend() const noexcept { return Base() + Count(); }
 
 	/// @brief Mutable view over current elements.
 	constexpr ConstView_t Const() const noexcept { return ConstView_t( Count(), Base() ); }
@@ -133,38 +133,38 @@ public:
 
 	constexpr bool IsValidIndex( I i ) const { return i != INVALID_INDEX; }
 
-	constexpr decltype( auto ) At( I i )
+	constexpr decltype( auto ) Get( I i )
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( 0 <= i && i < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGetValue( i );
+			return PackedGet( i );
 		else
-			return Base_t::template At< T >( i );
+			return Base_t::template Get< T >( i );
 	}
 
-	constexpr decltype( auto ) At( I i ) const
+	constexpr decltype( auto ) Get( I i ) const
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( 0 <= i && i < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGetValue( i );
+			return PackedGet( i );
 		else
-			return Base_t::template At< T >( i );
+			return Base_t::template Get< T >( i );
 	}
 
 	// --------- element access ----------
-	constexpr decltype( auto ) operator[]( I i ) { return At( i ); }
-	constexpr decltype( auto ) operator[]( I i ) const { return At( i ); }
+	constexpr decltype( auto ) operator[]( I i ) { return Get( i ); }
+	constexpr decltype( auto ) operator[]( I i ) const { return Get( i ); }
 
 	constexpr decltype( auto ) Front() const
 	{
 		BALL_ASSERT( 0 < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGetValue( 0 );
+			return PackedGet( 0 );
 		else
 			return Base_t::template Front< T >();
 	}
@@ -174,7 +174,7 @@ public:
 		BALL_ASSERT( 0 < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGetValue( Count() - 1 );
+			return PackedGet( Count() - 1 );
 		else
 			return Base_t::template Back< T >();
 	}
@@ -222,7 +222,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I i = 0; i < nPrefixCount; ++i )
-				if ( !( PackedGetValue( i ) == vPrefix.PackedGetValue( i ) ) )
+				if ( !( PackedGet( i ) == vPrefix.PackedGet( i ) ) )
 					return false;
 		}
 		else
@@ -250,7 +250,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I i = 0; i < nSuffixCount; ++i )
-				if ( !( PackedGetValue( nOffset + i ) == vSuffix.PackedGetValue( i ) ) )
+				if ( !( PackedGet( nOffset + i ) == vSuffix.PackedGet( i ) ) )
 					return false;
 		}
 		else
@@ -275,7 +275,7 @@ public:
 	///        No STL / memcmp.
 	constexpr I Find( const ConstView_t v, const I iFrom = FIRST_INDEX ) const noexcept
 	{
-		const I nCount     = Count();
+		const I nCount = Count();
 		const I nViewCount = v.Count();
 		const I nStart = ( iFrom < FIRST_INDEX ) ? FIRST_INDEX : iFrom;
 
@@ -296,7 +296,7 @@ public:
 			for ( ; i + Base_t::FIND_BATCH_LAST <= iLastStart; i += Base_t::FIND_BATCH_COUNT )
 			{
 				const I iBatchEnd = static_cast< I >( i + Base_t::FIND_BATCH_COUNT );
-				const I iFound = Base_t::FindBatchForward( i, iBatchEnd, [this, &v]( I j ) constexpr noexcept { return MatchAt( j, v ); } );
+				const I iFound = Base_t::FindBatchForward( i, iBatchEnd, [this, &v]( I j ) constexpr noexcept { return MatchFrom( j, v ); } );
 
 				if ( iFound != iBatchEnd )
 					return iFound;
@@ -304,7 +304,7 @@ public:
 
 			for ( ; i <= iLastStart; ++i )
 			{
-				if ( MatchAt( i, v ) )
+				if ( MatchFrom( i, v ) )
 					return i;
 			}
 		}
@@ -317,7 +317,7 @@ public:
 			for ( ; it + Base_t::FIND_BATCH_COUNT <= itLast; it += Base_t::FIND_BATCH_COUNT )
 			{
 				const T *itBatchEnd = it + Base_t::FIND_BATCH_COUNT;
-				const T *itFound = Base_t::FindBatchForward( it, itBatchEnd, [this, &v]( const T *itCheck ) constexpr noexcept { return MatchAt( itCheck, v ); } );
+				const T *itFound = Base_t::FindBatchForward( it, itBatchEnd, [this, &v]( const T *itCheck ) constexpr noexcept { return MatchFrom( itCheck, v ); } );
 
 				if ( itFound != itBatchEnd )
 					return static_cast< I >( itFound - pBase );
@@ -325,7 +325,7 @@ public:
 
 			for ( ; it < itLast; ++it )
 			{
-				if ( MatchAt( it, v ) )
+				if ( MatchFrom( it, v ) )
 					return static_cast< I >( it - pBase );
 			}
 		}
@@ -397,7 +397,7 @@ public:
 			for ( ; i >= Base_t::FIND_BATCH_LAST; )
 			{
 				const I iBatchEnd = static_cast< I >( i + 1 );
-				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return MatchAt( j, v ); } );
+				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return MatchFrom( j, v ); } );
 
 				if ( iFound != iBatchEnd )
 					return iFound;
@@ -410,7 +410,7 @@ public:
 
 			for ( ; ; --i )
 			{
-				if ( MatchAt( i, v ) )
+				if ( MatchFrom( i, v ) )
 					return i;
 
 				if ( i == FIRST_INDEX )
@@ -425,7 +425,7 @@ public:
 			for ( ; pBase + Base_t::FIND_BATCH_LAST <= it; )
 			{
 				const T *itBatchEnd = it + 1;
-				const T *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [this, &v]( const T *itCheck ) constexpr noexcept { return MatchAt( itCheck, v ); } );
+				const T *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [this, &v]( const T *itCheck ) constexpr noexcept { return MatchFrom( itCheck, v ); } );
 
 				if ( itFound != itBatchEnd )
 					return static_cast< I >( itFound - pBase );
@@ -438,7 +438,7 @@ public:
 
 			for ( ; ; --it )
 			{
-				if ( MatchAt( it, v ) )
+				if ( MatchFrom( it, v ) )
 					return static_cast< I >( it - pBase );
 
 				if ( it == pBase )
@@ -491,7 +491,7 @@ public:
 	friend constexpr bool operator>=( const CView &a, const CView &b ) noexcept { return !( a < b ); }
 
 protected:
-	constexpr bool MatchAt( const T *pHay, ConstView_t v ) const noexcept
+	constexpr bool MatchFrom( const T *pHay, ConstView_t v ) const noexcept
 	{
 		const T *pNeedle = v.Base();
 		const I nViewCount = v.Count();
@@ -505,7 +505,7 @@ protected:
 		return true;
 	}
 
-	constexpr bool MatchAt( I i, ConstView_t v ) const noexcept
+	constexpr bool MatchFrom( I i, ConstView_t v ) const noexcept
 	{
 		const I nViewCount = v.Count();
 
@@ -513,22 +513,22 @@ protected:
 		{
 			for ( I k = FIRST_INDEX; k < nViewCount; ++k )
 			{
-				if ( !( PackedGetValue( i + k ) == v.PackedGetValue( k ) ) )
+				if ( !( PackedGet( i + k ) == v.PackedGet( k ) ) )
 					return false;
 			}
 		}
 		else
 		{
-			return MatchAt( Base() + i, v );
+			return MatchFrom( Base() + i, v );
 		}
 
 		return true;
 	}
 
-	constexpr void SetValue( I i, const T &value ) noexcept
+	constexpr void SetTo( I i, const T &value ) noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE )
-			Base_t::template PackedSetValue< T >( i, value );
+			Base_t::template PackedSet< T >( i, value );
 		else
 			Base_t::template Base< T >()[ i ] = value;
 	}

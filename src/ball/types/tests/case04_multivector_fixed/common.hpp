@@ -52,11 +52,11 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 		arrSecond.erase( arrSecond.begin() + i, arrSecond.begin() + i + nCount );
 	};
 
-	const U nValueMask = static_cast< U >( Traits_t::VALUE_MASK );
+	const U nMask = static_cast< U >( Traits_t::MASK );
 	const U nSignBit = Traits_t::IS_SIGNED ? static_cast< U >( U( 1 ) << ( Traits_t::BITS - 1 ) ) : 0;
-	const U nRawPositive = Traits_t::IS_SIGNED ? static_cast< U >( nSignBit - 1 ) : nValueMask;
-	const U nRawAlt = Traits_t::IS_SIGNED ? nValueMask : ( nValueMask > 0 ? static_cast< U >( nValueMask - 1 ) : 0 );
-	const U nRawEdge = Traits_t::IS_SIGNED ? nSignBit : ( nValueMask > 1 ? static_cast< U >( nValueMask >> 1 ) : nValueMask );
+	const U nRawPositive = Traits_t::IS_SIGNED ? static_cast< U >( nSignBit - 1 ) : nMask;
+	const U nRawAlt = Traits_t::IS_SIGNED ? nMask : ( nMask > 0 ? static_cast< U >( nMask - 1 ) : 0 );
+	const U nRawEdge = Traits_t::IS_SIGNED ? nSignBit : ( nMask > 1 ? static_cast< U >( nMask >> 1 ) : nMask );
 
 	funcAddToTail( static_cast< T >( 0 ), 10.0f );
 	funcAddToTail( static_cast< T >( 1 ), 20.0f );
@@ -74,8 +74,8 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 
 		for ( size_t i = 0; i < arrFirst.size(); ++i )
 		{
-			const F nFirst = vec.template At< F >( static_cast< size_t >( i ) );
-			const float nSecond = vec.template At< float >( static_cast< size_t >( i ) );
+			const F nFirst = vec.template Get< F >( static_cast< size_t >( i ) );
+			const float nSecond = vec.template Get< float >( static_cast< size_t >( i ) );
 
 			if ( !( nFirst == arrFirst[ i ] ) || !( nSecond == arrSecond[ i ] ) )
 			{

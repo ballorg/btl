@@ -14,8 +14,8 @@ template < class B, typename I, typename T >
 class CStringImpl : public CVectorImpl< B, I, T >
 {
 public:
-	using Base_t =      CVectorImpl< B, I, T >;
-	using View_t =      Base_t::View_t;
+	using Base_t = CVectorImpl< B, I, T >;
+	using View_t = Base_t::View_t;
 	using ConstView_t = Base_t::ConstView_t;
 	template < I GN > using GrowableView_t = typename Base_t::template GrowableView_t< GN >;
 	template < I GN > using ConstGrowableView_t = typename Base_t::template ConstGrowableView_t< GN >;

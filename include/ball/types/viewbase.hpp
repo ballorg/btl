@@ -186,7 +186,7 @@ public:
 	}
 
 	template < typename T, Enable_t< T > = 0 >
-	constexpr decltype( auto ) At( I i )
+	constexpr decltype( auto ) Get( I i )
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
@@ -198,7 +198,7 @@ public:
 	}
 
 	template < typename T, Enable_t< T > = 0 >
-	constexpr decltype( auto ) At( I i ) const
+	constexpr decltype( auto ) Get( I i ) const
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( FIRST_INDEX <= i && i < Count() );
@@ -209,8 +209,8 @@ public:
 			return BaseBy< T >()[ i ];
 	}
 
-	template < typename T, Enable_t< T > = 0 > constexpr decltype( auto ) operator[]( I i ) { return At< T >( i ); }
-	template < typename T, Enable_t< T > = 0 > constexpr decltype( auto ) operator[]( I i ) const { return At< T >( i ); }
+	template < typename T, Enable_t< T > = 0 > constexpr decltype( auto ) operator[]( I i ) { return Get< T >( i ); }
+	template < typename T, Enable_t< T > = 0 > constexpr decltype( auto ) operator[]( I i ) const { return Get< T >( i ); }
 
 	template < typename T, Enable_t< T > = 0 >
 	constexpr decltype( auto ) Front() const
@@ -671,7 +671,7 @@ protected: // Packed methods.
 			}
 		}
 
-		return static_cast< T >( nRaw & Packed_t::VALUE_MASK );
+		return static_cast< T >( nRaw & Packed_t::MASK );
 	}
 
 	template < typename T, Enable_t< T > = 0 >
@@ -690,7 +690,7 @@ protected: // Packed methods.
 		uchar_t *pByte = pData + ( iFromBit >> 3 );
 		bits_t iShift = iFromBit & 7;
 
-		const U nRaw = static_cast< U >( value ) & Packed_t::VALUE_MASK;
+		const U nRaw = static_cast< U >( value ) & Packed_t::MASK;
 
 		for ( bits_t n = 0; n < nBits; ++n )
 		{

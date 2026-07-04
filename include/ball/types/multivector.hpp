@@ -18,7 +18,7 @@
 
 /// @file multivector.hpp
 /// @brief Growable SoA multi-column container (`CMultiVectorBase`) with shared row count.
-///        Provides typed column access (`At<T>`, `Front<T>`, `Back<T>`),
+///        Provides typed column access (`Get<T>`, `Front<T>`, `Back<T>`),
 ///        insertion/removal operations, and `CMultiVector`/`CBufferMultiVector` aliases.
 
 ///----------------------------------------------------------------------------

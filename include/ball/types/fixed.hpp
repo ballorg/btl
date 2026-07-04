@@ -169,12 +169,12 @@ struct CFixedBase : public MFixedBase< T, TBITS, TTAG >
 	constexpr CFixedBase &operator=( Type value ) noexcept { m_Value = Normalize( value ); return *this; }
 	constexpr operator Type() const noexcept { return m_Value; }
 
-	constexpr bool operator==( const CFixedBase &rhs ) const noexcept   { return m_Value == rhs.m_Value; }
-	constexpr bool operator!=( const CFixedBase &rhs ) const noexcept   { return m_Value != rhs.m_Value; }
-	constexpr bool operator< ( const CFixedBase &rhs ) const noexcept   { return m_Value < rhs.m_Value; }
-	constexpr bool operator> ( const CFixedBase &rhs ) const noexcept   { return m_Value > rhs.m_Value; }
-	constexpr bool operator<=( const CFixedBase &rhs ) const noexcept   { return m_Value <= rhs.m_Value; }
-	constexpr bool operator>=( const CFixedBase &rhs ) const noexcept   { return m_Value >= rhs.m_Value; }
+	constexpr bool operator==( const CFixedBase &rhs ) const noexcept { return m_Value == rhs.m_Value; }
+	constexpr bool operator!=( const CFixedBase &rhs ) const noexcept { return m_Value != rhs.m_Value; }
+	constexpr bool operator< ( const CFixedBase &rhs ) const noexcept { return m_Value < rhs.m_Value; }
+	constexpr bool operator> ( const CFixedBase &rhs ) const noexcept { return m_Value > rhs.m_Value; }
+	constexpr bool operator<=( const CFixedBase &rhs ) const noexcept { return m_Value <= rhs.m_Value; }
+	constexpr bool operator>=( const CFixedBase &rhs ) const noexcept { return m_Value >= rhs.m_Value; }
 };
 
 #	define BALL_FIXED_DECLARE_SIGNED( bits ) \
@@ -365,7 +365,7 @@ struct MFixedMetadataBase : public MFixedPackedBase< T >
 	static constexpr bits_t UNSIGNED_BITS = ComputeBits( sizeof( Unsigned_t ) );
 	static constexpr size_t BYTES = IS_PACKED ? ( static_cast< size_t >( BITS + bits_t( 7ull ) ) / bits_t( 8ull ) ) : sizeof( Raw_t );
 
-	static constexpr Unsigned_t VALUE_MASK = static_cast< Unsigned_t >( MFixedMask< BITS >::VALUE );
+	static constexpr Unsigned_t MASK = static_cast< Unsigned_t >( MFixedMask< BITS >::VALUE );
 };
 
 template < typename T >

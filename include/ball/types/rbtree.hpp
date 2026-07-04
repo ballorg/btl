@@ -12,10 +12,10 @@
 #	include "meta/get.hpp"
 #	include "meta/indexsequence.hpp"
 #	include "meta/indextype.hpp"
-#	include "meta/reflectvalue.hpp"
 #	include "meta/xvalue.hpp"
 #	include "multivector.hpp"
 #	include "pair.hpp"
+#	include "reflect.hpp"
 #	include "vector.hpp"
 
 enum class ERBTreeColor : uint1_t
@@ -318,7 +318,7 @@ protected:
 	// instead of qualifying through Nodes(). Count() is not pulled in: it would collide 
 	// with the occupied-node Count() below, so storage row count is reached through 
 	// TreeCount() / Tree_t::Count(). Member templates taking explicit type args 
-	// (At<>, PackedBaseBy<>) still need the this->template form, not a using.
+	// (Get<>, PackedBaseBy<>) still need the this->template form, not a using.
 	using Tree_t::PackedBaseBy;
 	using Tree_t::AddToTail;
 
@@ -492,7 +492,7 @@ protected:
 		vecVisited.Grow( TreeCount() );
 
 		for ( I i = 0; i < TreeCount(); ++i )
-			vecVisited.PackedSetValue( i, false );
+			vecVisited.PackedSet( i, false );
 
 		// NIL (-1) anchors "no in-order predecessor yet" for the ordering check below.
 		Index_t iPrev = NIL_INDEX;
@@ -1228,7 +1228,7 @@ protected:
 		if ( vecVisited[ iNode ] )
 			return false;
 
-		vecVisited.PackedSetValue( iNode, true );
+		vecVisited.PackedSet( iNode, true );
 
 		if ( ParentOf( iNode ) != iExpectedParent )
 			return false;
@@ -1490,10 +1490,10 @@ public:
 	template < TI TN > constexpr const Column_t< TN > &Get( const_iterator it ) const { return Base_t::template Column< TN >( it.SlotIndex() ); }
 
 	/// @brief Per-column row access by column type (requires a unique column type).
-	template < typename T > constexpr T &Get( Index_t iNode ) { return this->template At< T >( iNode ); }
-	template < typename T > constexpr const T &Get( Index_t iNode ) const { return this->template At< T >( iNode ); }
-	template < typename T > constexpr T &Get( iterator it ) { return this->template At< T >( it.SlotIndex() ); }
-	template < typename T > constexpr const T &Get( const_iterator it ) const { return this->template At< T >( it.SlotIndex() ); }
+	template < typename T > constexpr T &Get( Index_t iNode ) { return Base_t::template Get< T >( iNode ); }
+	template < typename T > constexpr const T &Get( Index_t iNode ) const { return Base_t::template Get< T >( iNode ); }
+	template < typename T > constexpr T &Get( iterator it ) { return Base_t::template Get< T >( it.SlotIndex() ); }
+	template < typename T > constexpr const T &Get( const_iterator it ) const { return Base_t::template Get< T >( it.SlotIndex() ); }
 
 private:
 	/// @complexity O(log n): a single Insert of one source row (CopyRowFrom and MoveRowFrom).

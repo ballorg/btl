@@ -17,13 +17,13 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 		{
 			for ( size_t i = 0; i < nVec; ++i )
 			{
-				if ( vec.template At< size_t >( i ) != ref[ i ].First() )
+				if ( vec.template Get< size_t >( i ) != ref[ i ].First() )
 				{
 					bOk = false;
 					break;
 				}
 
-				if ( vec.template At< uint32_t >( i ) != static_cast< uint32_t >( ref[ i ].Second() ) )
+				if ( vec.template Get< uint32_t >( i ) != static_cast< uint32_t >( ref[ i ].Second() ) )
 				{
 					bOk = false;
 					break;
@@ -90,7 +90,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 
 	if ( !ref.empty() )
 	{
-		vec.template At< uint32_t >( 0 ) += uint32_t( 1 );
+		vec.template Get< uint32_t >( 0 ) += uint32_t( 1 );
 		ref[ 0 ].Second() += 1;
 
 		const bool bFrontOk = vec.template Front< size_t >() == ref.front().First() && vec.template Front< uint32_t >() == static_cast< uint32_t >( ref.front().Second() );
@@ -108,7 +108,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	{
 		for ( size_t i = 0; i < vec.Count(); ++i )
 		{
-			if ( vec.template At< size_t >( i ) == nFirst && vec.template At< uint32_t >( i ) == nSecond )
+			if ( vec.template Get< size_t >( i ) == nFirst && vec.template Get< uint32_t >( i ) == nSecond )
 			{
 				return i;
 			}

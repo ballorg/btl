@@ -7,6 +7,11 @@
 #	include "isstandardlayout.hpp"
 #	include "reflectvalue.hpp"
 
+// CReflect / ReflectAccess / ReflectAssign / ReflectSerialize /
+// ReflectDeserialize come from <ball/types/reflect.hpp>, which defines them before
+// including this header. This file is one link of that cluster and is not meant to
+// be included on its own.
+
 /// Measures the byte offset of a member within @p O at run time.
 ///
 /// @p C is the class that actually declares the member (the owner itself or one of
@@ -150,13 +155,13 @@ struct MMemberAccessor
 	using Owner_t = O;
 	using Value_t = ReflectValue_t< F >;
 
-	static constexpr Value_t &Get( Owner_t &owner ) noexcept { return ReflectValueAccess( owner.*M ); }
-	static constexpr const Value_t &Get( const Owner_t &owner ) noexcept { return ReflectValueAccess( owner.*M ); }
+	static constexpr Value_t &Get( Owner_t &owner ) noexcept { return ReflectAccess( owner.*M ); }
+	static constexpr const Value_t &Get( const Owner_t &owner ) noexcept { return ReflectAccess( owner.*M ); }
 
 	template < typename V >
 	static constexpr void Set( Owner_t &owner, V &&value ) noexcept
 	{
-		ReflectValueAssign( owner.*M, static_cast< V && >( value ) );
+		ReflectAssign( owner.*M, static_cast< V && >( value ) );
 	}
 };
 
@@ -210,7 +215,7 @@ struct MField : D
 	template < typename S >
 	static constexpr bool Serialize( const Owner_t &owner, S &storage ) noexcept
 	{
-		return ReflectSerializeValue( storage, Get( owner ) );
+		return ReflectSerialize( storage, Get( owner ) );
 	}
 
 	template < typename S >
@@ -222,7 +227,7 @@ struct MField : D
 	template < typename S >
 	static constexpr bool Deserialize( Owner_t &owner, const S &storage, Index_t &cursor ) noexcept
 	{
-		return ReflectDeserializeValue( Get( owner ), storage, cursor );
+		return ReflectDeserialize( Get( owner ), storage, cursor );
 	}
 
 	template < typename S >

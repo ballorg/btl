@@ -85,7 +85,7 @@ class CStaticDelegate< R ( Ts... ), TPayload... > : public IDelegate< R, Ts... >
 {
 public:
 	using Function_t = R ( * )( Ts..., TPayload... );
-	using Payload_t  = MPack< size_t, TPayload... >;
+	using Payload_t = MPack< size_t, TPayload... >;
 
 	constexpr CStaticDelegate( const Function_t &pFunction, TPayload &&...payload ) noexcept : m_pFunction( pFunction ), m_Payload( Forward< TPayload >( payload )... ) {}
 
@@ -480,36 +480,36 @@ public:
 	{
 		for ( Index_t i = 0; i < m_Events.Count(); ++i )
 		{
-			if ( HandleAt( i ).IsValid() == false )
+			if ( Handle( i ).IsValid() == false )
 			{
-				HandleAt( i ) = DelegateHandle_t( true );
-				CallbackAt( i ) = delegate;
+				Handle( i ) = DelegateHandle_t( true );
+				Callback( i ) = delegate;
 
-				return HandleAt( i );
+				return Handle( i );
 			}
 		}
 
 		m_Events.AddToTail( DelegateHandle_t( true ), delegate );
 
-		return HandleAt( m_Events.Count() - 1 );
+		return Handle( m_Events.Count() - 1 );
 	}
 
 	DelegateHandle_t Add( SingleDelegate_t &&delegate ) noexcept
 	{
 		for ( Index_t i = 0; i < m_Events.Count(); ++i )
 		{
-			if ( HandleAt( i ).IsValid() == false )
+			if ( Handle( i ).IsValid() == false )
 			{
-				HandleAt( i ) = DelegateHandle_t( true );
-				CallbackAt( i ) = Move( delegate );
+				Handle( i ) = DelegateHandle_t( true );
+				Callback( i ) = Move( delegate );
 
-				return HandleAt( i );
+				return Handle( i );
 			}
 		}
 
 		m_Events.AddToTail( DelegateHandle_t( true ), Move( delegate ) );
 
-		return HandleAt( m_Events.Count() - 1 );
+		return Handle( m_Events.Count() - 1 );
 	}
 
 	template < typename ...TPayload >
@@ -542,14 +542,14 @@ public:
 
 		while ( i < m_Events.Count() )
 		{
-			if ( CallbackAt( i ).GetOwner() != pObject )
+			if ( Callback( i ).GetOwner() != pObject )
 			{
 				++i;
 				continue;
 			}
 
-			HandleAt( i ).Reset();
-			CallbackAt( i ).Clear();
+			Handle( i ).Reset();
+			Callback( i ).Clear();
 
 			if ( IsLocked() )
 			{
@@ -561,8 +561,8 @@ public:
 
 			if ( i != nLast )
 			{
-				Swap( HandleAt( i ), HandleAt( nLast ) );
-				Swap( CallbackAt( i ), CallbackAt( nLast ) );
+				Swap( Handle( i ), Handle( nLast ) );
+				Swap( Callback( i ), Callback( nLast ) );
 			}
 
 			m_Events.Remove( nLast );
@@ -576,11 +576,11 @@ public:
 
 		for ( Index_t i = 0; i < m_Events.Count(); ++i )
 		{
-			if ( HandleAt( i ) != handle )
+			if ( Handle( i ) != handle )
 				continue;
 
-			HandleAt( i ).Reset();
-			CallbackAt( i ).Clear();
+			Handle( i ).Reset();
+			Callback( i ).Clear();
 
 			if ( !IsLocked() )
 			{
@@ -588,8 +588,8 @@ public:
 
 				if ( i != nLast )
 				{
-					Swap( HandleAt( i ), HandleAt( nLast ) );
-					Swap( CallbackAt( i ), CallbackAt( nLast ) );
+					Swap( Handle( i ), Handle( nLast ) );
+					Swap( Callback( i ), Callback( nLast ) );
 				}
 
 				m_Events.Remove( nLast );
@@ -617,8 +617,8 @@ public:
 		{
 			for ( Index_t i = 0; i < m_Events.Count(); ++i )
 			{
-				HandleAt( i ).Reset();
-				CallbackAt( i ).Clear();
+				Handle( i ).Reset();
+				Callback( i ).Clear();
 			}
 		}
 		else
@@ -638,8 +638,8 @@ public:
 		{
 			if ( iWrite != i )
 			{
-				Swap( HandleAt( iWrite ), HandleAt( i ) );
-				Swap( CallbackAt( iWrite ), CallbackAt( i ) );
+				Swap( Handle( iWrite ), Handle( i ) );
+				Swap( Callback( iWrite ), Callback( i ) );
 			}
 
 			++iWrite;
@@ -655,8 +655,8 @@ public:
 
 		for ( Index_t i = 0; i < m_Events.Count(); ++i )
 		{
-			if ( HandleAt( i ).IsValid() )
-				CallbackAt( i ).Execute( args... );
+			if ( Handle( i ).IsValid() )
+				Callback( i ).Execute( args... );
 		}
 
 		Unlock();
@@ -668,7 +668,7 @@ public:
 
 		for ( Index_t i = 0; i < m_Events.Count(); ++i )
 		{
-			if ( HandleAt( i ).IsValid() )
+			if ( Handle( i ).IsValid() )
 				++nBound;
 		}
 
@@ -684,10 +684,10 @@ protected:
 		--m_nLocks;
 	}
 	bool IsLocked() const noexcept { return m_nLocks > 0; }
-	DelegateHandle_t &HandleAt( Index_t i ) { return m_Events.template At< DelegateHandle_t >( i ); }
-	const DelegateHandle_t &HandleAt( Index_t i ) const { return m_Events.template At< DelegateHandle_t >( i ); }
-	SingleDelegate_t &CallbackAt( Index_t i ) { return m_Events.template At< SingleDelegate_t >( i ); }
-	const SingleDelegate_t &CallbackAt( Index_t i ) const { return m_Events.template At< SingleDelegate_t >( i ); }
+	DelegateHandle_t &Handle( Index_t i ) { return m_Events.template Get< DelegateHandle_t >( i ); }
+	const DelegateHandle_t &Handle( Index_t i ) const { return m_Events.template Get< DelegateHandle_t >( i ); }
+	SingleDelegate_t &Callback( Index_t i ) { return m_Events.template Get< SingleDelegate_t >( i ); }
+	const SingleDelegate_t &Callback( Index_t i ) const { return m_Events.template Get< SingleDelegate_t >( i ); }
 
 private:
 	size32_t m_nLocks; //TODO: Make atomic family.

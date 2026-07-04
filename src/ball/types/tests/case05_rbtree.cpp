@@ -21,7 +21,7 @@ namespace
 	// Single-value map spelling used only to exercise CRBTree's Key()/Value().
 	using MapTree_t = BTL::RBTree_t< BTL::size32_t, size_t, Node_t >;
 
-	static Node_t MakeValue( size_t key )
+	static Node_t Make( size_t key )
 	{
 		return Node_t( key, key * 17u + 3u );
 	}
@@ -36,7 +36,7 @@ namespace
 	// Insert a key with its value split across columns 1 and 2.
 	static Tree_t::Index_t InsertNode( Tree_t &tree, size_t key )
 	{
-		const Node_t value = MakeValue( key );
+		const Node_t value = Make( key );
 
 		return tree.Insert( key, value.First(), value.Second() );
 	}
@@ -428,7 +428,7 @@ namespace
 
 		for ( size_t i = 0; i < nKeys; ++i )
 		{
-			const Node_t value = MakeValue( arrKeys[ i ] );
+			const Node_t value = Make( arrKeys[ i ] );
 			const auto iInsert = InsertNode( tree, value.First() );
 
 			if ( IsEndIndex( tree, iInsert ) )
@@ -480,17 +480,17 @@ void Case05_RBTree( TestsOutput_t &sOut )
 		// Single-value map Key()/Value() accessors (key = column 0, value = column 1).
 		MapTree_t tree;
 
-		const auto it = tree.InsertIterator( 42u, MakeValue( 42u ) );
+		const auto it = tree.InsertIterator( 42u, Make( 42u ) );
 
 		bool bOk = it != tree.end();
 		bOk &= tree.Key( it ) == 42u;
-		bOk &= tree.Value( it ).First() == 42u && tree.Value( it ).Second() == MakeValue( 42u ).Second();
+		bOk &= tree.Value( it ).First() == 42u && tree.Value( it ).Second() == Make( 42u ).Second();
 
 		const MapTree_t::Index_t idx = tree.Find( 42u );
 
-		bOk &= tree.Key( idx ) == 42u && tree.Value( idx ).Second() == MakeValue( 42u ).Second();
+		bOk &= tree.Key( idx ) == 42u && tree.Value( idx ).Second() == Make( 42u ).Second();
 
-		tree.Value( idx ) = MakeValue( 7u );   // mutate through the value reference
+		tree.Value( idx ) = Make( 7u );   // mutate through the value reference
 		bOk &= tree.Value( idx ).First() == 7u;
 
 		LogTreeCheck( sOut, "key/value accessors", bOk );
@@ -531,7 +531,7 @@ void Case05_RBTree( TestsOutput_t &sOut )
 			if ( IsEndIndex( tree, iInsert ) )
 				bAllOk = false;
 
-			ref[ key ] = MakeValue( key ).Second();
+			ref[ key ] = Make( key ).Second();
 		}
 
 		const bool bOk = CheckTreeMatchesRef( tree, ref );
@@ -566,7 +566,7 @@ void Case05_RBTree( TestsOutput_t &sOut )
 		for ( size_t key : arrKeys )
 		{
 			InsertNode( tree, key );
-			ref[ key ] = MakeValue( key ).Second();
+			ref[ key ] = Make( key ).Second();
 		}
 
 		const size_t rootKey = tree.Get< 0 >( tree.RootIndex() );
@@ -600,7 +600,7 @@ void Case05_RBTree( TestsOutput_t &sOut )
 		RefMap_t ref;
 
 		for ( size_t key = 0; key < 8u; ++key )
-			ref[ key ] = MakeValue( key ).Second();
+			ref[ key ] = Make( key ).Second();
 
 		bOk &= CheckTreeMatchesRef( tree, ref );
 

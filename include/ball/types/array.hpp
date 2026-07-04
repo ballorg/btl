@@ -13,13 +13,13 @@ template < typename I, typename T >
 class CEmptyArray
 {
 public:
-	constexpr       T *Base()       noexcept    { return nullptr; }
-	constexpr const T *Base() const noexcept    { return nullptr; }
-	constexpr       T *Data()       noexcept    { return Base(); }
-	constexpr const T *Data() const noexcept    { return Base(); }
+	constexpr T *Base() noexcept { return nullptr; }
+	constexpr const T *Base() const noexcept { return nullptr; }
+	constexpr T *Data() noexcept { return Base(); }
+	constexpr const T *Data() const noexcept { return Base(); }
 
-	static constexpr I      Count() noexcept    { return 0; }
-	static constexpr bool   Empty() noexcept    { return true; }
+	static constexpr I Count() noexcept { return 0; }
+	static constexpr bool Empty() noexcept { return true; }
 }; // class CEmptyArray
 
 /*
@@ -34,11 +34,11 @@ Constraints:
 
 Behavior:
 - For N == 0: Base()/Data()/begin()/end() return nullptr; Front()/Back() assert.
-- Bounds are checked via BALL_ASSERT in At()/Front()/Back().
+- Bounds are checked via BALL_ASSERT in Get()/Front()/Back().
 - No exceptions; contract-based API.
 
 Notes:
-- ValueInit() helper returns an instance with value-initialized elements.
+- Init() helper returns an instance with value-initialized elements.
 - Fill(), Set(), CopyFrom() avoid std:: algorithms.
 -------------------------------------------------------------------------------
 */
@@ -46,11 +46,11 @@ template < typename I, typename T, I N >
 class CArray
 {
 public:
-	using Index_t       = I;
-	using Fixed_t       = MFixed< Index_t >;
+	using Index_t = I;
+	using Fixed_t = MFixed< Index_t >;
 
-	static constexpr I FIRST_INDEX   =  I( 0 );
-	static constexpr I INVALID_INDEX =  Fixed_t::INVALID;
+	static constexpr I FIRST_INDEX = I( 0 );
+	static constexpr I INVALID_INDEX = Fixed_t::INVALID;
 
 public:
 	// --------- ctors / assignment ----------
@@ -69,22 +69,22 @@ public:
 	/// @brief Return a value-initialized array (zero for scalars).
 	constexpr CArray Init() noexcept
 	{
-		for ( I i = I( 0 ); i < I( N ); ++i )
+		for ( I i = 0; i < N; ++i )
 			m_Elements[ i ] = T();
 	}
 
 	// --------- sizes / byte sizes ----------
-	static constexpr size_t Stride() noexcept   { return sizeof( T ); }
-	static constexpr size_t Size()   noexcept   { return static_cast< size_t >( N ) * Stride(); }
+	static constexpr size_t Stride() noexcept { return sizeof( T ); }
+	static constexpr size_t Size() noexcept { return static_cast< size_t >( N ) * Stride(); }
 
-	static constexpr I     Count() noexcept     { return Index_t( N ); }
-	static constexpr bool  Empty() noexcept     { return N == I( 0 ); }
+	static constexpr I Count() noexcept { return Index_t( N ); }
+	static constexpr bool  Empty() noexcept { return N == I( 0 ); }
 
 	// --------- raw base pointers ----------
-	constexpr       T *Base()       noexcept    { return Empty() ? nullptr : m_Elements; }
-	constexpr const T *Base() const noexcept    { return Empty() ? nullptr : m_Elements; }
-	constexpr       T *Data()       noexcept    { return Base(); }
-	constexpr const T *Data() const noexcept    { return Base(); }
+	constexpr T *Base() noexcept { return Empty() ? nullptr : m_Elements; }
+	constexpr const T *Base() const noexcept { return Empty() ? nullptr : m_Elements; }
+	constexpr T *Data() noexcept { return Base(); }
+	constexpr const T *Data() const noexcept { return Base(); }
 
 	// --------- element access ----------
 	static constexpr bool IsValidIndex( I i ) noexcept
@@ -92,7 +92,7 @@ public:
 		return i != INVALID_INDEX;
 	}
 
-	constexpr T &At( I i )
+	constexpr T &Get( I i )
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( FIRST_INDEX <= i && i < N );
@@ -100,7 +100,7 @@ public:
 		return m_Elements[ i ];
 	}
 
-	constexpr const T &At( I i ) const
+	constexpr const T &Get( I i ) const
 	{
 		BALL_ASSERT( IsValidIndex( i ) );
 		BALL_ASSERT( FIRST_INDEX <= i && i < N );
@@ -108,8 +108,8 @@ public:
 		return m_Elements[ i ];
 	}
 
-	constexpr T &operator[]( I i ) { return At( i ); }
-	constexpr const T &operator[]( I i ) const { return At( i ); }
+	constexpr T &operator[]( I i ) { return Get( i ); }
+	constexpr const T &operator[]( I i ) const { return Get( i ); }
 
 	constexpr T &Front()
 	{
@@ -140,14 +140,14 @@ public:
 	}
 
 	// --------- iterators ----------
-	constexpr       T *begin()       noexcept   { return Base(); }
-	constexpr       T *end()         noexcept   { return ( N == 0 ) ? nullptr : ( m_Elements + N ); }
-	constexpr const T *begin() const noexcept   { return Base(); }
-	constexpr const T *end()   const noexcept   { return ( N == 0 ) ? nullptr : ( m_Elements + N ); }
-	constexpr const T *cbegin() const noexcept  { return Base(); }
-	constexpr const T *cend()   const noexcept  { return ( N == 0 ) ? nullptr : ( m_Elements + N ); }
+	constexpr T *begin() noexcept { return Base(); }
+	constexpr T *end() noexcept { return !N ? nullptr : ( m_Elements + N ); }
+	constexpr const T *begin() const noexcept { return Base(); }
+	constexpr const T *end() const noexcept { return !N ? nullptr : ( m_Elements + N ); }
+	constexpr const T *cbegin() const noexcept { return Base(); }
+	constexpr const T *cend() const noexcept { return !N ? nullptr : ( m_Elements + N ); }
 
-	// --------- algorithms (no STL) ----------
+	// --------- algorithms ----------
 	/// @brief Fill all slots with the provided value.
 	constexpr void Fill( const T &value ) noexcept
 	{

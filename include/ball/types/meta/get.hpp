@@ -56,13 +56,13 @@ constexpr decltype( auto ) Get( const TPACK &&pack ) noexcept
 template < typename T, typename TPACK, typename I >
 constexpr decltype( auto ) Get( TPACK &pack, I i ) noexcept
 {
-	return pack.template At< T >( i );
+	return pack.template Get< T >( i );
 }
 
 template < typename T, typename TPACK, typename I >
 constexpr decltype( auto ) Get( const TPACK &pack, I i ) noexcept
 {
-	return pack.template At< T >( i );
+	return pack.template Get< T >( i );
 }
 
 #endif // !defined( _INCLUDE_BALL_TYPES_META_GET_HPP_ )
