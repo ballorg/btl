@@ -82,21 +82,25 @@ BALL_REFLECT_TAGGED_TEMPLATE( RBTreeParentColumn );
 
 ///-----------------------------------------------------------------------------
 /// @brief Structure-of-arrays red-black tree core with an out-of-band NIL.
-///
+/// 
 /// @details `NIL_INDEX` is the out-of-band invalid index (-1): a virtual black 
 /// `end()`/no-child marker that owns no physical row. Real nodes occupy slots 
 /// `FIRST_INDEX` (0) and up, so slot 0 is an ordinary black node (the first 
 /// root), not a reserved sentinel. The accessors map this -1 to a black, 
 /// self-linked virtual leaf so the balancing code can treat "no child" like a 
 /// black leaf, mirroring the classic CLRS sentinel model without spending a slot 
-/// on it. The balancing rules and complexity guarantees follow the standard 
+/// on it. The root is reachable in O(1) without any dedicated member: slot 0's 
+/// parent cell always stores the root's index encoded as `~R`, while slot 0's 
+/// real parent is displaced into the root's own (by definition NIL) parent cell 
+/// -- ParentOf/SetParent remap the two cells and no element ever moves for it. 
+/// The balancing rules and complexity guarantees follow the standard 
 /// red-black tree model: 
 /// https://www.nist.gov/dads/HTML/redblack.html 
 /// https://tildesites.bowdoin.edu/~ltoma/teaching/cs231/fall07/MIT/rbtrees-MIT.pdf
 ///-----------------------------------------------------------------------------
 ///-----------------------------------------------------------------------------
 /// @brief Multi-column (SoA) red-black tree core.
-///
+/// 
 /// @details The payload is the key column @p K followed by an arbitrary pack 
 /// @p Ts...: each is stored in its own column alongside the tree metadata 
 /// columns (color, left, right, parent). The ordering key is column 0 (type 
@@ -168,12 +172,12 @@ public:
 
 	///-----------------------------------------------------------------------------
 	/// @brief Minimal bidirectional iterator over occupied tree slots.
-	///
+	/// 
 	/// @details `end()` is represented by the virtual NIL sentinel and is decrementable, 
 	/// which matches the standard bidirectional iterator requirement 
 	/// that a past-the-end iterator may still be decrementable when a predecessor exists: 
 	/// https://cppreference.com/w/cpp/iterator/bidirectional_iterator.html
-	///
+	/// 
 	/// @complexity Construction, comparison, dereference and SlotIndex are O(1). The 
 	/// increment/decrement operators are O(log n) worst case (one inorder step), but 
 	/// O(1) amortized, so a full begin()->end() traversal is O(n) overall.
@@ -295,9 +299,9 @@ protected:
 	/// @complexity O(1).
 	constexpr I Count() const noexcept { return TreeCount(); }
 
-	/// Climb parent links from a known occupied node to the root (parent == NIL). O(log n) 
-	/// and scan-free: prefer this whenever an occupied node is already in hand so the root 
-	/// is never recomputed by re-scanning the slot array.
+	/// Climb parent links from a known occupied node to the root (parent == NIL). Kept as 
+	/// the encoding-independent way to reach the root: Validate uses it to cross-check the 
+	/// root cell (see RootIndex below), and asserts can call it from any occupied node.
 	/// 
 	/// @complexity O(log n): one climb up the tree height.
 	constexpr Index_t RootIndex( Index_t iFrom ) const noexcept
@@ -310,20 +314,23 @@ protected:
 		return iFrom;
 	}
 
-	/// The root is the single node whose parent link is the sentinel. Storage is dense 
-	/// (compact-on-erase), so FIRST_INDEX is always occupied while the tree is non-empty: 
-	/// climb from it instead of scanning for an occupied slot. O(log n), no scan -- this is 
-	/// what keeps FindAndRemove out of O(n^2). Empty tree reports NIL.
+	/// The root's physical index R is encoded in the parent cell of slot FIRST_INDEX as 
+	/// `~R` (== -(R + 1)): the root needs no parent value of its own (it is NIL by 
+	/// definition), so that cell is free to act as the root pointer, and slot 0's real 
+	/// parent is displaced into the root's parent cell instead (see ParentOf/SetParent). 
+	/// With the root at slot 0 the cell holds `~0 == -1` -- exactly the plain "parent is 
+	/// NIL" value, so the indirection only kicks in once the root moves away from slot 0. 
+	/// No elements are ever relocated to maintain this. Empty tree reports NIL.
 	/// 
-	/// @complexity O(log n): a single climb from FIRST_INDEX to the root.
+	/// @complexity O(1): decode the root cell, no climb and no scan.
 	constexpr Index_t RootIndex() const noexcept
 	{
-		return TreeCount() != FIRST_INDEX ? RootIndex( FIRST_INDEX ) : NIL_INDEX;
+		return TreeCount() != FIRST_INDEX ? static_cast< Index_t >( ~static_cast< Index_t >( ParentColumn()[ FIRST_INDEX ] ) ) : NIL_INDEX;
 	}
 
 	/// Smallest key = leftmost descendant of the root; NIL when the tree is empty.
 	/// 
-	/// @complexity O(log n): climb to the root, then descend the left spine.
+	/// @complexity O(log n): resolve the root in O(1), then descend the left spine.
 	constexpr Index_t LeftmostIndex() const noexcept
 	{
 		const Index_t iRoot = RootIndex();
@@ -333,7 +340,7 @@ protected:
 
 	/// Largest key = rightmost descendant of the root; NIL when the tree is empty.
 	/// 
-	/// @complexity O(log n): climb to the root, then descend the right spine.
+	/// @complexity O(log n): resolve the root in O(1), then descend the right spine.
 	constexpr Index_t RightmostIndex() const noexcept
 	{
 		const Index_t iRoot = RootIndex();
@@ -447,6 +454,10 @@ protected:
 		if ( IsNil( iRoot ) || !IsNil( ParentOf( iRoot ) ) || ColorOf( iRoot ) != Color_t::BLACK )
 			return false;
 
+		// The encoded root cell must agree with the encoding-independent parent climb.
+		if ( RootIndex( FIRST_INDEX ) != iRoot )
+			return false;
+
 		CVector< I, bool > vecVisited;
 
 		vecVisited.Grow( TreeCount() );
@@ -507,7 +518,10 @@ protected:
 		const Index_t iAppended = TreeCount();
 
 		// Seed the parent link in the appended row directly instead of a follow-up 
-		// SetParent: the new node has no children yet, so left/right stay NIL.
+		// SetParent: the new node has no children yet, so left/right stay NIL. The raw 
+		// write is encoding-correct: the first node stores NIL (-1 == ~0), which is 
+		// exactly the root cell saying "the root is slot 0"; any later node is neither 
+		// slot 0 nor the root, so its cell holds its own parent verbatim.
 		AddToTail( Color_t::RED, NIL_INDEX, NIL_INDEX, iParent, Forward< Us >( values )... );
 
 		return iAppended;
@@ -661,8 +675,9 @@ protected:
 			SetRight( iHole, iRight );
 
 			// Repoint the moved node's neighbours (parent's child link, children's parent 
-			// links) to its new slot. A NIL parent means it was the root, found afresh by 
-			// RootIndex() climbing from the dense FIRST_INDEX.
+			// links) to its new slot. A NIL parent means the moved node was the root: the 
+			// SetParent above then performed a root transfer, re-encoding the root cell 
+			// onto the hole, so no follow-up fix is needed here.
 			if ( !IsNil( iParent ) )
 			{
 				if ( LeftOf( iParent ) == iLast )
@@ -790,12 +805,12 @@ protected:
 	/// A fresh node is inserted as red so every root->leaf path keeps the same 
 	/// black-height. The only invariant that can break immediately is a red node 
 	/// having a red parent.
-	///
+	/// 
 	/// Case 1: uncle is red. 
 	/// Recolor parent + uncle to black and grandparent to red. This repairs the 
 	/// local red-red conflict without changing the black-height below the 
 	/// grandparent, but it may move the violation one level upward.
-	///
+	/// 
 	/// Case 2 + 3: uncle is black. 
 	/// First rotate to convert the "inner" configuration into an "outer" one, 
 	/// then rotate around the grandparent and swap colors between parent and 
@@ -881,8 +896,9 @@ protected:
 			}
 		}
 
-		// The root must remain black even if recoloring bubbled a red node upward.
-		SetColor( RootIndex( z ), Color_t::BLACK );
+		// The root must remain black even if recoloring bubbled a red node upward; the 
+		// root cell makes this an O(1) lookup instead of a climb from z.
+		SetColor( RootIndex(), Color_t::BLACK );
 	}
 
 	///-----------------------------------------------------------------------------
@@ -894,15 +910,15 @@ protected:
 	/// the black-height of exactly one root->leaf path. The loop treats @p x as 
 	/// carrying one "extra black" that must be pushed upward, absorbed by a red 
 	/// node, or redistributed through rotations.
-	///
+	/// 
 	/// Red sibling case: 
 	/// Rotate so the sibling becomes black and the parent becomes red. This does 
 	/// not solve the deficit yet; it rewrites the neighborhood into one of the 
 	/// black-sibling cases below.
-	///
+	/// 
 	/// Black sibling with two black children: 
 	/// Recolor the sibling red and move the extra black to the parent.
-	///
+	/// 
 	/// Black sibling with at least one red outer child: 
 	/// Rotate around the parent and recolor so the path through @p x gains one 
 	/// black node back, eliminating the deficit locally.
@@ -1148,8 +1164,8 @@ protected:
 	/// removes many null special-cases from insert/delete fix-up logic. Boundary 
 	/// nodes are no longer cached: LeftmostIndex()/RightmostIndex() derive them.
 	/// 
-	/// @complexity The iRoot overload is O(1). The no-arg overload is O(log n) (it 
-	/// resolves the root via RootIndex first).
+	/// @complexity Both overloads are O(1): the no-arg form resolves the root from the 
+	/// encoded root cell, not a climb.
 	///-----------------------------------------------------------------------------
 	// Normalize from an already-resolved root (NIL when the tree is empty), so a caller 
 	// that climbed to the root after a mutation does not trigger another slot scan.
@@ -1242,7 +1258,8 @@ protected:
 	/// in-range assert stands in for the dropped "not NIL" runtime branch.
 	/// 
 	/// @complexity LeftOf/RightOf/ParentOf/ColorOf and SetLeft/SetRight/SetParent/SetColor 
-	/// are all O(1) single-column reads or writes.
+	/// are all O(1) single-column reads or writes; ParentOf/SetParent add one read of the 
+	/// always-hot root cell (the parent cell of slot FIRST_INDEX).
 	constexpr Index_t LeftOf( Index_t iNode ) const noexcept
 	{
 		BALL_ASSERT_MESSAGE( IsValidIndex( iNode ), "Requires an in-range non-sentinel node index" );
@@ -1257,11 +1274,24 @@ protected:
 		return RightColumn()[ iNode ];
 	}
 
+	/// Parent links live in the parent column with two repurposed cells (see RootIndex): 
+	/// the cell of slot FIRST_INDEX always stores the encoded root pointer `~R`, and the 
+	/// cell of the root R stores slot 0's displaced real parent. Every other cell holds 
+	/// its own node's parent verbatim, so the remap below is two compares plus one read 
+	/// of the always-cached root cell -- no climbs and no relocations anywhere.
 	constexpr Index_t ParentOf( Index_t iNode ) const noexcept
 	{
 		BALL_ASSERT_MESSAGE( IsValidIndex( iNode ), "Requires an in-range non-sentinel node index" );
 
-		return ParentColumn()[ iNode ];
+		const ParentColumn_t *pParents = ParentColumn();
+		const Index_t iRoot = static_cast< Index_t >( ~static_cast< Index_t >( pParents[ FIRST_INDEX ] ) );
+
+		// The root has no parent by definition; slot 0 reads its displaced parent from 
+		// the root's cell.
+		if ( iNode == iRoot )
+			return NIL_INDEX;
+
+		return pParents[ IsFirst( iNode ) ? iRoot : iNode ];
 	}
 
 	// ColorOf keeps the NIL runtime branch (unlike the link readers above): the fix-up 
@@ -1292,12 +1322,45 @@ protected:
 		RightColumn()[ iNode ] = iRight;
 	}
 
+	/// Writing NIL declares @p iNode the new root: the root pointer cell is re-encoded and 
+	/// slot 0's displaced parent follows it from the old root's cell into the new root's 
+	/// cell -- pure index bookkeeping, no element is constructed or moved. Every rotation 
+	/// and transplant already promotes the new root (SetParent with NIL) before demoting 
+	/// the old one, so a plain write never targets the current root (asserted below).
 	constexpr void SetParent( Index_t iNode, Index_t iParent ) noexcept
 	{
 		BALL_ASSERT_MESSAGE( IsValidIndex( iNode ), "Requires an in-range non-sentinel node index" );
 		BALL_ASSERT_MESSAGE( IsNilOrValid( iParent ), "Parent must be sentinel or an in-range node index" );
 
-		ParentColumn()[ iNode ] = iParent;
+		ParentColumn_t *pParents = ParentColumn();
+		const Index_t iRoot = static_cast< Index_t >( ~static_cast< Index_t >( pParents[ FIRST_INDEX ] ) );
+
+		if ( IsNil( iParent ) )
+		{
+			// Root transfer to iNode (a no-op when it already is the root).
+			if ( iNode == iRoot )
+				return;
+
+			// Slot 0's displaced parent moves from the old root's cell to the new root's 
+			// cell; while the old root was slot 0 itself there is nothing displaced yet.
+			const Index_t iFirstParent = IsFirst( iRoot ) ? NIL_INDEX : static_cast< Index_t >( pParents[ iRoot ] );
+
+			// The old root's cell reverts to holding its own parent: transiently NIL until 
+			// the mutation relinks it (or drops it, when the old root is being removed).
+			if ( !IsFirst( iRoot ) )
+				pParents[ iRoot ] = NIL_INDEX;
+
+			pParents[ FIRST_INDEX ] = static_cast< Index_t >( ~iNode );
+
+			if ( !IsFirst( iNode ) )
+				pParents[ iNode ] = iFirstParent;
+
+			return;
+		}
+
+		BALL_ASSERT_MESSAGE( iNode != iRoot, "Demoting the root requires a prior root transfer (SetParent with NIL)" );
+
+		pParents[ IsFirst( iNode ) ? iRoot : iNode ] = iParent;
 	}
 
 	// SetColor keeps the NIL no-op (unlike SetParent above): EraseFixup's final 
@@ -1316,11 +1379,12 @@ protected:
 		Get< TagColumn_t >( Nodes(), iNode ) = eColor;
 	}
 
-	// Nothing is cached: RootIndex(), LeftmostIndex() and RightmostIndex() derive their 
-	// answers from the SoA links on demand, and the node storage itself is the protected 
-	// base (Nodes()), so the tree carries no data members of its own -- the comparator is an 
-	// empty base reached via Comparator(). Compact-on-erase keeps storage dense, so RootIndex() 
-	// climbs from the always-occupied FIRST_INDEX in O(log n) rather than scanning for a slot.
+	// Nothing is cached and no extra memory is spent: the node storage itself is the 
+	// protected base (Nodes()), the comparator is an empty base reached via Comparator(), 
+	// and the root pointer lives inside the existing parent column -- slot 0's parent cell 
+	// stores ~R while slot 0's real parent is displaced into the root's own (otherwise 
+	// NIL) cell. That makes RootIndex() O(1) with zero element relocations; compact-on- 
+	// erase keeps storage dense so slot 0 always exists to host the encoding.
 };
 
 template < typename I, I N, typename TI, typename C, typename K, typename... Ts >
@@ -1764,8 +1828,9 @@ public:
 			}
 		}
 
-		// The fix-up may bubble to the top; the root is always forced black.
-		SetColor( RootIndex( z ), Color_t::BLACK );
+		// The fix-up may bubble to the top; the root is always forced black. The root 
+		// cell makes this an O(1) lookup instead of a climb from z.
+		SetColor( RootIndex(), Color_t::BLACK );
 	}
 
 	///-----------------------------------------------------------------------------
@@ -1844,12 +1909,10 @@ public:
 		if ( yOriginalColor == Color_t::BLACK )
 			EraseFixup( x, xParent );
 
-		// xParent (or the replacement x when the root itself was removed) is still 
-		// occupied and linked after the splice, so climb to the root from it instead of 
-		// rescanning every slot. Both NIL means the tree is now empty
-		const Index_t iAnchor = !IsNil( xParent ) ? xParent : x;
-
-		NormalizeAfterMutation( !IsNil( iAnchor ) ? RootIndex( iAnchor ) : NIL_INDEX );
+		// The root cell tracked every transplant/rotation above, so the post-splice root 
+		// is an O(1) read -- no climb from an anchor node. When the last node was removed 
+		// the stale self-root normalizes to a harmless no-op before the row is dropped.
+		NormalizeAfterMutation( RootIndex() );
 
 		// Physically drop z by compacting the last node into its slot so storage stays 
 		// dense. Returns the slot the relocated node came from (or NIL) so the caller can 
@@ -1940,7 +2003,7 @@ public:
 
 /// Convenience spellings with the comparator fixed to `CRBTreeLess< K >` (use the 
 /// classes directly for a custom comparator).
-///
+/// 
 /// Single-value map: key @p K + value @p V.
 template < typename I = size32_t, typename K = I, typename V = K > using RBTree_t = CRBTree< I, K, V, CRBTreeLess< K > >;
 template < typename K, typename V = K > using RBTree8_t = CRBTree< size8_t, K, V, CRBTreeLess< K > >;
