@@ -1483,10 +1483,10 @@ private:
 public:
 	/// @complexity O(m + n log n): clear m current rows, then insert the n source rows.
 	template < I ON >
-	constexpr void CopyFrom( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other )
+	constexpr CMultiRBTreeImpl &CopyFrom( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other )
 	{
 		if ( reinterpret_cast< const void * >( this ) == reinterpret_cast< const void * >( &other ) )
-			return;
+			return *this;
 
 		Base_t::Comparator() = other.Comparator();
 
@@ -1497,15 +1497,17 @@ public:
 
 		for ( Index_t i = other.FirstIndex(); i != other.EndIndex(); i = other.NextIndex( i ) )
 			CopyRowFrom( other, i, ColumnSequence_t() );
+
+		return *this;
 	}
 
 	/// @complexity O(m + n log n): clear m current rows, then re-insert the n source rows 
 	/// (this is a structural rebuild, not a pointer steal, so it is not O(1)).
 	template < I ON >
-	constexpr void MoveFrom( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other )
+	constexpr CMultiRBTreeImpl &MoveFrom( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other )
 	{
 		if ( reinterpret_cast< const void * >( this ) == reinterpret_cast< const void * >( &other ) )
-			return;
+			return *this;
 
 		Base_t::Comparator() = Move( other.Comparator() );
 
@@ -1523,24 +1525,16 @@ public:
 		}
 
 		other.Clear();
+
+		return *this;
 	}
 
 	/// @complexity O(m + n log n): the copy/move constructors and assignment operators all 
 	/// delegate to CopyFrom/MoveFrom, which rebuild the tree row by row.
 	template < I ON > constexpr CMultiRBTreeImpl( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other ) { CopyFrom( other ); }
-	template < I ON > constexpr CMultiRBTreeImpl &operator=( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other )
-	{
-		CopyFrom( other );
-
-		return *this;
-	}
+	template < I ON > constexpr CMultiRBTreeImpl &operator=( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other ) { return CopyFrom( other ); }
 	template < I ON > constexpr CMultiRBTreeImpl( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	template < I ON > constexpr CMultiRBTreeImpl &operator=( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other )
-	{
-		MoveFrom( Move( other ) );
-
-		return *this;
-	}
+	template < I ON > constexpr CMultiRBTreeImpl &operator=( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 
 	///-----------------------------------------------------------------------------
 	/// @brief Public unique-key tree facade over `CMultiRBTreeBase`.
