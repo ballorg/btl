@@ -51,6 +51,35 @@ BALL_FIXED_UNSIGNED_ENUM_TRAIT( ERBTreeColor, 1 );
 		for ( auto it = ( tree ).PrevIndex( ( tree ).EndIndex() ); it != ( tree ).EndIndex(); it = ( tree ).PrevIndex( it ) )
 
 ///-----------------------------------------------------------------------------
+/// @brief Iterates @p tree in storage (slot) order from `FIRST_INDEX`, not key order.
+/// 
+/// @details Storage is dense (compact-on-erase leaves no holes), so every slot in 
+/// [`FIRST_INDEX`, `Count()`) is a live node: this is a linear, cache-friendly sweep 
+/// with no link chasing, at the cost of an arbitrary visiting order -- rows are 
+/// permuted by insertion history and compaction moves. @p it holds the slot 
+/// `Index_t`, same as the ordered macros. Safe on an empty tree.
+/// 
+/// @complexity O(n) for the whole loop: one O(1) step per slot.
+///-----------------------------------------------------------------------------
+#	define BALL_RBTREE_FOREACH_UNORDERED( tree, it ) \
+		for ( auto it = ( tree ).FIRST_INDEX; it != ( tree ).Count(); ++it )
+
+///-----------------------------------------------------------------------------
+/// @brief Iterates @p tree in reverse storage (slot) order, from the last slot 
+/// down to `FIRST_INDEX`; not key order.
+/// 
+/// @details Mirror of `BALL_RBTREE_FOREACH_UNORDERED` with the same dense-storage 
+/// guarantees. The downward direction additionally tolerates removing the current 
+/// node inside the body: compact-on-erase relocates the last row into the vacated 
+/// slot, and in a downward sweep that row was already visited, so every node is 
+/// still visited exactly once. Safe on an empty tree.
+/// 
+/// @complexity O(n) for the whole loop: one O(1) step per slot.
+///-----------------------------------------------------------------------------
+#	define BALL_RBTREE_FOREACH_UNORDERED_REVERSE( tree, it ) \
+		for ( auto it = ( tree ).Count(); it-- != ( tree ).FIRST_INDEX; )
+
+///-----------------------------------------------------------------------------
 /// @brief Default strict-weak-order comparator for tree keys.
 /// 
 /// @details Red-black tree search, insertion and balancing logic assume that 
