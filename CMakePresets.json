@@ -23,7 +23,8 @@
 
 			"cacheVariables":
 			{
-				"CMAKE_BUILD_TYPE": "Debug"
+				"CMAKE_BUILD_TYPE": "Debug",
+				"BALL_ENABLE_ASSERT": true
 			}
 		},
 		{
@@ -35,6 +36,18 @@
 			"cacheVariables":
 			{
 				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+		{
+			"name": "RelWithDebInfoAndAsserts",
+			"displayName": "Ninja - Release With Debug Info And Asserts",
+			"description": "Build using Visual Studio generator",
+			"inherits": "NinjaBase",
+
+			"cacheVariables":
+			{
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
+				"BALL_ENABLE_ASSERT": true
 			}
 		},
 		{
@@ -66,6 +79,13 @@
 			"configurePreset": "RelWithDebInfo"
 		},
 		{
+			"name": "RelWithDebInfoAndAsserts",
+
+			"displayName": "Ninja - Release With Debug Info And Asserts",
+			"description": "Release With Debug Info And Asserts building with Ninja configuration",
+			"configurePreset": "RelWithDebInfoAndAsserts"
+		},
+		{
 			"name": "Release",
 
 			"displayName": "Ninja - Release",
@@ -89,6 +109,15 @@
 			"name": "RelWithDebInfo",
 			"displayName": "CTest - Ninja - RelWithDebInfo",
 			"configurePreset": "RelWithDebInfo",
+			"output":
+			{
+				"outputOnFailure": true
+			}
+		},
+		{
+			"name": "RelWithDebInfoAndAsserts",
+			"displayName": "CTest - Ninja - RelWithDebInfoAndAsserts",
+			"configurePreset": "RelWithDebInfoAndAsserts",
 			"output":
 			{
 				"outputOnFailure": true
