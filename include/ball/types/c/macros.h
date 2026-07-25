@@ -2,7 +2,6 @@
 #	define _INCLUDE_BALL_TYPES_C_MACROS_H_
 
 #	include "platform.h"
-#	include "constevaluated.h"
 #	include "nouniqueaddress.h"
 
 #	ifdef BALL_ENABLE_MODULE

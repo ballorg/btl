@@ -94,6 +94,16 @@ public:
 	static constexpr size_t Stride() noexcept { return ( 0 + ... + BYTES< Ts > ); }
 	constexpr size_t Size() const noexcept { return static_cast< size_t >( m_nCount ) * Stride(); }
 	constexpr I Count() const noexcept { return m_nCount; }
+	/// @brief Byte size of column @p T 's live data: `Count()` multiplied by the
+	/// element size -- `sizeof( T )` for ordinary columns, the packed bit width
+	/// (rounded up to whole bytes) for bit-packed ones.
+	template < typename T > constexpr size_t SizeBy() const noexcept
+	{
+		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
+			return PackedSizeBy< T >( Count() );
+		else
+			return static_cast< size_t >( Count() ) * sizeof( T );
+	}
 	constexpr I FixedCount() const noexcept { return FIXED_COUNT; }
 	template < typename T >  constexpr size_t FixedSizeBy() const noexcept { return FixedCount() * sizeof( T ); }
 	constexpr I FixedCapacity() const noexcept { return BitCeil_Const( FixedCount() ); }
@@ -326,7 +336,7 @@ public:
 			for ( ; i >= FIND_BATCH_LAST; )
 			{
 				const I iBatchEnd = static_cast< I >( i + 1 );
-				const I iFound = FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return PackedGetBy< T >( j ) == value; } );
+				const I iFound = FindBatchReverse( i, iBatchEnd, [ & ]( I j ) constexpr noexcept { return PackedGetBy< T >( j ) == value; } );
 
 				if ( iFound != iBatchEnd )
 					return iFound;
@@ -361,7 +371,7 @@ public:
 			for ( ; itBegin + FIND_BATCH_LAST <= it; )
 			{
 				const T *itBatchEnd = it + 1;
-				const T *itFound = FindBatchReverse( it, itBatchEnd, [&]( const T *itCheck ) constexpr noexcept { return *itCheck == value; } );
+				const T *itFound = FindBatchReverse( it, itBatchEnd, [ & ]( const T *itCheck ) constexpr noexcept { return *itCheck == value; } );
 
 				if ( itFound != itBatchEnd )
 					return static_cast< I >( itFound - pBase );
@@ -380,9 +390,9 @@ public:
 				if ( it == itBegin )
 					break;
 			}
-		}
 
-		return INVALID_INDEX;
+			return INVALID_INDEX;
+		}
 	}
 
 	// --------- slicing / subviews (typed pointers are advanced equally) ----------

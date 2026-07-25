@@ -87,7 +87,7 @@ public:
 			for ( ; i + FIND_BATCH_LAST < nCount; i += FIND_BATCH_COUNT )
 			{
 				const I iBatchEnd = static_cast< I >( i + FIND_BATCH_COUNT );
-				const I iFound = Base_t::FindBatchForward( i, iBatchEnd, [&]( I j ) constexpr noexcept { return RowEquals< Ts... >( j, args... ); } );
+				const I iFound = Base_t::FindBatchForward( i, iBatchEnd, [ & ]( I j ) constexpr noexcept { return RowEquals< Ts... >( j, args... ); } );
 
 				if ( iFound != iBatchEnd )
 					return iFound;
@@ -108,7 +108,7 @@ public:
 			for ( ; it + FIND_BATCH_COUNT <= itEnd; it += FIND_BATCH_COUNT )
 			{
 				const FirstColumn_t *itBatchEnd = it + FIND_BATCH_COUNT;
-				const FirstColumn_t *itFound = Base_t::FindBatchForward( it, itBatchEnd, [&]( const FirstColumn_t *itCheck ) constexpr noexcept { return RowEquals< Ts... >( itCheck, args... ); } );
+				const FirstColumn_t *itFound = Base_t::FindBatchForward( it, itBatchEnd, [ & ]( const FirstColumn_t *itCheck ) constexpr noexcept { return RowEquals< Ts... >( itCheck, args... ); } );
 
 				if ( itFound != itBatchEnd )
 					return static_cast< I >( itFound - pFirst );
@@ -158,7 +158,7 @@ public:
 			for ( ; i >= Base_t::FIND_BATCH_LAST; )
 			{
 				const I iBatchEnd = static_cast< I >( i + 1 );
-				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return RowEquals< Ts... >( j, args... ); } );
+				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [ & ]( I j ) constexpr noexcept { return RowEquals< Ts... >( j, args... ); } );
 
 				if ( iFound != iBatchEnd )
 					return iFound;
@@ -186,7 +186,7 @@ public:
 			for ( ; pFirst + Base_t::FIND_BATCH_LAST <= it; )
 			{
 				const FirstColumn_t *itBatchEnd = it + 1;
-				const FirstColumn_t *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [&]( const FirstColumn_t *itCheck ) constexpr noexcept { return RowEquals< Ts... >( itCheck, args... ); } );
+				const FirstColumn_t *itFound = Base_t::FindBatchReverse( it, itBatchEnd, [ & ]( const FirstColumn_t *itCheck ) constexpr noexcept { return RowEquals< Ts... >( itCheck, args... ); } );
 
 				if ( itFound != itBatchEnd )
 					return static_cast< I >( itFound - pFirst );
@@ -283,7 +283,7 @@ protected:
 			if ( Base_t::template IsPackedOverflowBy< T0 >() )
 				return reinterpret_cast< uint8_t * >( Base_t::template PackedDataBy< T0 >() );
 		}
-		else if ( Base_t::template IsOverflowBy< T0 >() )
+		else if ( Base_t::template IsOverflowBy< T0 >( Base_t::Count() ) )
 		{
 			return reinterpret_cast< uint8_t * >( Base_t::template DataBy< T0 >() );
 		}
@@ -665,10 +665,18 @@ public:
 	// ---------------------------
 	// Size management
 	// ---------------------------
+
 	///-----------------------------------------------------------------------------
-	/// @brief Changes the logical row count while keeping all columns synchronized.
+	/// @brief Like @ref SetCount, but leaves any newly grown rows as raw storage.
+	///
+	/// @details Reserves through @ref EnsureCapacity directly and repoints the
+	/// columns. Shrinking still destructs the dropped rows (as @ref SetCount does),
+	/// but growing does NOT construct the new rows: the caller owns the raw memory
+	/// in `[old count, nNew)` and must fill it by construction before those rows are
+	/// read or destroyed. Rows below the old count keep their live objects. Suited
+	/// to bulk builds that move each element into place exactly once.
 	///-----------------------------------------------------------------------------
-	constexpr void SetCount( I nNew )
+	constexpr void SetCountRaw( I nNew )
 	{
 		const I nOld = Count();
 
@@ -683,6 +691,16 @@ public:
 		uint8_t *pData = Base_t::EnsureCapacity( nNew );
 
 		Set( nNew, Base_t::template StorageBy< Ts >( nNew, pData )... );
+	}
+
+	///-----------------------------------------------------------------------------
+	/// @brief Changes the logical row count while keeping all columns synchronized.
+	///-----------------------------------------------------------------------------
+	constexpr void SetCount( I nNew )
+	{
+		const I nOld = Count();
+
+		SetCountRaw( nNew );
 
 		if ( nNew > nOld )
 			( ResizeRangeBy< Ts >( nOld, nNew ), ... );
@@ -844,11 +862,6 @@ private:
 	template < typename T >
 	constexpr void ResizeRangeBy( I nOld, I nNew )
 	{
-		T *pData = Base_t::template BaseBy< T >();
-
-		if ( !pData )
-			return;
-
 		if constexpr ( IS_PACKED_STORAGE< T > )
 		{
 			if ( nOld < nNew )
@@ -856,38 +869,44 @@ private:
 			else if ( nOld > nNew )
 				Base_t::template PackedClearRowsBy< T >( nNew, nOld - nNew );
 
-			return;
 		}
+		else
+		{
+			T *pData = Base_t::template BaseBy< T >();
 
-		if ( nOld < nNew )
-			ConstructElements( &pData[ nOld ], &pData[ nNew ] );
-		else if ( nOld > nNew )
-			DestructElements( &pData[ nNew ], &pData[ nOld ] );
+			if ( !pData )
+				return;
+
+			if ( nOld < nNew )
+				ConstructElements( &pData[ nOld ], &pData[ nNew ] );
+			else if ( nOld > nNew )
+				DestructElements( &pData[ nNew ], &pData[ nOld ] );
+		}
 	}
 
 	template < typename T >
 	constexpr void DestructRangeBy( I i, I nCount )
 	{
-		if constexpr ( IS_PACKED_STORAGE< T > )
-			return;
+		if constexpr ( !IS_PACKED_STORAGE< T > )
+		{
+			T *pData = Base_t::template BaseBy< T >();
 
-		T *pData = Base_t::template BaseBy< T >();
+			if ( !pData )
+				return;
 
-		if ( !pData )
-			return;
-
-		DestructElements( &pData[ i ], &pData[ i + nCount ] );
+			DestructElements( &pData[ i ], &pData[ i + nCount ] );
+		}
 	}
 
 	template < typename T >
 	constexpr void DestructAllBy()
 	{
-		if constexpr ( IS_PACKED_STORAGE< T > )
-			return;
+		if constexpr ( !IS_PACKED_STORAGE< T > )
+		{
+			T *pData = Base_t::template BaseBy< T >();
 
-		T *pData = Base_t::template BaseBy< T >();
-
-		DestructElements( pData, pData + Count() );
+			DestructElements( pData, pData + Count() );
+		}
 	}
 
 	template < typename T >

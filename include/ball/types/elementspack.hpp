@@ -5,6 +5,7 @@
 
 #	include "base/arch.h"
 #	include "base/fixed.h"
+#	include "meta/constevaluated.hpp"
 #	include "meta/pack.hpp"
 #	include "meta/removecv.hpp"
 #	include "meta/select.hpp"
@@ -96,14 +97,20 @@ public:
 		if constexpr ( IS_SAME< Type, T > )
 			return IsOverflow( nCount );
 		else
+		{
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
+			return false;
+		}
 	}
 	template < TI K > constexpr bool IsOverflowBy( I nCount ) const noexcept
 	{
 		if constexpr ( K == 0 )
 			return IsOverflow( nCount );
 		else
+		{
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
+			return false;
+		}
 	}
 
 	template < typename T > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept
@@ -111,14 +118,20 @@ public:
 		if constexpr ( IS_SAME< Type, T > )
 			return IsPackedOverflow( nCount );
 		else
+		{
 			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
+			return false;
+		}
 	}
 	template < TI K > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept
 	{
 		if constexpr ( K == 0 )
 			return IsPackedOverflow( nCount );
 		else
+		{
 			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
+			return false;
+		}
 	}
 
 	// ---- static storage access (SoA arrays), returns T* ----
@@ -330,7 +343,11 @@ public:
 	{
 		if constexpr ( K == 0 )
 		{
-			if ( BALL_IS_CONSTANT_EVALUATED() )
+			// Activating (and thus zeroing) the union member is required for a
+			// constant expression but must not happen at run time, where it would
+			// wipe the live inline buffer on every store; the run-time path writes
+			// straight through the already-active member.
+			if ( IsConstantEvaluated() )
 			{
 				m_Node.m_Fixed = Fixed_t();
 
@@ -352,7 +369,7 @@ public:
 	{
 		if constexpr ( K == 0 )
 		{
-			if ( BALL_IS_CONSTANT_EVALUATED() )
+			if ( IsConstantEvaluated() )
 				m_Node.m_PackedFixed = PackedFixed_t();
 		}
 		else
@@ -691,9 +708,12 @@ public:
 	{
 		if constexpr ( K == 0 )
 		{
-			if ( BALL_IS_CONSTANT_EVALUATED() )
+			// See the single-column overload: activation is compile-time only, so a
+			// run-time store does not wipe the already-active inline buffer.
+			if ( IsConstantEvaluated() )
 			{
 				m_Node.m_Fixed = Fixed_t();
+
 				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), pSrc );
 			}
 			else
@@ -711,7 +731,7 @@ public:
 	{
 		if constexpr ( K == 0 )
 		{
-			if ( BALL_IS_CONSTANT_EVALUATED() )
+			if ( IsConstantEvaluated() )
 				m_Node.m_PackedFixed = PackedFixed_t();
 		}
 		else

@@ -7,7 +7,6 @@
 #	include "c/assert.h"
 #	include "elements.hpp"
 #	include "fixed.hpp"
-#	include "meta/conditional.hpp"
 #	include "meta/fixed.hpp"
 #	include "meta/get.hpp"
 #	include "meta/indexsequence.hpp"
@@ -16,6 +15,7 @@
 #	include "multivector.hpp"
 #	include "pair.hpp"
 #	include "reflect.hpp"
+#	include "slotiterator.hpp"
 #	include "vector.hpp"
 
 enum class ERBTreeColor : uint1_t
@@ -109,6 +109,12 @@ BALL_REFLECT_TAGGED_TEMPLATE( RBTreeLeftColumn );
 BALL_REFLECT_TAGGED_TEMPLATE( RBTreeRightColumn );
 BALL_REFLECT_TAGGED_TEMPLATE( RBTreeParentColumn );
 
+// Key column tag: the key routinely shares a type with a value column, and the SoA 
+// substrate aliases same-typed heap columns - tagging the key keeps it its own 
+// column (the hash map does the same via HashKeyColumn). Value columns stay as 
+// supplied; distinguish identically-typed values with your own tags.
+BALL_REFLECT_TAGGED_TEMPLATE( RBTreeKeyColumn );
+
 ///-----------------------------------------------------------------------------
 /// @brief Structure-of-arrays red-black tree core with an out-of-band NIL.
 /// 
@@ -138,7 +144,7 @@ BALL_REFLECT_TAGGED_TEMPLATE( RBTreeParentColumn );
 /// index through `Column_t< TN >` / `Get< TN >`, mirroring `CMultiVector` 
 /// (column 0 is the key, columns 1.. are @p Ts).
 template < typename I, I N, typename TI, typename C, typename K, typename... Ts >
-class CMultiRBTreeBase : public C, public CBufferMultiVector< I, N, TI, ERBTreeColor, RBTreeLeftColumn_t< I >, RBTreeRightColumn_t< I >, RBTreeParentColumn_t< I >, K, Ts... >
+class CMultiRBTreeBase : public C, public CBufferMultiVector< I, N, TI, ERBTreeColor, RBTreeLeftColumn_t< I >, RBTreeRightColumn_t< I >, RBTreeParentColumn_t< I >, RBTreeKeyColumn_t< K >, Ts... >
 {
 public:
 	using TagColumn_t = ERBTreeColor;
@@ -147,12 +153,14 @@ public:
 	using LeftColumn_t = RBTreeLeftColumn_t< I >;
 	using RightColumn_t = RBTreeRightColumn_t< I >;
 	using ParentColumn_t = RBTreeParentColumn_t< I >;
+	// The key column is reflect-tagged so it never aliases a same-typed value column.
+	using KeyColumn_t = RBTreeKeyColumn_t< K >;
 
 	/// @brief Type of the @p TN -th payload column (column 0 is the key @p K).
 	template < TI TN > using Column_t = typename MIndexType< TI, TN, K, Ts... >::Type;
 
 	// The SoA node storage is the protected base; Nodes() exposes it as Base_t.
-	using Base_t = CBufferMultiVector< I, N, TI, TagColumn_t, LeftColumn_t, RightColumn_t, ParentColumn_t, K, Ts... >;
+	using Base_t = CBufferMultiVector< I, N, TI, TagColumn_t, LeftColumn_t, RightColumn_t, ParentColumn_t, KeyColumn_t, Ts... >;
 	using Tree_t = Base_t;
 	using Value_t = Column_t< 0 >;
 	using Key_t = K;
@@ -186,8 +194,10 @@ public:
 
 	using ColumnSequence_t = MakeIndexSequence_t< size_t, 1 + sizeof...( Ts ) >;
 
-	template < TI TN > constexpr Column_t< TN > *PayloadColumn() noexcept { return Get< PAYLOAD_COLUMN_OFFSET + TN >( Nodes() ); }
-	template < TI TN > constexpr const Column_t< TN > *PayloadColumn() const noexcept { return Get< PAYLOAD_COLUMN_OFFSET + TN >( Nodes() ); }
+	// Column 0 is stored as the reflect-tagged key cell, so the pointer type is
+	// deduced (it differs from `Column_t< 0 >`); value columns deduce to `Column_t< TN > *`.
+	template < TI TN > constexpr auto PayloadColumn() noexcept { return Get< PAYLOAD_COLUMN_OFFSET + TN >( Nodes() ); }
+	template < TI TN > constexpr auto PayloadColumn() const noexcept { return Get< PAYLOAD_COLUMN_OFFSET + TN >( Nodes() ); }
 
 public:
 	// "No node" / end / no-child is the out-of-band invalid index (-1): it owns no 
@@ -199,97 +209,16 @@ public:
 	// Alias of NIL_INDEX kept for diagnostics: the never-valid (-1) index.
 	static constexpr Index_t INVALID_INDEX = COLUMN_NIL_INDEX;
 
-	///-----------------------------------------------------------------------------
-	/// @brief Minimal bidirectional iterator over occupied tree slots.
-	/// 
-	/// @details `end()` is represented by the virtual NIL sentinel and is decrementable, 
-	/// which matches the standard bidirectional iterator requirement 
-	/// that a past-the-end iterator may still be decrementable when a predecessor exists: 
-	/// https://cppreference.com/w/cpp/iterator/bidirectional_iterator.html
-	/// 
-	/// @complexity Construction, comparison, dereference and SlotIndex are O(1). The 
-	/// increment/decrement operators are O(log n) worst case (one inorder step), but 
-	/// O(1) amortized, so a full begin()->end() traversal is O(n) overall.
-	///-----------------------------------------------------------------------------
-	template < bool IS_CONST >
-	class CIterator
-	{
-	private:
-		using TreeOwner_t = Conditional_t< IS_CONST, const CMultiRBTreeBase, CMultiRBTreeBase >;
-		using Reference_t = Conditional_t< IS_CONST, const Value_t &, Value_t & >;
-		using Pointer_t = Conditional_t< IS_CONST, const Value_t *, Value_t * >;
+	// Bidirectional iterator over occupied tree slots, shared with the hash map
+	// (@ref CSlotIterator). This tree owner supplies the traversal contract --
+	// Index_t/Key_t, NIL_INDEX, Key(), IsOccupied(), NextIndex() (inorder successor)
+	// and PrevIndex() (inorder predecessor, so `--end()` yields the rightmost node).
+	using iterator = CSlotIterator< CMultiRBTreeBase, false >;
+	using const_iterator = CSlotIterator< CMultiRBTreeBase, true >;
 
-	public:
-		constexpr CIterator() noexcept : m_iNode( NIL_INDEX ), m_pTree( nullptr ) {}
-		constexpr CIterator( TreeOwner_t *pTree, Index_t iNode ) noexcept : m_iNode( iNode ), m_pTree( pTree ) {}
-		constexpr CIterator( const CIterator &other ) noexcept = default;
-		constexpr CIterator &operator=( const CIterator &other ) noexcept = default;
-		constexpr CIterator( const CIterator< false > &other ) noexcept requires ( IS_CONST ) : m_iNode( other.m_iNode ), m_pTree( other.m_pTree ) {}
-
-		constexpr Reference_t operator*() const
-		{
-			BALL_ASSERT_MESSAGE( m_iNode != NIL_INDEX, "Iterator dereference cannot target end()/NIL_INDEX" );
-			BALL_ASSERT_MESSAGE( m_pTree, "Iterator dereference requires a valid tree owner" );
-			BALL_ASSERT_MESSAGE( m_pTree->IsOccupied( m_iNode ), "Iterator dereference requires an occupied tree slot" );
-
-			return m_pTree->Key( m_iNode );
-		}
-
-		constexpr Pointer_t operator->() const { return &operator*(); }
-
-		constexpr CIterator &operator++()
-		{
-			BALL_ASSERT_MESSAGE( m_iNode != NIL_INDEX, "Iterator increment cannot start from end()/NIL_INDEX" );
-			BALL_ASSERT_MESSAGE( m_pTree, "Iterator increment requires a valid tree owner" );
-			BALL_ASSERT_MESSAGE( m_pTree->IsOccupied( m_iNode ), "Iterator increment requires an occupied tree slot" );
-
-			m_iNode = m_pTree->NextIndex( m_iNode );
-
-			return *this;
-		}
-
-		constexpr CIterator operator++( int )
-		{
-			CIterator copy( *this );
-
-			++( *this );
-
-			return copy;
-		}
-
-		constexpr CIterator &operator--()
-		{
-			BALL_ASSERT_MESSAGE( m_iNode == NIL_INDEX || m_pTree->IsOccupied( m_iNode ), "Iterator decrement requires end() or an occupied tree slot" );
-			BALL_ASSERT_MESSAGE( m_pTree, "Iterator decrement requires a valid tree owner" );
-
-			m_iNode = m_pTree->PrevIndex( m_iNode );
-
-			return *this;
-		}
-
-		constexpr CIterator operator--( int )
-		{
-			CIterator copy( *this );
-
-			--( *this );
-
-			return copy;
-		}
-
-		template < bool RHS_CONST > constexpr bool operator==( const CIterator< RHS_CONST > &rhs ) const noexcept { return m_pTree == rhs.m_pTree && m_iNode == rhs.m_iNode; }
-		template < bool RHS_CONST > constexpr bool operator!=( const CIterator< RHS_CONST > &rhs ) const noexcept { return !( *this == rhs ); }
-
-		constexpr Index_t SlotIndex() const noexcept { return m_iNode; }
-
-	private:
-		template < bool > friend class CIterator;
-
-		Index_t m_iNode;
-		TreeOwner_t *m_pTree;
-	};
-
-	using iterator = CIterator< false >;
-	using const_iterator = CIterator< true >;
+	// The shared iterator reaches the traversal contract (Key/IsOccupied/NextIndex/
+	// PrevIndex), which is protected here, exactly as the former nested iterator did.
+	template < typename, bool > friend class CSlotIterator;
 
 	/// @complexity O(1).
 	constexpr CMultiRBTreeBase() noexcept : CMultiRBTreeBase( Compare_t() ) {}
@@ -411,7 +340,12 @@ protected:
 		BALL_ASSERT_MESSAGE( IsValidIndex( iNode ), "Access requires an in-range slot index" );
 		BALL_ASSERT_MESSAGE( IsOccupied( iNode ), "Access requires an occupied tree slot" );
 
-		return PayloadColumn< TN >()[ iNode ];
+		// Column 0 is the reflect-tagged key: unwrap it to the raw key. Value columns
+		// are returned as stored (a value may itself be a CReflect the caller wants).
+		if constexpr ( TN == 0 )
+			return ReflectAccess( PayloadColumn< TN >()[ iNode ] );
+		else
+			return PayloadColumn< TN >()[ iNode ];
 	}
 
 	/// @complexity O(1).
@@ -421,7 +355,10 @@ protected:
 		BALL_ASSERT_MESSAGE( IsValidIndex( iNode ), "Access requires an in-range slot index" );
 		BALL_ASSERT_MESSAGE( IsOccupied( iNode ), "Access requires an occupied tree slot" );
 
-		return PayloadColumn< TN >()[ iNode ];
+		if constexpr ( TN == 0 )
+			return ReflectAccess( PayloadColumn< TN >()[ iNode ] );
+		else
+			return PayloadColumn< TN >()[ iNode ];
 	}
 
 	// Key and EndIndex are O(1). FirstIndex is O(log n) (leftmost node). NextIndex and 
@@ -446,8 +383,8 @@ protected:
 
 	// Iterator() wraps an index in O(1). begin()/cbegin() are O(log n) (leftmost node); 
 	// end()/cend() are O(1) (the NIL sentinel).
-	constexpr iterator Iterator( Index_t iNode ) noexcept { return iterator( this, iNode ); }
-	constexpr const_iterator Iterator( Index_t iNode ) const noexcept { return const_iterator( this, iNode ); }
+	constexpr iterator Iterator( Index_t iNode ) noexcept { return iterator( iNode, this ); }
+	constexpr const_iterator Iterator( Index_t iNode ) const noexcept { return const_iterator( iNode, this ); }
 
 	constexpr iterator begin() noexcept { return Iterator( FirstIndex() ); }
 	constexpr iterator end() noexcept { return Iterator( EndIndex() ); }
@@ -1961,9 +1898,9 @@ public:
 	/// @complexity O(m + n log n): cross-capacity copy/move conversions rebuild the tree via 
 	/// CopyFrom/MoveFrom.
 	template < I N > constexpr CMultiRBTree( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { CopyFrom( other ); }
-	template < I N > constexpr CMultiRBTree &operator=( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { CopyFrom( other ); return *this; }
+	template < I N > constexpr CMultiRBTree &operator=( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { return CopyFrom( other ); }
 	template < I N > constexpr CMultiRBTree( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	template < I N > constexpr CMultiRBTree &operator=( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); return *this; }
+	template < I N > constexpr CMultiRBTree &operator=( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
 /// @brief Fixed-capacity (inline buffer) counterpart of `CMultiRBTree`.
@@ -1977,9 +1914,9 @@ public:
 
 	/// @complexity O(m + n log n): cross-form copy/move conversions rebuild via CopyFrom/MoveFrom.
 	constexpr CBufferMultiRBTree( const CMultiRBTree< I, C, K, Ts... > &other ) { CopyFrom( other ); }
-	constexpr CBufferMultiRBTree &operator=( const CMultiRBTree< I, C, K, Ts... > &other ) { CopyFrom( other ); return *this; }
+	constexpr CBufferMultiRBTree &operator=( const CMultiRBTree< I, C, K, Ts... > &other ) { return CopyFrom( other ); }
 	constexpr CBufferMultiRBTree( CMultiRBTree< I, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	constexpr CBufferMultiRBTree &operator=( CMultiRBTree< I, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); return *this; }
+	constexpr CBufferMultiRBTree &operator=( CMultiRBTree< I, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
 ///-----------------------------------------------------------------------------
@@ -2004,10 +1941,10 @@ public:
 	/// @brief Accesses the ordering key (column 0) of a node by index or iterator.
 	/// 
 	/// @complexity O(1) (all Key and Value accessors).
-	constexpr Key_t &Key( Index_t iNode ) { return Base_t::template Get< Key_t >( iNode ); }
-	constexpr const Key_t &Key( Index_t iNode ) const { return Base_t::template Get< Key_t >( iNode ); }
-	constexpr Key_t &Key( iterator it ) { return Base_t::template Get< Key_t >( it ); }
-	constexpr const Key_t &Key( const_iterator it ) const { return Base_t::template Get< Key_t >( it ); }
+	constexpr Key_t &Key( Index_t iNode ) { return Base_t::template Get< 0 >( iNode ); }
+	constexpr const Key_t &Key( Index_t iNode ) const { return Base_t::template Get< 0 >( iNode ); }
+	constexpr Key_t &Key( iterator it ) { return Base_t::template Get< 0 >( it ); }
+	constexpr const Key_t &Key( const_iterator it ) const { return Base_t::template Get< 0 >( it ); }
 
 	/// @brief Accesses the mapped value (column 1) of a node by index or iterator.
 	constexpr V &Value( Index_t iNode ) { return Base_t::template Get< V >( iNode ); }
@@ -2019,9 +1956,9 @@ public:
 	/// 
 	/// @complexity O(m + n log n): each rebuilds the tree via CopyFrom/MoveFrom.
 	template < I ON > constexpr CRBTree( const CRBTree< I, K, V, C, ON > &other ) { CopyFrom( other ); }
-	template < I ON > constexpr CRBTree &operator=( const CRBTree< I, K, V, C, ON > &other ) { CopyFrom( other ); return *this; }
+	template < I ON > constexpr CRBTree &operator=( const CRBTree< I, K, V, C, ON > &other ) { return CopyFrom( other ); }
 	template < I ON > constexpr CRBTree( CRBTree< I, K, V, C, ON > &&other ) { MoveFrom( Move( other ) ); }
-	template < I ON > constexpr CRBTree &operator=( CRBTree< I, K, V, C, ON > &&other ) { MoveFrom( Move( other ) ); return *this; }
+	template < I ON > constexpr CRBTree &operator=( CRBTree< I, K, V, C, ON > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
 /// Convenience spellings with the comparator fixed to `CRBTreeLess< K >` (use the 

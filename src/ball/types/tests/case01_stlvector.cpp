@@ -5,6 +5,7 @@ struct CAdapter_StdVector
 	using C = std::vector< TestPair_t >;
 	static constexpr size_t INVALID_INDEX = static_cast< size_t >( -1 );
 
+	static TestPair_t *Base( C &vec ) { return &vec.begin()[0]; }
 	static void Reserve( C &vec, size_t capacity ) { vec.reserve( capacity ); }
 	static void Append( C &vec, const TestPair_t &value ) { vec.emplace_back( value ); }
 	static size_t Count( const C &vec ) { return vec.size(); }

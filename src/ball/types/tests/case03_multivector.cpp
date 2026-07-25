@@ -7,7 +7,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	C vec;
 	std::vector< TestPair_t > ref;
 
-	auto funcCheck = [&]( BTL::StringView_t svLabel )
+	auto funcCheck = [ & ]( BTL::StringView_t svLabel )
 	{
 		const size_t nVec = vec.Count();
 		const size_t nRef = ref.size();
@@ -39,7 +39,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 			sOut.AppendMultiple( "mismatch (C=", nVec, ", Ref=", nRef, ")\n" );
 	};
 
-	auto funcAppendRange = [&]( size_t nStart, size_t nCount )
+	auto funcAppendRange = [ & ]( size_t nStart, size_t nCount )
 	{
 		for ( size_t i = 0; i < nCount; ++i )
 		{
@@ -104,7 +104,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 			sOut += "mismatch\n";
 	}
 
-	auto funcFindRow = [&]( size_t nFirst, uint32_t nSecond ) -> size_t
+	auto funcFindRow = [ & ]( size_t nFirst, uint32_t nSecond ) -> size_t
 	{
 		for ( size_t i = 0; i < vec.Count(); ++i )
 		{

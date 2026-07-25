@@ -3,18 +3,21 @@
 
 #	pragma once
 
-#	include "c/bits.h"
 #	include "base/arch.h"
 #	include "base/fixed.h"
+#	include "c/assert.h"
+#	include "c/bits.h"
 #	include "meta/fixed.hpp"
 
 /// @brief Computes the bit width helper used for power-of-two construction.
 /// @tparam I Unsigned integral type described by MFixed<I>.
 /// @param x Input value.
-/// @return For x == 0, returns 1. For supported widths (<= 64 bits), returns
-///         msb_index(x - 1) + 1. Returns MFixed<I>::INVALID for unsupported
-///         widths on this implementation.
-/// @note For the intrinsic path, non-zero inputs are expected to satisfy x > 1.
+/// @return For supported widths (<= 64 bits), returns msb_index(x - 1) + 1.
+///         Returns MFixed<I>::INVALID for unsupported widths on this implementation.
+/// 
+/// @note Precondition: x > 1. The intrinsic path scans the mask `x - 1`; a zero
+///       mask (x == 0 or x == 1) leaves the scan's index output undefined, so
+///       callers must guard those cases (see BitCeil). Asserted below.
 template < typename I >
 constexpr I BitWidth( I x )
 {
@@ -128,6 +131,39 @@ constexpr I BitCeil( I x )
 		return INVALID;
 
 	return I( 1 ) << iWidth;
+}
+
+/// @brief Population count: the number of set (1) bits in @p x.
+/// @tparam U Unsigned integral type described by MFixed<U> (width <= 64). A
+///         population count is defined over the raw bit pattern, so the word must
+///         be unsigned: a signed type would sign-extend in the intrinsic casts.
+/// @param x Input value.
+/// @return The count of 1-bits in @p x, via the platform popcount intrinsic
+///         (`__popcnt`/`__popcnt64` on MSVC, `__builtin_popcount*` on GCC/Clang).
+template < typename U >
+constexpr U PopCount( U x )
+{
+	using Fixed_t = MFixed< U >;
+
+	BALL_STATIC_ASSERT( Fixed_t::IS_UNSIGNED, "PopCount requires an unsigned integral type (signed inputs would sign-extend)" );
+
+	constexpr U NUM_BITS = Fixed_t::BITS;
+
+#	if defined( BALL_MSVC )
+	if constexpr ( NUM_BITS <= 32 )
+		return static_cast< U >( __popcnt( static_cast< uint_t >( x ) ) );
+	else
+		return static_cast< U >( __popcnt64( static_cast< ullong_t >( x ) ) );
+
+#	elif defined( BALL_GNUC )
+	if constexpr ( NUM_BITS <= 32 )
+		return static_cast< U >( __builtin_popcount( static_cast< uint_t >( x ) ) );
+	else
+		return static_cast< U >( __builtin_popcountll( static_cast< ullong_t >( x ) ) );
+
+#	else // !defined( BALL_MSVC ) && !defined( BALL_GNUC )
+#		error Unsupported platform!
+#	endif // defined( BALL_MSVC ) || defined( BALL_GNUC )
 }
 
 #endif // !defined( _INCLUDE_BALL_TYPES_BITS_HPP_ )

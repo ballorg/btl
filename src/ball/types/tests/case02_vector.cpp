@@ -5,6 +5,7 @@ struct CAdapter_Vector
 	using C = BTL::BufferVector_t< TestPair_t, 16 >;
 	static constexpr size_t INVALID_INDEX = C::INVALID_INDEX;
 
+	static TestPair_t *Base( C &vec ) { return vec.Base(); }
 	static void Reserve( C &, size_t ) {}
 	static void Append( C &vec, const TestPair_t &value ) { vec.AddToTail( value ); }
 	static size_t Count( const C &vec ) { return vec.Count(); }

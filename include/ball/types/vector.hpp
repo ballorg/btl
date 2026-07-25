@@ -583,12 +583,13 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			const I nWith = svRepl.Count();
+
 			Remove( i, nRemove );
 
 			if ( nWith > 0 )
 				Insert( i, svRepl );
 
-			return ( nWith == 0 ) ? ( ( i == 0 ) ? INVALID_INDEX : ( i - 1 ) ) : ( i + nWith - 1 );
+			return !nWith ? ( !i ? INVALID_INDEX : ( i - 1 ) ) : ( i + nWith - 1 );
 		}
 
 		const I nCount = Count();
@@ -596,17 +597,17 @@ public:
 		BALL_ASSERT( i <= nCount );
 		BALL_ASSERT( nRemove <= ( nCount - i ) );
 
-		const I nWith   = svRepl.Count();
-		const I nDelta  = nWith - nRemove; // can be negative
-		T *pData        = const_cast< T * >( Base() );
+		const I nWith = svRepl.Count();
+		const I nDelta = nWith - nRemove; // can be negative
+		T *pData = const_cast< T * >( Base() );
 
 		// Case 1: exact-size replace -> copy over the window and done.
-		if ( nDelta == 0 )
+		if ( !nDelta )
 		{
 			for ( I k = 0; k < nWith; ++k )
 				pData[ i + k ] = svRepl[ k ];
 
-			return ( nWith == 0 ) ? ( ( i == 0 ) ? INVALID_INDEX : ( i - 1 ) ) : ( i + nWith - 1 );
+			return !nWith ? ( !i ? INVALID_INDEX : ( i - 1 ) ) : ( i + nWith - 1 );
 		}
 
 		// Case 2: shrink (nWith < nRemove) -> move suffix left, shrink logical size.
@@ -619,20 +620,20 @@ public:
 
 			// 2.2 Shift suffix left by nShrink.
 			const I nSuffixBegin  = i + nRemove;
-			const I nOldCount     = nCount;
+			const I nOldCount = nCount;
 
 			ShiftElementsLeft( &pData[ i + nWith ], &pData[ nSuffixBegin ], &pData[ nOldCount ] );
 
 			// 2.3 Commit new logical size.
 			Set( nCount - nShrink, pData );
 
-			return ( nWith == 0 ) ? ( ( i == 0 ) ? INVALID_INDEX : i ) : ( i + nWith );
+			return !nWith ? ( !i ? INVALID_INDEX : i ) : ( i + nWith );
 		}
 
 		// Case 3: grow (nWith > nRemove) -> ensure capacity, shift suffix right, then copy.
 		{
 			const I nGrow = nDelta; // amount to push right
-			const I nNew  = nCount + nGrow;
+			const I nNew = nCount + nGrow;
 
 			// 3.1 Ensure capacity; pointer may change.
 			pData = EnsureCapacity( nNew );
@@ -687,15 +688,16 @@ public:
 	{
 		const I nWhat = svWhat.Count();
 
-		if ( nWhat == 0 )
+		if ( !nWhat )
 			return 0;
 
 		I nReplaced = 0;
-		I nFrom     = 0;
+		I nFrom = 0;
 
 		for ( ; ; )
 		{
 			const I iFound = Find( svWhat, nFrom );
+
 			if ( iFound == INVALID_INDEX )
 				break;
 
@@ -760,7 +762,7 @@ public:
 		const I nTailStart = nIndex + nViewCount;
 		const I nTailCount = nCount - nTailStart;
 		const I nInsertCount  = src.Length();
-		const I nNewCount  = nCount - nViewCount + nInsertCount;
+		const I nNewCount = nCount - nViewCount + nInsertCount;
 
 		T *pElements = EnsureCapacity( nNewCount );
 

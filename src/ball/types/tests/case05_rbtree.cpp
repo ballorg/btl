@@ -1,7 +1,6 @@
 #include "common.hpp"
 
 #include <map>
-#include <unordered_map>
 #include <vector>
 
 namespace
@@ -219,145 +218,6 @@ namespace
 		}
 
 		return ~size_t( 0 );
-	}
-
-	struct BenchmarkResult_t
-	{
-		BTL::CTimeNS m_Insert;
-		BTL::CTimeNS m_Find;
-		BTL::CTimeNS m_Erase;
-		bool m_bOk = true;
-	};
-
-	template < typename T >
-	struct CAdapterBase
-	{
-		using C = T;
-
-		static void Reserve( C &, size_t ) {}
-		static bool Insert( C &map, size_t key ) { return map.emplace( key, key * 17u + 3u ).second; }
-		static bool Find( const C &map, size_t key )
-		{
-			const auto it = map.find( key );
-
-			return it != map.end() && it->first == key;
-		}
-		static bool Erase( C &map, size_t key ) { return map.erase( key ) == 1u; }
-		static size_t Count( const C &map ) { return map.size(); }
-		static bool Empty( const C &map ) { return map.empty(); }
-		static bool Validate( const C & ) { return true; }
-	};
-
-	struct CAdapter_RBTree
-	{
-		using C = Tree_t;
-
-		static void Reserve( C &, size_t ) {}
-		static bool Insert( C &tree, size_t key ) { return !IsEndIndex( tree, InsertNode( tree, key ) ); }
-		static bool Find( const C &tree, size_t key )
-		{
-			const Tree_t::Index_t iNode = tree.Find( key );
-
-			return !IsEndIndex( tree, iNode ) && tree.Get< 1 >( iNode ) == key;
-		}
-		static bool Erase( C &tree, size_t key ) { return !IsEndIndex( tree, tree.FindAndRemove( key ) ); }
-		static size_t Count( const C &tree ) { return tree.Count(); }
-		static bool Empty( const C &tree ) { return tree.Count() == 0u; }
-		static bool Validate( const C &tree ) { return tree.Validate(); }
-	};
-
-	struct CAdapter_StdMap : CAdapterBase< RefMap_t >
-	{
-	};
-
-	struct CAdapter_StdUnorderedMap : CAdapterBase< std::unordered_map< size_t, size_t > >
-	{
-		static void Reserve( C &map, size_t count ) { map.reserve( count ); }
-	};
-
-	static std::vector< size_t > MakeBenchmarkKeys( const size_t nCount )
-	{
-		std::vector< size_t > keys;
-		keys.reserve( nCount );
-
-		for ( size_t i = 0; i < nCount; ++i )
-			keys.push_back( i );
-
-		size_t state = 0x9E3779B97F4A7C15ull;
-
-		for ( size_t i = nCount; 1u < i; --i )
-		{
-			state = state * 1664525u + 1013904223u;
-			const size_t j = state % i;
-			std::swap( keys[ i - 1u ], keys[ j ] );
-		}
-
-		return keys;
-	}
-
-	template < typename A >
-	static BenchmarkResult_t RunMapBenchmark( const std::vector< size_t > &keys )
-	{
-		BenchmarkResult_t result{};
-		typename A::C container;
-
-		A::Reserve( container, keys.size() );
-
-		BALL_PROF_BEGIN( MapInsertBenchmark );
-
-		for ( size_t key : keys )
-		{
-			if ( !A::Insert( container, key ) )
-				result.m_bOk = false;
-		}
-
-		result.m_Insert = BALL_PROF_END( MapInsertBenchmark );
-		result.m_bOk = result.m_bOk && A::Count( container ) == keys.size();
-
-		BALL_PROF_BEGIN( MapFindBenchmark );
-
-		for ( size_t key : keys )
-		{
-			if ( !A::Find( container, key ) )
-				result.m_bOk = false;
-		}
-
-		result.m_Find = BALL_PROF_END( MapFindBenchmark );
-
-		BALL_PROF_BEGIN( MapEraseBenchmark );
-
-		for ( size_t key : keys )
-		{
-			if ( !A::Erase( container, key ) )
-				result.m_bOk = false;
-		}
-
-		result.m_Erase = BALL_PROF_END( MapEraseBenchmark );
-		result.m_bOk = result.m_bOk && A::Empty( container ) && A::Validate( container );
-
-		return result;
-	}
-
-	static const char *BenchmarkStatus( bool bOk )
-	{
-		return bOk ? "ok" : "mismatch";
-	}
-
-	static void LogBenchmarkComparison( TestsOutput_t &sOut )
-	{
-		// The RB tree no longer caches root/boundary/free-list state; deriving them on
-		// demand makes every operation O(n)+ (overall ~O(n^2 log n) across the run), so
-		// this comparison uses a moderate key count to stay responsive.
-		const std::vector< size_t > keys = MakeBenchmarkKeys( 100'000u );
-		const BenchmarkResult_t rbTree = RunMapBenchmark< CAdapter_RBTree >( keys );
-		const BenchmarkResult_t stdMap = RunMapBenchmark< CAdapter_StdMap >( keys );
-		const BenchmarkResult_t stdUnorderedMap = RunMapBenchmark< CAdapter_StdUnorderedMap >( keys );
-
-		sOut.AppendMultiple( "BTL::RBTree_t: benchmark vs std::map vs std::unordered_map (", keys.size(), " keys)\n" );
-		sOut.AppendMultiple( " - insert: rb=", rbTree.m_Insert.AsMillisF(), " ms, std=", stdMap.m_Insert.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Insert.AsMillisF(), " ms\n" );
-		sOut.AppendMultiple( " - find: rb=", rbTree.m_Find.AsMillisF(), " ms, std=", stdMap.m_Find.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Find.AsMillisF(), " ms\n" );
-		sOut.AppendMultiple( " - erase: rb=", rbTree.m_Erase.AsMillisF(), " ms, std=", stdMap.m_Erase.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Erase.AsMillisF(), " ms\n" );
-		sOut.AppendMultiple( " - status: rb=", BenchmarkStatus( rbTree.m_bOk ), ", std=", BenchmarkStatus( stdMap.m_bOk ), ", unordered=", BenchmarkStatus( stdUnorderedMap.m_bOk ), "\n" );
 	}
 
 	static bool CheckMultiBTree( TestsOutput_t &sOut )
@@ -650,9 +510,6 @@ void Case05_RBTree( TestsOutput_t &sOut )
 
 		bAllOk = bAllOk && bOk;
 	}
-
-	LogBenchmarkComparison( sOut );
-	sOut += "---\n";
 
 	sOut.AppendMultiple( "BTL::RBTree_t: " );
 

@@ -21,7 +21,7 @@ template < class A >
 bool CheckContainerMatches( const typename A::C &container, const std::vector< TestPair_t > &expected, TestsOutput_t &sOut )
 {
 	const size_t nContainerCount = A::Count( container );
-	const size_t nExpectedCount  = expected.size();
+	const size_t nExpectedCount = expected.size();
 
 	bool bMatches = nContainerCount == nExpectedCount;
 
@@ -46,7 +46,7 @@ bool CheckContainerMatches( const typename A::C &container, const std::vector< T
 }
 
 template < class A >
-void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
+void RunVectorCase( TestsOutput_t &sOut, const BTL::StringView_t &svCaseLabel )
 {
 	using C = typename A::C;
 
@@ -55,7 +55,9 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 
 	A::Reserve( vecContainer, 16 );
 
-	auto funcAppendRange = [&]( size_t start, size_t count )
+	sOut.AppendMultiple( svCaseLabel, ": First address - ", A::Base( vecContainer ), "\n" );
+
+	auto funcAppendRange = [ & ]( size_t start, size_t count )
 	{
 		for ( size_t i = 0; i < count; ++i )
 		{
@@ -66,9 +68,9 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		}
 	};
 
-	auto funcLogState = [&]( const char *pszLabel, const BTL::CTimeNS &elapsed = BTL::CTimeNS() )
+	auto funcLogState = [ & ]( const BTL::StringView_t &svLabel, const BTL::CTimeNS &elapsed = BTL::CTimeNS() )
 	{
-		sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": ", BTL::StringView_t( pszLabel ) );
+		sOut.AppendMultiple( svCaseLabel, ": ", svLabel );
 		CheckContainerMatches< A >( vecContainer, vecReference, sOut );
 
 		if ( elapsed.IsValid() )
@@ -79,6 +81,8 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 
 	BALL_PROF_BEGIN( AppendRange );
 	funcAppendRange( 0, 10'000'000 );
+
+	sOut.AppendMultiple( svCaseLabel, ": Filled address - ", A::Base( vecContainer ), "\n" );
 
 	auto nsAppendRange = BALL_PROF_END( AppendRange );
 
@@ -154,7 +158,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 	const bool bReferenceFound = itReference != vecReference.end();
 	const size_t iReference = bReferenceFound ? static_cast< size_t >( itReference - vecReference.begin() ) : A::INVALID_INDEX;
 
-	sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": " );
+	sOut.AppendMultiple( svCaseLabel, ": " );
 
 	if ( bContainerFound )
 		sOut.AppendMultiple( "Find: found element at index ", iFound, " " );
@@ -172,7 +176,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 		sOut += "\n";
 
 	if ( bContainerFound != bReferenceFound || ( bContainerFound && bReferenceFound && iFound != iReference ) )
-		sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), " - Find mismatch between container and reference\n" );
+		sOut.AppendMultiple( svCaseLabel, " - Find mismatch between container and reference\n" );
 
 	BALL_PROF_BEGIN( MissFind );
 
@@ -181,7 +185,7 @@ void RunVectorCase( TestsOutput_t &sOut, const char *pszCaseLabel )
 
 	auto nsMissFind = BALL_PROF_END( MissFind );
 
-	sOut.AppendMultiple( BTL::StringView_t( pszCaseLabel ), ": " );
+	sOut.AppendMultiple( svCaseLabel, ": " );
 
 	if ( A::IsValidIndex( vecContainer, iMissing ) )
 		sOut.AppendMultiple( "Missing element was unexpectedly found at ", iMissing );
@@ -212,6 +216,9 @@ void Case03_MultiVector( TestsOutput_t &sOut );
 void Case04_MultiVector_Fixed( TestsOutput_t &sOut );
 void Case05_RBTree( TestsOutput_t &sOut );
 void Case06_Reflection( TestsOutput_t &sOut );
+void Case07_Hash( TestsOutput_t &sOut );
+void Case08_HashMap( TestsOutput_t &sOut );
 void Case10_Delegate( TestsOutput_t &sOut );
+void Case11_MapBenchmark( TestsOutput_t &sOut );
 
 #endif // !defined( _SRC_BALL_TYPES_TESTS_COMMON_HPP_ )

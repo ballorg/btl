@@ -397,7 +397,7 @@ public:
 			for ( ; i >= Base_t::FIND_BATCH_LAST; )
 			{
 				const I iBatchEnd = static_cast< I >( i + 1 );
-				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [&]( I j ) constexpr noexcept { return MatchFrom( j, v ); } );
+				const I iFound = Base_t::FindBatchReverse( i, iBatchEnd, [ & ]( I j ) constexpr noexcept { return MatchFrom( j, v ); } );
 
 				if ( iFound != iBatchEnd )
 					return iFound;

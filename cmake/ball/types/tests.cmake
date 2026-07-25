@@ -18,7 +18,10 @@ add_executable(${PROJECT_TESTS_NAME}
 	${SOURCE_DIR}/ball/types/tests/case04_multivector_fixed.cpp
 	${SOURCE_DIR}/ball/types/tests/case05_rbtree.cpp
 	${SOURCE_DIR}/ball/types/tests/case06_reflection.cpp
+	${SOURCE_DIR}/ball/types/tests/case07_hash.cpp
+	${SOURCE_DIR}/ball/types/tests/case08_hashmap.cpp
 	${SOURCE_DIR}/ball/types/tests/case10_delegate.cpp
+	${SOURCE_DIR}/ball/types/tests/case11_mapbenchmark.cpp
 )
 
 if(MSVC)

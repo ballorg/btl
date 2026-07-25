@@ -17,35 +17,35 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 	std::vector< F > arrFirst;
 	std::vector< float > arrSecond;
 
-	auto funcAddToTail = [&]( T nFirst, float nSecond )
+	auto funcAddToTail = [ & ]( T nFirst, float nSecond )
 	{
 		vec.AddToTail( nFirst, nSecond );
 		arrFirst.push_back( nFirst );
 		arrSecond.push_back( nSecond );
 	};
 
-	auto funcAddToHead = [&]( T nFirst, float nSecond )
+	auto funcAddToHead = [ & ]( T nFirst, float nSecond )
 	{
 		vec.AddToHead( nFirst, nSecond );
 		arrFirst.insert( arrFirst.begin(), nFirst );
 		arrSecond.insert( arrSecond.begin(), nSecond );
 	};
 
-	auto funcInsert = [&]( size_t i, T nFirst, float nSecond )
+	auto funcInsert = [ & ]( size_t i, T nFirst, float nSecond )
 	{
 		vec.Insert( i, nFirst, nSecond );
 		arrFirst.insert( arrFirst.begin() + i, nFirst );
 		arrSecond.insert( arrSecond.begin() + i, nSecond );
 	};
 
-	auto funcInsertMultiple = [&]( size_t i, size_t nCount, T nFirst, float nSecond )
+	auto funcInsertMultiple = [ & ]( size_t i, size_t nCount, T nFirst, float nSecond )
 	{
 		vec.InsertMultiple( i, nCount, nFirst, nSecond );
 		arrFirst.insert( arrFirst.begin() + i, nCount, nFirst );
 		arrSecond.insert( arrSecond.begin() + i, nCount, nSecond );
 	};
 
-	auto funcRemove = [&]( size_t i, size_t nCount = 1u )
+	auto funcRemove = [ & ]( size_t i, size_t nCount = 1u )
 	{
 		vec.Remove( i, nCount );
 		arrFirst.erase( arrFirst.begin() + i, arrFirst.begin() + i + nCount );

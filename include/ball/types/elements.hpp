@@ -6,6 +6,7 @@
 #	include "base/arch.h"
 #	include "base/fixed.h"
 #	include "c/assert.h"
+#	include "meta/constevaluated.hpp"
 #	include "meta/removereference.hpp"
 #	include "meta/xvalue.hpp"
 #	include "memory.h"
@@ -86,9 +87,6 @@ constexpr T *CopyElements_Unified( const I nCount, T *pDest, const T *pSrc ) noe
 template < typename I, typename T >
 constexpr T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 {
-	if ( BALL_IS_CONSTANT_EVALUATED() )
-		return CopyElements_Unified( nCount, pDest, pSrc );
-
 	BALL_ASSERT( 0 <= nCount );
 	BALL_ASSERT_MESSAGE( nCount == 0 || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
 	BALL_ASSERT_MESSAGE( nCount == 0 || pDest <= pSrc || pSrc + nCount <= pDest, "Unsafe overlap for forward copy" );
