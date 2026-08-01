@@ -3,6 +3,7 @@
 
 #	pragma once
 
+#	include "new.hpp"
 #	include "types/c/macros.h"
 #	include "types/memory.h"
 

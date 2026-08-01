@@ -16,7 +16,7 @@ constexpr T *ConstructElement( T *pMemory )
 {
 	BALL_ASSERT( pMemory != nullptr );
 
-	return reinterpret_cast< T * >( ::new( static_cast< void * >( pMemory ) ) T );
+	return reinterpret_cast< T * >( ::new( sizeof( T ), static_cast< void * >( pMemory ) ) T );
 }
 
 template < typename T, typename ...Ts >
@@ -24,7 +24,7 @@ constexpr T *ConstructElement( T *pMemory, Ts &&...args )
 {
 	BALL_ASSERT( pMemory != nullptr );
 
-	return reinterpret_cast< T * >( ::new( static_cast< void * >( pMemory ) ) T( Forward< Ts >( args )... ) );
+	return reinterpret_cast< T * >( ::new( sizeof( T ), static_cast< void * >( pMemory ) ) T( Forward< Ts >( args )... ) );
 }
 
 template < typename T >

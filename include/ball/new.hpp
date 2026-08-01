@@ -6,7 +6,5 @@
 
 BALL_EXPORT inline void *operator new( size_t, size_t, [[ maybe_unused ]] void *p ) noexcept { return p; }
 BALL_EXPORT inline void operator delete( void *, size_t, [[ maybe_unused ]] void *p ) noexcept {}
-BALL_EXPORT inline void *operator new( size_t, [[ maybe_unused ]] void *p ) noexcept { return p; }
-BALL_EXPORT inline void operator delete( void *, [[ maybe_unused ]] void *p ) noexcept {}
 
 #endif // !defined( _INCLUDE_BALL_NEW_HPP_ )
