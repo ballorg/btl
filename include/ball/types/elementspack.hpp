@@ -5,7 +5,9 @@
 
 #	include "base/arch.h"
 #	include "base/fixed.h"
+#	include "c/assert/static.h"
 #	include "meta/constevaluated.hpp"
+#	include "meta/indextype.hpp"
 #	include "meta/pack.hpp"
 #	include "meta/removecv.hpp"
 #	include "meta/select.hpp"
@@ -20,8 +22,8 @@ struct MElementsPackBase
 
 	static constexpr size_t FIXED_ELEMENT_SIZE = sizeof( Type );
 	static constexpr size_t POINTER_SIZE = sizeof( Type * );
-	static constexpr bool   FIXED_OVERFLOWS_POINTER = POINTER_SIZE >= FIXED_ELEMENT_SIZE;
-	static constexpr I      FIXED_COUNT = I( POINTER_SIZE / FIXED_ELEMENT_SIZE );
+	static constexpr bool FIXED_OVERFLOWS_POINTER = POINTER_SIZE >= FIXED_ELEMENT_SIZE;
+	static constexpr I FIXED_COUNT = I( POINTER_SIZE / FIXED_ELEMENT_SIZE );
 };
 
 template < typename I, I N, typename T >
@@ -67,379 +69,157 @@ struct MElementsPack : MElementsPackBase< I, T >
 	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return PackedSize( nCount ) > FIXED_SIZE; }
 };
 
-template < typename I, I N, typename TI, typename ...Ts >
-class CElementsPack;
-
-template < typename I, I N, typename TI, typename T0 >
-class CElementsPack< I, N, TI, T0 > : public MElementsPack< I, N, T0 >
+/// Per-column inline/external storage node used by CElementsPack.
+template < typename I, I N, typename T >
+class CElementsNode : public MElementsPack< I, N, T >
 {
 public:
-	using Type = T0;
-	using Base_t = MElementsPack< I, N, T0 >;
-	static constexpr I COMMON_FIXED_COUNT = Base_t::STORAGE_FIXED_COUNT;
-	using Base_t::FIXED_COUNT;
-	using Base_t::FIXED_SIZE;
+	using Type = T;
+	using Base_t = MElementsPack< I, N, T >;
 	using typename Base_t::Element_t;
 	using typename Base_t::Fixed_t;
 	using typename Base_t::Packed_t;
 	using typename Base_t::PackedFixed_t;
 	using typename Base_t::Data_t;
 	using typename Base_t::PackedData_t;
-	using Base_t::IsOverflow;
-	using Base_t::IsPackedOverflow;
+	using Base_t::FIXED_COUNT;
 
-	constexpr CElementsPack() noexcept : m_Node() {}
+	/// @complexity O(1): selects the pointer member or initializes one inline value.
+	constexpr CElementsNode() noexcept : m_Node() {}
+	constexpr CElementsNode( const Type &value ) noexcept : m_Node( value ) {}
+	constexpr CElementsNode( Type &&value ) noexcept : m_Node( Move( value ) ) {}
 
-	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
-	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
-	template < typename T > constexpr bool IsOverflowBy( I nCount ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsOverflow( nCount );
-		else
-		{
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-			return false;
-		}
-	}
-	template < TI K > constexpr bool IsOverflowBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsOverflow( nCount );
-		else
-		{
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-			return false;
-		}
-	}
+	/// @complexity O(1): direct union-member access.
+	constexpr RemoveCV_t< Type > *Fixed() noexcept { return m_Node.m_Fixed.Data(); }
+	constexpr const Type *Fixed() const noexcept { return m_Node.m_Fixed.Data(); }
+	constexpr Packed_t *PackedFixed() noexcept { return m_Node.m_PackedFixed.Data(); }
+	constexpr const Packed_t *PackedFixed() const noexcept { return m_Node.m_PackedFixed.Data(); }
+	constexpr Data_t &Data() noexcept { return m_Node.m_pData; }
+	constexpr const Data_t &Data() const noexcept { return m_Node.m_pData; }
+	constexpr PackedData_t &PackedData() noexcept { return m_Node.m_pPackedData; }
+	constexpr const PackedData_t &PackedData() const noexcept { return m_Node.m_pPackedData; }
 
-	template < typename T > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept
+	/// @complexity O(1): selects one of two storage members.
+	constexpr Type *Base( bool bOverflow ) noexcept { return bOverflow ? Data() : Fixed(); }
+	constexpr const Type *Base( bool bOverflow ) const noexcept { return bOverflow ? Data() : Fixed(); }
+	constexpr Packed_t *PackedBase( bool bOverflow ) noexcept { return bOverflow ? PackedData() : PackedFixed(); }
+	constexpr const Packed_t *PackedBase( bool bOverflow ) const noexcept { return bOverflow ? PackedData() : PackedFixed(); }
+
+	/// @complexity O(nCount): copies the requested inline elements.
+	template < typename U > constexpr void StoreFixed( I nCount, const U *pSrc ) noexcept
 	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsPackedOverflow( nCount );
-		else
+		if ( IsConstantEvaluated() )
 		{
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-			return false;
+			m_Node.m_Fixed = Fixed_t();
+			CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), pSrc );
 		}
-	}
-	template < TI K > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsPackedOverflow( nCount );
 		else
 		{
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-			return false;
+			CopyElements( nCount, m_Node.m_Fixed.Data(), pSrc );
 		}
 	}
 
-	// ---- static storage access (SoA arrays), returns T* ----
-	template < typename T > constexpr RemoveCV_t< T > *FixedBy() noexcept
+	/// @complexity O(FIXED_SIZE) during constant evaluation; O(1) at run time.
+	constexpr void ActivatePackedFixed() noexcept
 	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_Fixed.Data();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr const T *FixedBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_Fixed.Data();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr RemoveCV_t< T > *FixedBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_Fixed.Data();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr const T *FixedBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_Fixed.Data();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr Packed_t *PackedFixedBy() noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_PackedFixed.Data();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr const Packed_t *PackedFixedBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_PackedFixed.Data();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr Packed_t *PackedFixedBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_PackedFixed.Data();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr const Packed_t *PackedFixedBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_PackedFixed.Data();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
+		if ( IsConstantEvaluated() )
+			m_Node.m_PackedFixed = PackedFixed_t();
 	}
 
-	// ---- pointer storage access (AoS of pointers), returns T* ----
-	template < typename T > constexpr Data_t &DataBy() noexcept
+	/// @complexity O(nCount) for inline storage; O(1) for pointer storage.
+	constexpr void Copy( I nCount, const CElementsNode &other, bool bOverflow ) noexcept
 	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pData;
+		if ( bOverflow )
+			m_Node.m_pData = other.m_Node.m_pData;
 		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr const Data_t &DataBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pData;
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr Data_t &DataBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pData;
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr const Data_t &DataBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pData;
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr Packed_t *&PackedDataBy() noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pPackedData;
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr Packed_t *const &PackedDataBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pPackedData;
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr Packed_t *&PackedDataBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pPackedData;
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr Packed_t *const &PackedDataBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pPackedData;
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
+			CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.m_Node.m_Fixed.Data() );
 	}
 
-	template < typename T > constexpr T *BaseBy( I nCount ) noexcept
+	/// @complexity O(FIXED_COUNT) for inline storage; O(1) for pointer storage.
+	constexpr void SwapWith( CElementsNode &other, bool bOverflow ) noexcept
 	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsOverflow( nCount ) ? DataBy< T >() : FixedBy< T >();
+		if ( bOverflow )
+			Swap( m_Node.m_pData, other.m_Node.m_pData );
 		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr const T *BaseBy( I nCount ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsOverflow( nCount ) ? DataBy< T >() : FixedBy< T >();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-
-	template < TI K, typename T > constexpr T *BaseBy( I nCount ) noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsOverflow( nCount ) ? DataBy< K, T >() : FixedBy< K, T >();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > const T *BaseBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsOverflow( nCount ) ? DataBy< K, T >() : FixedBy< K, T >();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr Packed_t *PackedBaseBy( I nCount ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsPackedOverflow( nCount ) ? PackedDataBy< T >() : PackedFixedBy< T >();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr const Packed_t *PackedBaseBy( I nCount ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsPackedOverflow( nCount ) ? PackedDataBy< T >() : PackedFixedBy< T >();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr Packed_t *PackedBaseBy( bool bOverflow ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return bOverflow ? PackedDataBy< T >() : PackedFixedBy< T >();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < typename T > constexpr const Packed_t *PackedBaseBy( bool bOverflow ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return bOverflow ? PackedDataBy< T >() : PackedFixedBy< T >();
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr Packed_t *PackedBaseBy( I nCount ) noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsPackedOverflow( nCount ) ? PackedDataBy< K, T >() : PackedFixedBy< K, T >();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr const Packed_t *PackedBaseBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsPackedOverflow( nCount ) ? PackedDataBy< K, T >() : PackedFixedBy< K, T >();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr Packed_t *PackedBaseBy( bool bOverflow ) noexcept
-	{
-		if constexpr ( K == 0 )
-			return bOverflow ? PackedDataBy< K, T >() : PackedFixedBy< K, T >();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-	template < TI K, typename T > constexpr const Packed_t *PackedBaseBy( bool bOverflow ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return bOverflow ? PackedDataBy< K, T >() : PackedFixedBy< K, T >();
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-
-	// Copy @p nCount elements into the fixed buffer. The fixed buffer is made the
-	// union's active member first so the copy is valid inside a constant
-	// expression (reading an inactive union member is ill-formed in constexpr).
-	template < TI K, typename T > constexpr void StoreFixedElements( I nCount, const T *pSrc ) noexcept
-	{
-		if constexpr ( K == 0 )
-		{
-			// Activating (and thus zeroing) the union member is required for a
-			// constant expression but must not happen at run time, where it would
-			// wipe the live inline buffer on every store; the run-time path writes
-			// straight through the already-active member.
-			if ( IsConstantEvaluated() )
-			{
-				m_Node.m_Fixed = Fixed_t();
-
-				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), pSrc );
-			}
-			else
-			{
-				CopyElements( nCount, m_Node.m_Fixed.Data(), pSrc );
-			}
-		}
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-
-	// Make the packed fixed buffer the union's active member so subsequent packed
-	// bit writes are valid inside a constant expression (the same activation rule
-	// as StoreFixedElements, but for the packed-storage member).
-	template < TI K > constexpr void ActivatePackedFixed() noexcept
-	{
-		if constexpr ( K == 0 )
-		{
-			if ( IsConstantEvaluated() )
-				m_Node.m_PackedFixed = PackedFixed_t();
-		}
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-
-	template < typename T > constexpr void CopyBy( I nCount, const CElementsPack &other ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			if ( IsOverflow( nCount ) )
-				m_Node.m_pData = other.DataBy< T >();
-			else
-				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< T >() );
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-
-	template < TI K > constexpr void CopyBy( I nCount, const CElementsPack &other ) noexcept
-	{
-		if constexpr ( K == 0 )
-			if ( IsOverflow( nCount ) )
-				m_Node.m_pData = other.DataBy< K, Type >();
-			else
-				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< K, Type >() );
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
-	}
-
-	template < typename T > constexpr void SwapBy( I nCount, CElementsPack &other ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			if ( IsOverflow( nCount ) )
-				Swap( m_Node.m_pData, other.m_Node.m_pData );
-			else
-				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
-		else
-			static_assert( IS_SAME< Type, T >, "CElementsPack: typed OOB for empty pack" );
-	}
-
-	template < TI K > constexpr void SwapBy( I nCount, CElementsPack &other ) noexcept
-	{
-		if constexpr ( K == 0 )
-			if ( IsOverflow( nCount ) )
-				Swap( m_Node.m_pData, other.m_Node.m_pData );
-			else
-				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
-		else
-			static_assert( K == 0, "CElementsPack: typed OOB for empty pack" );
+			Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
 	}
 
 protected:
 	union Node_t
 	{
+		/// @complexity O(1), plus O(PACKED_BITS) when encoding a packed value.
 		constexpr Node_t() noexcept : m_pData( nullptr ) {}
+		constexpr Node_t( const Type &value ) noexcept : m_pData( nullptr )
+		{
+			BALL_STATIC_ASSERT( FIXED_COUNT > 0, "CElementsPack: a value requires inline storage" );
 
-		Fixed_t         m_Fixed;
-		Data_t          m_pData;
-		PackedFixed_t   m_PackedFixed;
-		PackedData_t    m_pPackedData;
+			if constexpr ( Base_t::IS_PACKED )
+				StorePacked( value );
+			else
+			{
+				m_Fixed = Fixed_t();
+				m_Fixed[ 0 ] = value;
+			}
+		}
+		constexpr Node_t( Type &&value ) noexcept : m_pData( nullptr )
+		{
+			BALL_STATIC_ASSERT( FIXED_COUNT > 0, "CElementsPack: a value requires inline storage" );
+
+			if constexpr ( Base_t::IS_PACKED )
+				StorePacked( value );
+			else
+			{
+				m_Fixed = Fixed_t();
+				m_Fixed[ 0 ] = Move( value );
+			}
+		}
+
+		/// @complexity O(PACKED_BITS): writes one logical packed value bit by bit.
+		constexpr void StorePacked( const Type &value ) noexcept
+		{
+			using U = typename Base_t::Traits_t::Unsigned_t;
+
+			m_PackedFixed = PackedFixed_t();
+			const U nValue = static_cast< U >( value );
+
+			for ( bits_t n = 0; n < Base_t::PACKED_BITS; ++n )
+				if ( ( nValue >> n ) & 1 )
+					m_PackedFixed[ static_cast< I >( n >> 3 ) ] = static_cast< Packed_t >( m_PackedFixed[ static_cast< I >( n >> 3 ) ] | static_cast< Packed_t >( Packed_t( 1 ) << ( n & 7 ) ) );
+		}
+
+		Fixed_t m_Fixed;
+		Data_t m_pData;
+		PackedFixed_t m_PackedFixed;
+		PackedData_t m_pPackedData;
 	} m_Node;
 };
 
+#define BALL_ELEMENTS_PACK_ACCESSORS( Name, NodeMethod ) \
+	template < typename T > constexpr decltype( auto ) Name() noexcept { return NodeBy< T >().NodeMethod(); } \
+	template < typename T > constexpr decltype( auto ) Name() const noexcept { return NodeBy< T >().NodeMethod(); } \
+	template < TI K, typename T > constexpr decltype( auto ) Name() noexcept { return CheckedNodeBy< K, T >().NodeMethod(); } \
+	template < TI K, typename T > constexpr decltype( auto ) Name() const noexcept { return CheckedNodeBy< K, T >().NodeMethod(); }
+
+template < typename I, I N, typename TI, typename ...Ts >
+class CElementsPack;
+
+/// Typed pack of per-column inline/external storage nodes.
 template < typename I, I N, typename TI, typename T0, typename ...Ts >
 class CElementsPack< I, N, TI, T0, Ts... > : public MElementsPack< I, N, T0 >
 {
 public:
 	using Type = T0;
 	using Base_t = MElementsPack< I, N, T0 >;
-	using Tail_t = CElementsPack< I, N, TI, Ts... >;
-	static constexpr I COMMON_FIXED_COUNT = Base_t::STORAGE_FIXED_COUNT < Tail_t::COMMON_FIXED_COUNT ? Base_t::STORAGE_FIXED_COUNT : Tail_t::COMMON_FIXED_COUNT;
+	using Nodes_t = MPack< TI, CElementsNode< I, N, T0 >, CElementsNode< I, N, Ts >... >;
+	template < TI K > using NodeByIndex_t = typename MIndexType< TI, K, CElementsNode< I, N, T0 >, CElementsNode< I, N, Ts >... >::Type;
+	static constexpr I COMMON_FIXED_COUNT = []() constexpr noexcept
+	{
+		I nCount = Base_t::STORAGE_FIXED_COUNT;
+
+		( ( nCount = nCount < MElementsPack< I, N, Ts >::STORAGE_FIXED_COUNT ? nCount : MElementsPack< I, N, Ts >::STORAGE_FIXED_COUNT ), ... );
+
+		return nCount;
+	}();
 	using Base_t::FIXED_COUNT;
 	using Base_t::FIXED_SIZE;
 	using typename Base_t::Element_t;
@@ -448,351 +228,95 @@ public:
 	using typename Base_t::PackedFixed_t;
 	using typename Base_t::Data_t;
 	using typename Base_t::PackedData_t;
-	using Base_t::IsOverflow;
-	using Base_t::IsPackedOverflow;
 
-	constexpr CElementsPack() noexcept : m_Node() {};
+	/// @complexity O(sizeof...(Ts)): initializes one node per column.
+	constexpr CElementsPack() noexcept : m_Nodes() {}
+	explicit constexpr CElementsPack( const Type &value, const Ts &...tail ) noexcept : m_Nodes( value, tail... ) {}
+	explicit constexpr CElementsPack( Type &&value, Ts &&...tail ) noexcept : m_Nodes( Move( value ), Move( tail )... ) {}
 
+	/// @complexity O(sizeof...(Ts) * FIXED_COUNT) for inline nodes; O(sizeof...(Ts)) for pointers.
+	constexpr CElementsPack( const CElementsPack & ) noexcept = default;
+	constexpr CElementsPack( CElementsPack && ) noexcept = default;
+	constexpr CElementsPack &operator=( const CElementsPack & ) noexcept = default;
+	constexpr CElementsPack &operator=( CElementsPack &&other ) noexcept { m_Nodes.MoveFrom( Move( other.m_Nodes ) ); return *this; }
+
+	/// @complexity O(1): compares against the compile-time shared threshold.
 	static constexpr bool IsOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
 	static constexpr bool IsPackedOverflow( I nCount ) noexcept { return nCount > COMMON_FIXED_COUNT; }
-	template < typename T > constexpr bool IsOverflowBy( I nCount ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsOverflow( nCount );
-		else
-			return m_Tail.template IsOverflowBy< T >( nCount );
-	}
-	template < TI K > constexpr bool IsOverflowBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsOverflow( nCount );
-		else
-			return m_Tail.template IsOverflowBy< K - 1 >( nCount );
-	}
-	template < typename T > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return IsPackedOverflow( nCount );
-		else
-			return m_Tail.template IsPackedOverflowBy< T >( nCount );
-	}
-	template < TI K > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsPackedOverflow( nCount );
-		else
-			return m_Tail.template IsPackedOverflowBy< K - 1 >( nCount );
-	}
+	template < typename T > constexpr bool IsOverflowBy( I nCount ) const noexcept { NodeBy< T >(); return IsOverflow( nCount ); }
+	template < TI K > constexpr bool IsOverflowBy( I nCount ) const noexcept { NodeBy< K >(); return IsOverflow( nCount ); }
+	template < typename T > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept { NodeBy< T >(); return IsPackedOverflow( nCount ); }
+	template < TI K > constexpr bool IsPackedOverflowBy( I nCount ) const noexcept { NodeBy< K >(); return IsPackedOverflow( nCount ); }
 
-	// ---- static storage access (SoA arrays), returns T* ----
-	template < typename T > constexpr RemoveCV_t< T > *FixedBy() noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_Fixed.Data();
-		else
-			return m_Tail.template FixedBy< T >();
-	}
-	template < typename T > constexpr const T *FixedBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_Fixed.Data();
-		else
-			return m_Tail.template FixedBy< T >();
-	}
-	template < TI K, typename T > constexpr RemoveCV_t< T > *FixedBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_Fixed.Data();
-		else
-			return m_Tail.template FixedBy< K - 1, T >();
-	}
-	template < TI K, typename T > constexpr const T *FixedBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_Fixed.Data();
-		else
-			return m_Tail.template FixedBy< K - 1, T >();
-	}
-	template < typename T > constexpr Packed_t *PackedFixedBy() noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_PackedFixed.Data();
-		else
-			return m_Tail.template PackedFixedBy< T >();
-	}
-	template < typename T > constexpr const Packed_t *PackedFixedBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_PackedFixed.Data();
-		else
-			return m_Tail.template PackedFixedBy< T >();
-	}
-	template < TI K, typename T > constexpr Packed_t *PackedFixedBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_PackedFixed.Data();
-		else
-			return m_Tail.template PackedFixedBy< K - 1, T >();
-	}
-	template < TI K, typename T > constexpr const Packed_t *PackedFixedBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_PackedFixed.Data();
-		else
-			return m_Tail.template PackedFixedBy< K - 1, T >();
-	}
+	/// @complexity O(k) type-pack traversal, where k is the column index.
+	BALL_ELEMENTS_PACK_ACCESSORS( FixedBy, Fixed )
+	BALL_ELEMENTS_PACK_ACCESSORS( PackedFixedBy, PackedFixed )
+	BALL_ELEMENTS_PACK_ACCESSORS( DataBy, Data )
+	BALL_ELEMENTS_PACK_ACCESSORS( PackedDataBy, PackedData )
 
-	// ---- pointer storage access (AoS of pointers), returns T* ----
-	template < typename T > constexpr auto &DataBy() noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pData;
-		else
-			return m_Tail.template DataBy< T >();
-	}
-	template < typename T > constexpr const auto &DataBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pData;
-		else
-			return m_Tail.template DataBy< T >();
-	}
-	template < TI K, typename T > constexpr auto &DataBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pData;
-		else
-			return m_Tail.template DataBy< K - 1, T >();
-	}
-	template < TI K, typename T > constexpr const auto &DataBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pData;
-		else
-			return m_Tail.template DataBy< K - 1, T >();
-	}
-	template < typename T > constexpr auto &PackedDataBy() noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pPackedData;
-		else
-			return m_Tail.template PackedDataBy< T >();
-	}
-	template < typename T > constexpr const auto &PackedDataBy() const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return m_Node.m_pPackedData;
-		else
-			return m_Tail.template PackedDataBy< T >();
-	}
-	template < TI K, typename T > constexpr auto &PackedDataBy() noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pPackedData;
-		else
-			return m_Tail.template PackedDataBy< K - 1, T >();
-	}
-	template < TI K, typename T > constexpr const auto &PackedDataBy() const noexcept
-	{
-		if constexpr ( K == 0 )
-			return m_Node.m_pPackedData;
-		else
-			return m_Tail.template PackedDataBy< K - 1, T >();
-	}
+	/// @complexity O(k) type-pack traversal, where k is the column index.
+	template < typename T > constexpr T *BaseBy( I nCount ) noexcept { return NodeBy< T >().Base( IsOverflow( nCount ) ); }
+	template < typename T > constexpr const T *BaseBy( I nCount ) const noexcept { return NodeBy< T >().Base( IsOverflow( nCount ) ); }
+	template < typename T > constexpr T *BaseBy( bool bOverflow ) noexcept { return NodeBy< T >().Base( bOverflow ); }
+	template < typename T > constexpr const T *BaseBy( bool bOverflow ) const noexcept { return NodeBy< T >().Base( bOverflow ); }
+	template < TI K, typename T > constexpr T *BaseBy( I nCount ) noexcept { return CheckedNodeBy< K, T >().Base( IsOverflow( nCount ) ); }
+	template < TI K, typename T > constexpr const T *BaseBy( I nCount ) const noexcept { return CheckedNodeBy< K, T >().Base( IsOverflow( nCount ) ); }
+	template < TI K, typename T > constexpr T *BaseBy( bool bOverflow ) noexcept { return CheckedNodeBy< K, T >().Base( bOverflow ); }
+	template < TI K, typename T > constexpr const T *BaseBy( bool bOverflow ) const noexcept { return CheckedNodeBy< K, T >().Base( bOverflow ); }
 
-	template < typename T > constexpr T *BaseBy( bool bOverflow ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return bOverflow ? DataBy< T >() : FixedBy< T >();
-		else
-			return m_Tail.template BaseBy< T >( bOverflow );
-	}
-	template < typename T > constexpr const T *BaseBy( bool bOverflow ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return bOverflow ? DataBy< T >() : FixedBy< T >();
-		else
-			return m_Tail.template BaseBy< T >( bOverflow );
-	}
+	/// @complexity O(k) type-pack traversal, where k is the column index.
+	template < typename T > constexpr Packed_t *PackedBaseBy( I nCount ) noexcept { return NodeBy< T >().PackedBase( IsPackedOverflow( nCount ) ); }
+	template < typename T > constexpr const Packed_t *PackedBaseBy( I nCount ) const noexcept { return NodeBy< T >().PackedBase( IsPackedOverflow( nCount ) ); }
+	template < typename T > constexpr Packed_t *PackedBaseBy( bool bOverflow ) noexcept { return NodeBy< T >().PackedBase( bOverflow ); }
+	template < typename T > constexpr const Packed_t *PackedBaseBy( bool bOverflow ) const noexcept { return NodeBy< T >().PackedBase( bOverflow ); }
+	template < TI K, typename T > constexpr Packed_t *PackedBaseBy( I nCount ) noexcept { return CheckedNodeBy< K, T >().PackedBase( IsPackedOverflow( nCount ) ); }
+	template < TI K, typename T > constexpr const Packed_t *PackedBaseBy( I nCount ) const noexcept { return CheckedNodeBy< K, T >().PackedBase( IsPackedOverflow( nCount ) ); }
+	template < TI K, typename T > constexpr Packed_t *PackedBaseBy( bool bOverflow ) noexcept { return CheckedNodeBy< K, T >().PackedBase( bOverflow ); }
+	template < TI K, typename T > constexpr const Packed_t *PackedBaseBy( bool bOverflow ) const noexcept { return CheckedNodeBy< K, T >().PackedBase( bOverflow ); }
 
-	template < TI K, typename T > constexpr T *BaseBy( I nCount ) noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsOverflow( nCount ) ? DataBy< K, T >() : FixedBy< K, T >();
-		else
-			return m_Tail.template BaseBy< K - 1, T >( nCount );
-	}
-	template < TI K, typename T > constexpr const T *BaseBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return IsOverflow( nCount ) ? DataBy< K, T >() : FixedBy< K, T >();
-		else
-			return m_Tail.template BaseBy< K - 1, T >( nCount );
-	}
-	template < TI K, typename T > constexpr T *BaseBy( bool bOverflow ) noexcept
-	{
-		if constexpr ( K == 0 )
-			return bOverflow ? DataBy< K, T >() : FixedBy< K, T >();
-		else
-			return m_Tail.template BaseBy< K - 1, T >( bOverflow );
-	}
-	template < TI K, typename T > constexpr const T *BaseBy( bool bOverflow ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return bOverflow ? DataBy< K, T >() : FixedBy< K, T >();
-		else
-			return m_Tail.template BaseBy< K - 1, T >( bOverflow );
-	}
-	template < typename T > constexpr Packed_t *PackedBaseBy( I nCount ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return PackedBaseBy< T >( IsPackedOverflow( nCount ) );
-		else
-			return m_Tail.template PackedBaseBy< T >( nCount );
-	}
-	template < typename T > constexpr const Packed_t *PackedBaseBy( I nCount ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return PackedBaseBy< T >( IsPackedOverflow( nCount ) );
-		else
-			return m_Tail.template PackedBaseBy< T >( nCount );
-	}
-	template < typename T > constexpr Packed_t *PackedBaseBy( bool bOverflow ) noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return bOverflow ? PackedDataBy< T >() : PackedFixedBy< T >();
-		else
-			return m_Tail.template PackedBaseBy< T >( bOverflow );
-	}
-	template < typename T > constexpr const Packed_t *PackedBaseBy( bool bOverflow ) const noexcept
-	{
-		if constexpr ( IS_SAME< Type, T > )
-			return bOverflow ? PackedDataBy< T >() : PackedFixedBy< T >();
-		else
-			return m_Tail.template PackedBaseBy< T >( bOverflow );
-	}
-	template < TI K, typename T > constexpr Packed_t *PackedBaseBy( I nCount ) noexcept
-	{
-		if constexpr ( K == 0 )
-			return PackedBaseBy< K, T >( IsPackedOverflow( nCount ) );
-		else
-			return m_Tail.template PackedBaseBy< K - 1, T >( nCount );
-	}
-	template < TI K, typename T > constexpr const Packed_t *PackedBaseBy( I nCount ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return PackedBaseBy< K, T >( IsPackedOverflow( nCount ) );
-		else
-			return m_Tail.template PackedBaseBy< K - 1, T >( nCount );
-	}
-	template < TI K, typename T > constexpr Packed_t *PackedBaseBy( bool bOverflow ) noexcept
-	{
-		if constexpr ( K == 0 )
-			return bOverflow ? PackedDataBy< K, T >() : PackedFixedBy< K, T >();
-		else
-			return m_Tail.template PackedBaseBy< K - 1, T >( bOverflow );
-	}
-	template < TI K, typename T > constexpr const Packed_t *PackedBaseBy( bool bOverflow ) const noexcept
-	{
-		if constexpr ( K == 0 )
-			return bOverflow ? PackedDataBy< K, T >() : PackedFixedBy< K, T >();
-		else
-			return m_Tail.template PackedBaseBy< K - 1, T >( bOverflow );
-	}
+	/// @complexity O(K + nCount) for storage traversal and copying.
+	template < TI K, typename T > constexpr void StoreFixedElements( I nCount, const T *pSrc ) noexcept { CheckedNodeBy< K, T >().StoreFixed( nCount, pSrc ); }
+	template < TI K > constexpr void ActivatePackedFixed() noexcept { NodeBy< K >().ActivatePackedFixed(); }
 
-	// Copy @p nCount elements into the fixed buffer of the K-th column. The fixed
-	// buffer is made the union's active member first so the copy is valid inside
-	// a constant expression (reading an inactive union member is ill-formed in
-	// constexpr).
-	template < TI K, typename T > constexpr void StoreFixedElements( I nCount, const T *pSrc ) noexcept
-	{
-		if constexpr ( K == 0 )
-		{
-			// See the single-column overload: activation is compile-time only, so a
-			// run-time store does not wipe the already-active inline buffer.
-			if ( IsConstantEvaluated() )
-			{
-				m_Node.m_Fixed = Fixed_t();
-
-				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), pSrc );
-			}
-			else
-			{
-				CopyElements( nCount, m_Node.m_Fixed.Data(), pSrc );
-			}
-		}
-		else
-			m_Tail.template StoreFixedElements< K - 1, T >( nCount, pSrc );
-	}
-
-	// Make the K-th column's packed fixed buffer the union's active member so the
-	// following packed bit writes are valid inside a constant expression.
-	template < TI K > constexpr void ActivatePackedFixed() noexcept
-	{
-		if constexpr ( K == 0 )
-		{
-			if ( IsConstantEvaluated() )
-				m_Node.m_PackedFixed = PackedFixed_t();
-		}
-		else
-			m_Tail.template ActivatePackedFixed< K - 1 >();
-	}
-
+	/// @complexity O(k + nCount) for inline storage; O(k) for pointer storage.
 	template < typename T > constexpr void CopyBy( I nCount, const CElementsPack &other ) noexcept
 	{
-		if constexpr ( IS_SAME< Type, T > )
-			if ( IsOverflow( nCount ) )
-				m_Node.m_pData = other.DataBy< T >();
-			else
-				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< T >() );
-		else
-			m_Tail.template CopyBy< T >( nCount, other.m_Tail );
+		NodeBy< T >().Copy( nCount, other.template NodeBy< T >(), IsOverflow( nCount ) );
 	}
-
 	template < TI K > constexpr void CopyBy( I nCount, const CElementsPack &other ) noexcept
 	{
-		if constexpr ( K == 0 )
-			if ( IsOverflow( nCount ) )
-				m_Node.m_pData = other.DataBy< K, Type >();
-			else
-				CopyElements_Unified( nCount, m_Node.m_Fixed.Data(), other.FixedBy< K, Type >() );
-		else
-			m_Tail.template CopyBy< K - 1 >( nCount, other.m_Tail );
+		NodeBy< K >().Copy( nCount, other.template NodeBy< K >(), IsOverflow( nCount ) );
 	}
-
 	template < typename T > constexpr void SwapBy( I nCount, CElementsPack &other ) noexcept
 	{
-		if constexpr ( IS_SAME< Type, T > )
-			if ( IsOverflow( nCount ) )
-				Swap( m_Node.m_pData, other.m_Node.m_pData );
-			else
-				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
-		else
-			m_Tail.template SwapBy< T >( nCount, other.m_Tail );
+		NodeBy< T >().SwapWith( other.template NodeBy< T >(), IsOverflow( nCount ) );
 	}
-
 	template < TI K > constexpr void SwapBy( I nCount, CElementsPack &other ) noexcept
 	{
-		if constexpr ( K == 0 )
-			if ( IsOverflow( nCount ) )
-				Swap( m_Node.m_pData, other.m_Node.m_pData );
-			else
-				Swap( m_Node.m_Fixed, other.m_Node.m_Fixed );
-		else
-			m_Tail.template SwapBy< K - 1 >( nCount, other.m_Tail );
+		NodeBy< K >().SwapWith( other.template NodeBy< K >(), IsOverflow( nCount ) );
 	}
 
-protected:
-	union Node_t
+private:
+	template < typename T > constexpr auto &NodeBy() noexcept { return m_Nodes.template BaseBy< CElementsNode< I, N, T > >(); }
+	template < typename T > constexpr const auto &NodeBy() const noexcept { return m_Nodes.template BaseBy< CElementsNode< I, N, T > >(); }
+	template < TI K > constexpr auto &NodeBy() noexcept { return m_Nodes.template BaseBy< NodeByIndex_t< K > >(); }
+	template < TI K > constexpr const auto &NodeBy() const noexcept { return m_Nodes.template BaseBy< NodeByIndex_t< K > >(); }
+	template < TI K, typename T > constexpr decltype( auto ) CheckedNodeBy() noexcept
 	{
-		constexpr Node_t() noexcept : m_pData( nullptr ) {}
+		BALL_STATIC_ASSERT( ( IS_SAME< typename NodeByIndex_t< K >::Type, T > ), "CElementsPack: type does not match column index" );
 
-		Fixed_t         m_Fixed;
-		Data_t          m_pData;
-		PackedFixed_t   m_PackedFixed;
-		PackedData_t    m_pPackedData;
-	} m_Node;
-	Tail_t m_Tail;
+		return NodeBy< K >();
+	}
+	template < TI K, typename T > constexpr decltype( auto ) CheckedNodeBy() const noexcept
+	{
+		BALL_STATIC_ASSERT( ( IS_SAME< typename NodeByIndex_t< K >::Type, T > ), "CElementsPack: type does not match column index" );
+
+		return NodeBy< K >();
+	}
+
+	Nodes_t m_Nodes;
 };
+
+#undef BALL_ELEMENTS_PACK_ACCESSORS
 
 #endif // !defined( _INCLUDE_BALL_TYPES_ELEMENTSPACK_HPP_ )
