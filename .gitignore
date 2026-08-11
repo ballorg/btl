@@ -10,3 +10,8 @@
 # IDE files
 /.idea
 /.PVS-Studio
+
+# AI agents & MCP servers
+.claude*
+.codebase*
+.codex*
