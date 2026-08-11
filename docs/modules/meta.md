@@ -1,0 +1,50 @@
+# Module: meta (metaprogramming toolkit)
+
+## Overview
+
+Ball's replacement for `<type_traits>` and friends, under [include/ball/types/meta/](../../include/ball/types/meta/). It provides type traits, value and type packs, index sequences, fixed-width integer metadata, the derived Fibonacci-hash constants, and the descriptor machinery behind reflection. The aggregate header [meta.hpp](../../include/ball/types/meta.hpp) pulls in the commonly used subset; several headers (reflect*, typeinfo, indexsequence, tuple) are included directly by their consumers.
+
+## Responsibilities
+
+### Type traits (one tiny header each)
+
+`MIsSame`/`IS_SAME`, `IS_INTEGRAL`, `IS_CONST`, `IS_POINTER`, `IS_STANDARD_LAYOUT`, class/union/trivial/copyable/constructible/assignable probes (aggregated by `MTypeInfo`), `RemoveCV_t`, `RemoveReference_t`, `Decay_t`, `Conditional_t`, `EnableIf_t`, `MSelect` (type selector by boolean), `MSigned`/`MUnsigned` (signedness partners), `MFirst`, `MIndexOf` (index of a type in a pack, -1 if absent), `MIndexType` (type at index), `Void_t`.
+
+### Value/type packs and sequences
+
+- `MPack< TI, Ts... >` ([pack.hpp](../../include/ball/types/meta/pack.hpp)) — a recursive compile-time value pack storing one value per `Ts`, accessed by type or index through `BaseBy`; `MPointerPack` is the pointer flavor. Used by delegates for stored payloads.
+- `MSequence`/`MMakeSequence` ([sequence.hpp](../../include/ball/types/meta/sequence.hpp)) and `MIndexSequence`/`MakeIndexSequence_t` ([indexsequence.hpp](../../include/ball/types/meta/indexsequence.hpp)) — index-sequence machinery for fold expansion.
+- `MTuple`/`TupleCat_t` ([tuple.hpp](../../include/ball/types/meta/tuple.hpp)) — a minimal type list used by the reflection descriptors.
+- `Get< K >( pack )` / `Get< T >( pack )` ([get.hpp](../../include/ball/types/meta/get.hpp)) — uniform free-function access to anything exposing `BaseBy` (packs, views, multivectors).
+
+### Value utilities
+
+- [xvalue.hpp](../../include/ball/types/meta/xvalue.hpp) — `Move`, `Forward`, `Swap`.
+- [constevaluated.hpp](../../include/ball/types/meta/constevaluated.hpp) — `IsConstantEvaluated()`, a `constexpr` wrapper over the compiler builtin; containers use it to pick constant-expression-safe code paths (e.g. union member activation).
+- [return.hpp](../../include/ball/types/meta/return.hpp) — `MReturn< R >::Default()` for default-returning unbound delegates.
+- [variant.hpp](../../include/ball/types/meta/variant.hpp) — `Variant_t`, a raw union of scalar/pointer words used as the alignment/size block for delegate inline storage.
+- [memberfunction.hpp](../../include/ball/types/meta/memberfunction.hpp) — member-function pointer type builders and `IS_MEMBER_FUNCTION_POINTER` / `IS_CONST_MEMBER_FUNCTION_POINTER` covering all cv/ref/noexcept combinations.
+
+### Integer metadata
+
+- `MFixed< T >`, `FixedTag_t`, `MFixedBase`, and `MFixedMetadata< T >` ([fixed.hpp](../../include/ball/types/meta/fixed.hpp)) — base-independent width, normalization, packed-storage, signedness, min/max, and all-bits `INVALID` metadata. `include/ball/types/fixed.hpp` adds the wrappers backed by Ball's base integer aliases.
+- `MFibonacci< U >` ([fibonacci.hpp](../../include/ball/types/meta/fibonacci.hpp)) — the golden-ratio multiplier and FNV-style fold seed for any unsigned width 1..64; see [BTL::CFibonacciHash](../types/BTL.CFibonacciHash.md).
+- `MTypeInfo< T >` ([typeinfo.hpp](../../include/ball/types/meta/typeinfo.hpp)) — aggregated size/alignment/category/lifetime traits; its `IS_MEMMOVE_SAFE` drives the containers' choice between byte-relocation and move-construct/destroy relocation.
+
+### Reflection descriptors
+
+`reflectvalue.hpp`, `reflectfield.hpp`, `reflectdescriptor.hpp`, `reflecttraits.hpp`, `reflectforeach.hpp`, `reflectcommon.hpp` implement the field-spec/descriptor layer behind the `BALL_REFLECT_*` macros; they are documented with the [reflection module](reflection.md) and [BTL::CReflect](../types/BTL.CReflect.md).
+
+## Data Structures
+
+- [BTL::CFixedBase](../types/BTL.CFixedBase.md) — `MFixed`, `MFixedMetadata`, `CFixedBase`, `FixedTag_t` (fixed-width integer metadata and wrappers)
+- [BTL::CFibonacciHash](../types/BTL.CFibonacciHash.md) — `MFibonacci` constants and the hashing policy built on them
+- [BTL::CReflect](../types/BTL.CReflect.md) — the reflection descriptor machinery (`MFieldSpec`, `MField`, `MClass`)
+
+## Dependencies
+
+The core traits depend only on other `meta/` headers and built-in C++ types. The wrapper alias grids in `include/ball/types/fixed.hpp` additionally depend on [base](base.md).
+
+## Relationships
+
+Every container header includes parts of this module. The fixed-width metadata cluster (`MFixed`, `MFixedMetadata` in [meta/fixed.hpp](../../include/ball/types/meta/fixed.hpp), wrappers in [types/fixed.hpp](../../include/ball/types/fixed.hpp)) is documented at [BTL::CFixedBase](../types/BTL.CFixedBase.md).
