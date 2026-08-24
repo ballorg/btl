@@ -27,7 +27,7 @@ Each column uses a union of embedded inline storage and an external pointer. The
 
 ## Ownership and Lifetime
 
-The pack does not own the memory referenced by pointer alternatives. Owners such as [CVector](BTL.CVector.md) and [CMultiVector](BTL.CMultiVector.md) manage allocations; [CView](BTL.CView.md) and [CViewBase](BTL.CViewBase.md) treat pointers as borrowed.
+The pack does not own the memory referenced by pointer alternatives. Single- and multi-column [CVector](BTL.CVector.md) specializations manage allocations; [CView](BTL.CView.md) and [CViewBase](BTL.CViewBase.md) treat pointers as borrowed.
 
 ## Type Relationships
 
@@ -43,8 +43,8 @@ Embedded as `m_Elements` in [CViewBase](BTL.CViewBase.md). `MElementsPack` compu
 
 - Default construction selects null pointer storage for every column; value, copy, and move construction and assignment are also available.
 - `FixedBy`, `DataBy`, `BaseBy`, and packed counterparts by column type or index.
-- `IsOverflowBy` and `IsPackedOverflowBy` overflow predicates.
-- `StoreFixedElements` and `ActivatePackedFixed` for constant-evaluation-safe union activation.
+- `IsOverflowBy` and `Packed_IsOverflowBy` overflow predicates.
+- `StoreFixedElements` and `Packed_ActivateFixed` for constant-evaluation-safe union activation.
 - `CopyBy` and `SwapBy` for per-column pointer or inline storage operations.
 
 ## Notes

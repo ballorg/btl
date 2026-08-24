@@ -9,8 +9,8 @@ The owning, growable string: a `CStringImpl` formatting/editing layer over the [
 - **Namespace:** `BTL`
 - **Module:** [strings](../modules/strings.md)
 - **Kind:** class templates
-  - `CStringImpl< class B, typename I, typename T >` derived from `CVectorImpl< B, I, T >`
-  - `CString< I, T, A >` over `CVectorBase< CStringView< I, T >, I, T, A >`
+  - `CStringImpl< class B, typename I, typename T >` derived from its supplied one-column vector implementation
+  - `CString< I, T, A >` over `CVectorImpl< CVectorBase< A, CStringView< I, T, 0 >, I, 0, size8_t, T >, I, size8_t, T >`
   - `CBufferString< I, T, N, A >` over the `N`-buffer view
 - **Declared in:** [include/ball/types/string.hpp](../../include/ball/types/string.hpp)
 - **Aliases:** `String_t`, `String8_t`…`String64_t`; `WString*_t`, `UTF8String*_t`, `UTF16String*_t`, `UTF32String*_t`; `BufferString_t< N >` and the same matrix of buffer variants
@@ -25,7 +25,7 @@ No members beyond the vector stack: a character count plus the inline-buffer/hea
 
 ## Storage Model
 
-Identical to [CVector](BTL.CVector.md): contiguous characters, inline buffer first (`CBufferString< I, T, N >` keeps up to `N` characters inline), heap block on overflow, power-of-two growth, migration back inline on shrink.
+Contiguous characters are managed by the ordinary one-column vector stack: `CVectorBase` owns allocation over `CStringView`, while allocator-independent `CVectorImpl` supplies editing operations. `CBufferString< I, T, N >` keeps up to `N` characters inline, then migrates to heap storage with power-of-two growth.
 
 ## Ownership and Lifetime
 
@@ -48,7 +48,7 @@ Any edit (`Insert`, `Append`, `Set`, `Replace*`, `Trim*`, `Remove*`) may realloc
 
 - Formatting `Insert( i, x )` overloads: characters, views, string literals (length `N - 1`), `bool` (`"true"`/`"false"`), all signed/unsigned integer widths (decimal, with protected base-8/10/16 helpers `InsertUnsigned`/`InsertSigned` writing digits into a single pre-reserved gap), fixed-precision floats (`InsertFloatFixed< P >`), and pointers (`"0x"` + hex). Each returns the running cursor index for chaining.
 - Composite operations: `InsertMultiple`, `Append(Multiple)`, `Set(Multiple)`, `operator=`/`operator+=` forwarding to them; `Length()`, `String()`.
-- Editing inherited from [CVectorImpl](BTL.CVector.md): `Replace` (range, first, all, per-character), `Remove`, `RemoveAll`.
+- Editing inherited from the one-column [CVectorImpl](BTL.CVector.md): `Replace` (range, first, all, per-character), `Remove`, `RemoveAll`.
 - Whitespace: `TrimLeft`, `TrimRight`, `Trim` (ASCII space/tab/newline/carriage return).
 
 ## Usage

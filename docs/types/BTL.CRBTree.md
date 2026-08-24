@@ -1,15 +1,15 @@
-# BTL::CMultiRBTree
+# BTL::CRBTree
 
 ## Overview
 
-A structure-of-arrays red-black tree with unique keys: node metadata (color, left, right, parent) and payload (key + value columns) each live in their own column of a [CBufferMultiVector](BTL.CMultiVector.md). Storage is kept **dense** by compact-on-erase, the NIL sentinel is the out-of-band index `-1` (no reserved row), and the root is reachable in O(1) through an encoding in slot 0's parent cell.
+A structure-of-arrays red-black tree with unique keys: node metadata (color, left, right, parent) and payload (key + value columns) each live in their own column of a [CBufferVector](BTL.CVector.md). Storage is kept **dense** by compact-on-erase, the NIL sentinel is the out-of-band index `-1` (no reserved row), and the root is reachable in O(1) through an encoding in slot 0's parent cell.
 
 Family members:
 
-- `CMultiRBTreeBase< I, N, TI, C, K, Ts... >` — protected core (links, rotations, fix-ups, validation).
-- `CMultiRBTreeImpl< … >` — public facade (`Insert`, `Find`, `Remove`, bounds, iteration, cross-capacity copy/move).
-- `CMultiRBTree< I, C, K, Ts... >` (heap) / `CBufferMultiRBTree< I, N, C, K, Ts... >` (inline) — capacity wrappers.
-- `CRBTree< I, K, V, C, N >` — single-value map spelling with `Key()`/`Value()` accessors.
+- `CRBTreeBase< I, N, TI, C, K, Ts... >` — protected core (links, rotations, fix-ups, validation).
+- `CRBTreeImpl< … >` — public facade (`Insert`, `Find`, `Remove`, bounds, iteration, cross-capacity copy/move).
+- `CRBTree< I, C, K, Ts... >` (heap) / `CBufferMultiRBTree< I, N, C, K, Ts... >` (inline) — capacity wrappers.
+- `CRBTree< I, C, K, Ts... >` provides `Key()` and indexed or typed column access through `Get`; the `RBTree*_t` aliases select the one-value form.
 - `ERBTreeColor` — 1-bit color enum (packed column); `CRBTreeLess< T >` — default strict-weak-order comparator (transparent for `T = void`).
 - **Aliases:** `RBTree_t`/`RBTree8_t`…`RBTree64_t`, `BufferRBTree*_t`, `MultiRBTree*_t`, `BufferMultiRBTree*_t`.
 
@@ -17,7 +17,7 @@ Family members:
 
 - **Namespace:** `BTL`
 - **Module:** [associative](../modules/associative.md)
-- **Kind:** class templates; `CMultiRBTreeBase` derives from the comparator `C` (empty base) and from `CBufferMultiVector< I, N, TI, ERBTreeColor, RBTreeLeftColumn_t< I >, RBTreeRightColumn_t< I >, RBTreeParentColumn_t< I >, RBTreeKeyColumn_t< K >, Ts... >`
+- **Kind:** class templates; `CRBTreeBase` derives from the comparator `C` (empty base) and from `CBufferVector< I, N, ERBTreeColor, RBTreeLeftColumn_t< I >, RBTreeRightColumn_t< I >, RBTreeParentColumn_t< I >, RBTreeKeyColumn_t< K >, Ts... >`
 - **Declared in:** [include/ball/types/rbtree.hpp](../../include/ball/types/rbtree.hpp)
 
 ## Purpose
@@ -41,16 +41,16 @@ Structural conventions:
 
 ## Storage Model
 
-Node rows follow the [CMultiVector storage model](BTL.CMultiVector.md): inline column buffers up to the common inline capacity, then one shared heap block for all columns, with capacity derived as `BitCeil( count )`. Insert always appends at the tail (storage stays dense because erase compacts), so growth is amortized; erase shrinks the row count by one and may migrate or reallocate across a capacity boundary.
+Node rows follow the [multi-column CVector storage model](BTL.CVector.md): inline column buffers up to the common inline capacity, then one shared heap block for all columns, with capacity derived as `BitCeil( count )`. Insert always appends at the tail (storage stays dense because erase compacts), so growth is amortized; erase shrinks the row count by one and may migrate or reallocate across a capacity boundary.
 
 ## Ownership and Lifetime
 
-Node storage is owned by the `CBufferMultiVector` base (shared heap block or inline buffers). Payload elements are constructed per node on insert and destructed on erase/compaction; the comparator is carried as an empty base, reachable via `Comparator()`.
+Node storage is owned by the `CBufferVector` base (shared heap block or inline buffers). Payload elements are constructed per node on insert and destructed on erase/compaction; the comparator is carried as an empty base, reachable via `Comparator()`.
 
 ## Type Relationships
 
-- Storage: [CMultiVector](BTL.CMultiVector.md); column tags: [CReflect](BTL.CReflect.md); iterator: [CSlotIterator](BTL.CSlotIterator.md).
-- Hash-based counterpart: [CMultiHashMap](BTL.CMultiHashMap.md).
+- Storage: [CVector](BTL.CVector.md); column tags: [CReflect](BTL.CReflect.md); iterator: [CSlotIterator](BTL.CSlotIterator.md).
+- Hash-based counterpart: [CHashMap](BTL.CHashMap.md).
 
 ## Invariants
 
@@ -70,7 +70,7 @@ Node storage is owned by the `CBufferMultiVector` base (shared heap block or inl
 - Mutation: `Insert( key, values... )` (BST descent + red insert + `InsertFixup`; duplicate keys return `NIL_INDEX`), `Remove( index )` / `RemoveNode` (successor transplant + `EraseFixup` + compaction; returns the *remapped* successor index), `FindAndRemove`, `Clear`.
 - Search: `Find`, `LowerBound`, `UpperBound`, `Contains`, plus `*Iterator` forms — all O(log n) descents.
 - Iteration: `FirstIndex`/`NextIndex`/`PrevIndex`/`EndIndex` (in-order), `begin()/end()` via [CSlotIterator](BTL.CSlotIterator.md) (bidirectional; `--end()` yields the rightmost node), and the `BALL_RBTREE_FOREACH*` macros including dense unordered sweeps.
-- Column access: `Get< TN >( index | iterator )` by column position (0 = key) or `Get< T >` by unique column type; `CRBTree` adds `Key()`/`Value()`.
+- Column access: `Get< TN >( index | iterator )` by column position (0 = key) or `Get< T >` by unique column type; `CRBTree` adds `Key()`/`Get< 1 >()`.
 - `Validate()` — full structural check (links, ordering, red/black rules, black-height, dense-slot coverage); used by tests.
 - Cross-capacity `CopyFrom`/`MoveFrom` rebuild row-by-row in key order (O(m + n log n)); move clears the source.
 
@@ -80,9 +80,9 @@ Node storage is owned by the `CBufferMultiVector` base (shared heap block or inl
 BTL::RBTree32_t< int, float > map;          // key int, value float
 auto i = map.Insert( 42, 1.5f );            // node index or NIL_INDEX if duplicate
 if ( map.Contains( 42 ) )
-    map.Value( map.Find( 42 ) ) = 2.5f;
+    map.Get< 1 >( map.Find( 42 ) ) = 2.5f;
 BALL_RBTREE_FOREACH( map, it )              // ascending key order
-    Use( map.Key( it ), map.Value( it ) );
+    Use( map.Key( it ), map.Get< 1 >( it ) );
 ```
 
 ## Notes

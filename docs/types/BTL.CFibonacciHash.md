@@ -2,7 +2,7 @@
 
 ## Overview
 
-The stateless Fibonacci (multiplicative golden-ratio) hashing policy used by the [hash map](BTL.CMultiHashMap.md), pluggable the same way `CRBTreeLess` is for the tree. It splits hashing into two composable steps — reduce a key to a working word, then map that word onto a power-of-two table — and the entire chain is `constexpr`, so compile-time and run-time hashing produce bit-identical results.
+The stateless Fibonacci (multiplicative golden-ratio) hashing policy used by the [hash map](BTL.CHashMap.md), pluggable the same way `CRBTreeLess` is for the tree. It splits hashing into two composable steps — reduce a key to a working word, then map that word onto a power-of-two table — and the entire chain is `constexpr`, so compile-time and run-time hashing produce bit-identical results.
 
 ## Declaration
 
@@ -32,7 +32,7 @@ Stateless and trivially copyable; no lifetime concerns.
 
 ## Type Relationships
 
-- Default hash policy `C` of the [CMultiHashMap family](BTL.CMultiHashMap.md); the map calls the static `Make` and `IndexForCapacity` operations.
+- Default hash policy `C` of the [CHashMap family](BTL.CHashMap.md); the map calls the static `Make` and `IndexForCapacity` operations.
 - `MFibonacci` requires an **unsigned** word (`MFixedMetadata< U >::IS_UNSIGNED`), widths 1..64.
 - The storage overload is parameterized by `S` and accepts types exposing `Index_t`, `Base()`, and `Count()`; [CViewBase](BTL.CViewBase.md)-derived `CView` and `CStringView` types satisfy this interface.
 

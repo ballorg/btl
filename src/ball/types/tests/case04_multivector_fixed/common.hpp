@@ -9,7 +9,7 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 	using T = typename F::Type;
 	using Traits_t = BTL::MFixedMetadata< F >;
 	using U = typename Traits_t::Unsigned_t;
-	using C = BTL::MultiVector_t< F, float >;
+	using C = BTL::Vector_t< F, float >;
 
 	static_assert( Traits_t::BITS == BITS, "MFixed* mapping mismatch" );
 
@@ -144,7 +144,7 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 	}
 
 	if ( !bOk )
-		sOut.AppendMultiple( "BTL::MultiVector_t fixed case mismatch: ", svFamily, "<", BITS, "> stage=", svFailStage, "\n" );
+		sOut.AppendMultiple( "BTL::Vector_t fixed case mismatch: ", svFamily, "<", BITS, "> stage=", svFailStage, "\n" );
 
 	return bOk;
 }

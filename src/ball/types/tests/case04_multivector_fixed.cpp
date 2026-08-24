@@ -9,7 +9,7 @@ void Case04_MultiVector_Fixed( TestsOutput_t &sOut )
 	Case04_MultiVector_Fixed_Uncertain( sOut, nTotal, nFailed );
 	Case04_MultiVector_Fixed_Unsiged( sOut, nTotal, nFailed );
 
-	sOut.AppendMultiple( "BTL::MultiVector_t fixed types: " );
+	sOut.AppendMultiple( "BTL::Vector_t fixed types: " );
 
 	if ( nFailed == 0u )
 		sOut.AppendMultiple( "ok (", nTotal, " cases)\n" );

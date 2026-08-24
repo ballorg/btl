@@ -32,6 +32,6 @@ The macros above; [BTL::CReflect](../types/BTL.CReflect.md) with `ReflectAccess`
 
 ## Relationships
 
-- [CMultiRBTree](../types/BTL.CMultiRBTree.md) tags its key and link columns; [CMultiHashMap](../types/BTL.CMultiHashMap.md) tags its key column.
+- [CRBTree](../types/BTL.CRBTree.md) tags its key and link columns; [CHashMap](../types/BTL.CHashMap.md) tags its key column.
 - Serialization targets are typically byte vectors from the [containers module](containers.md).
 - Exercised by [case06_reflection.cpp](../../src/ball/types/tests/case06_reflection.cpp).

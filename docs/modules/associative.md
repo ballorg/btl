@@ -2,12 +2,12 @@
 
 ## Overview
 
-Key-addressed containers built as structure-of-arrays over [CBufferMultiVector](../types/BTL.CMultiVector.md): a red-black tree (ordered, unique keys) and an open-addressing hash map (unordered, unique keys). Both follow the same composition pattern — a policy empty base (comparator / hash policy), metadata columns in front of the payload columns (key + values), a protected `Base/Impl` split, and thin public wrappers in heap-backed and inline-buffer flavors.
+Key-addressed containers built as structure-of-arrays over [CBufferVector](../types/BTL.CVector.md): a red-black tree (ordered, unique keys) and an open-addressing hash map (unordered, unique keys). Both follow the same composition pattern — a policy empty base (comparator / hash policy), metadata columns in front of the payload columns (key + values), a protected `Base/Impl` split, and thin public wrappers in heap-backed and inline-buffer flavors.
 
 ## Responsibilities
 
-- Ordered map/set/multi-column map: O(log n) insert/find/erase, in-order iteration ([CMultiRBTree family](../types/BTL.CMultiRBTree.md)).
-- Hash map/set/multi-column map: expected O(1) insert/find/erase ([CMultiHashMap family](../types/BTL.CMultiHashMap.md)).
+- Ordered map/set/multi-column map: O(log n) insert/find/erase, in-order iteration ([CRBTree family](../types/BTL.CRBTree.md)).
+- Hash map/set/multi-column map: expected O(1) insert/find/erase ([CHashMap family](../types/BTL.CHashMap.md)).
 - Reusable hashing policy ([CFibonacciHash](../types/BTL.CFibonacciHash.md)) with derived compile-time constants ([MFibonacci](../types/BTL.CFibonacciHash.md)).
 - A shared iterator ([CSlotIterator](../types/BTL.CSlotIterator.md)) parameterized by the owner's traversal contract.
 
@@ -15,8 +15,8 @@ Key-addressed containers built as structure-of-arrays over [CBufferMultiVector](
 
 | Family | Wrappers | Convenience aliases |
 | --- | --- | --- |
-| Red-black tree | `CMultiRBTree` (heap), `CBufferMultiRBTree` (inline), `CRBTree` (key+value) | `RBTree(8/16/32/64)_t`, `BufferRBTree*_t`, `MultiRBTree*_t`, `BufferMultiRBTree*_t` |
-| Hash map | `CMultiHashMap` (heap), `CBufferMultiHashMap` (inline), `CHashMap` (key+value) | `HashMap(8/16/32/64)_t`, `BufferHashMap*_t`, `MultiHashMap*_t`, `BufferMultiHashMap*_t` |
+| Red-black tree | `CRBTree` (heap), `CBufferMultiRBTree` (inline) | `RBTree(8/16/32/64)_t`, `BufferRBTree*_t`, `MultiRBTree*_t`, `BufferMultiRBTree*_t` |
+| Hash map | `CHashMap` (heap), `CBufferMultiHashMap` (inline) | `HashMap(8/16/32/64)_t`, `BufferHashMap*_t`, `MultiHashMap*_t`, `BufferMultiHashMap*_t` |
 | Hash policy | `CFibonacciHash< U, INDEX >` | `Hash_t`, `Hash8_t` … `Hash64_t` |
 | Comparator | `CRBTreeLess< T >` (and transparent `CRBTreeLess< void >`) | — |
 
@@ -28,8 +28,8 @@ Iteration macros: `BALL_RBTREE_FOREACH(_REVERSE)` (key order), `BALL_RBTREE_FORE
 
 ## Data Structures
 
-- [BTL::CMultiRBTree](../types/BTL.CMultiRBTree.md) — tree core, facade, wrappers, `ERBTreeColor`, `CRBTreeLess`.
-- [BTL::CMultiHashMap](../types/BTL.CMultiHashMap.md) — table core, facade, wrappers, `EHashSlotState`.
+- [BTL::CRBTree](../types/BTL.CRBTree.md) — tree core, facade, wrappers, `ERBTreeColor`, `CRBTreeLess`.
+- [BTL::CHashMap](../types/BTL.CHashMap.md) — table core, facade, wrappers, `EHashSlotState`.
 - [BTL::CFibonacciHash](../types/BTL.CFibonacciHash.md) — hashing policy + `MFibonacci` constants.
 - [BTL::CSlotIterator](../types/BTL.CSlotIterator.md) — shared iterator.
 

@@ -14,9 +14,9 @@ namespace
 		BALL_REFLECT_END( PlayerStats_t );
 	};
 
-	struct PackedWithPadding_t
+	struct Packed_WithPadding_t
 	{
-		BALL_REFLECT_BEGIN( PackedWithPadding_t );
+		BALL_REFLECT_BEGIN( Packed_WithPadding_t );
 
 		BALL_REFLECT_FIELD( char, m_cSmallA );
 		BALL_REFLECT_FIELD( char, m_cSmallB );
@@ -24,7 +24,7 @@ namespace
 		BALL_REFLECT_FIELD( int, m_nValue );
 		BALL_REFLECT_FIELD( char, m_cTail );
 
-		BALL_REFLECT_END( PackedWithPadding_t );
+		BALL_REFLECT_END( Packed_WithPadding_t );
 	};
 
 	struct EntityBase_t
@@ -319,26 +319,31 @@ namespace
 
 	static bool CheckPaddingLayout()
 	{
-		using Desc_t = BTL::Reflect_t< PackedWithPadding_t >;
+		using Desc_t = BTL::Reflect_t< Packed_WithPadding_t >;
 
 		ReflectedField_t arrFields[ 5 ];
-		const FieldCollector_t fields = CollectFields< PackedWithPadding_t >( arrFields, 5u );
+		const FieldCollector_t fields = CollectFields< Packed_WithPadding_t >( arrFields, 5u );
 
 		const BTL::size32_t nExpectedPayloadSize = sizeof( char ) + sizeof( char ) + sizeof( double ) + sizeof( int ) + sizeof( char );
-		const BTL::size32_t nExpectedPadding = BTL::size32_t( sizeof( PackedWithPadding_t ) ) - nExpectedPayloadSize;
+		const BTL::size32_t nExpectedPadding = BTL::size32_t( sizeof( Packed_WithPadding_t ) ) - nExpectedPayloadSize;
 		BTL::size32_t nActualPadding = 0u;
 
+		// Every inner gap is both "after" one field and "before" the next one.
+		// Count the before values once, then add only the final trailing padding.
 		for ( BTL::size32_t i = 0u; i < fields.m_nCount; ++i )
-			nActualPadding += arrFields[ i ].m_nPaddingBefore + arrFields[ i ].m_nPaddingAfter;
+			nActualPadding += arrFields[ i ].m_nPaddingBefore;
+
+		if ( fields.m_nCount )
+			nActualPadding += arrFields[ fields.m_nCount - 1u ].m_nPaddingAfter;
 
 		bool bOk = Desc_t::FIELD_COUNT == 5u;
 
 		bOk &= fields.m_nCount == 5u;
-		bOk &= arrFields[ 0 ].m_nOffset == offsetof( PackedWithPadding_t, m_cSmallA );
-		bOk &= arrFields[ 1 ].m_nOffset == offsetof( PackedWithPadding_t, m_cSmallB );
-		bOk &= arrFields[ 2 ].m_nOffset == offsetof( PackedWithPadding_t, m_fWide );
-		bOk &= arrFields[ 3 ].m_nOffset == offsetof( PackedWithPadding_t, m_nValue );
-		bOk &= arrFields[ 4 ].m_nOffset == offsetof( PackedWithPadding_t, m_cTail );
+		bOk &= arrFields[ 0 ].m_nOffset == offsetof( Packed_WithPadding_t, m_cSmallA );
+		bOk &= arrFields[ 1 ].m_nOffset == offsetof( Packed_WithPadding_t, m_cSmallB );
+		bOk &= arrFields[ 2 ].m_nOffset == offsetof( Packed_WithPadding_t, m_fWide );
+		bOk &= arrFields[ 3 ].m_nOffset == offsetof( Packed_WithPadding_t, m_nValue );
+		bOk &= arrFields[ 4 ].m_nOffset == offsetof( Packed_WithPadding_t, m_cTail );
 
 		bOk &= nActualPadding == nExpectedPadding;
 

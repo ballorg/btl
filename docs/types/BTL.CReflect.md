@@ -31,7 +31,7 @@ The descriptor layer (built by the macros, not stored in objects):
 
 ## Type Relationships
 
-- Tags used by [CMultiRBTree](BTL.CMultiRBTree.md) (`RBTreeKeyColumn_t`, `RBTreeLeft/Right/ParentColumn_t`) and [CMultiHashMap](BTL.CMultiHashMap.md) (`HashKeyColumn_t`); the aliasing problem is described in [architecture.md](../architecture.md#same-type-soa-columns-and-reflect-tags).
+- Tags used by [CRBTree](BTL.CRBTree.md) (`RBTreeKeyColumn_t`, `RBTreeLeft/Right/ParentColumn_t`) and [CHashMap](BTL.CHashMap.md) (`HashKeyColumn_t`); the aliasing problem is described in [architecture.md](../architecture.md#same-type-soa-columns-and-reflect-tags).
 - Field names use [CStringView](BTL.CStringView.md); descriptors use `MTuple`, `MIndexSequence`, `MTypeInfo` from [meta](../modules/meta.md).
 
 ## Operations

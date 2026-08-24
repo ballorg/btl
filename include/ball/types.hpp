@@ -21,7 +21,6 @@ BALL_EXPORT namespace BTL
 #	include "types/hashmap.hpp"
 #	include "types/math.hpp"
 #	include "types/meta.hpp"
-#	include "types/multivector.hpp"
 #	include "types/number.hpp"
 #	include "types/pair.hpp"
 #	include "types/rbtree.hpp"
@@ -30,6 +29,7 @@ BALL_EXPORT namespace BTL
 #	include "types/string.hpp"
 #	include "types/stringview.hpp"
 #	include "types/vector.hpp"
+#	include "types/vectoriterator.hpp"
 #	include "types/view.hpp"
 #	include "types/viewbase.hpp"
 };

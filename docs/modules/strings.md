@@ -32,7 +32,7 @@ Digit-writing primitives (`Num_Digits`, `Num_WriteUnsigned`) live in the [utilit
 
 ## Relationships
 
-- `CString`'s view layer **is** `CStringView` (passed as the `B` base of `CVectorBase`), so every string is implicitly viewable and comparable as a view.
+- `CString` uses the ordinary `CVectorBase`/`CVectorImpl` stack over `CStringView`, so allocation remains confined to `CVectorBase` and every string remains implicitly viewable and comparable as a view.
 - [CFibonacciHash](../types/BTL.CFibonacciHash.md) accepts the `Base()`/`Count()` storage interface inherited by `CStringView`, making strings usable as hash-map keys.
 - Reflection uses `CStringView` as its field-name type.
 

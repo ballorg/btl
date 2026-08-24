@@ -30,7 +30,7 @@ Elements are direct subobjects: constructed and destroyed with the array, copied
 
 ## Type Relationships
 
-- Provides the `Fixed_t`/`PackedFixed_t` inline buffers of [CElementsPack](BTL.CElementsPack.md).
+- Provides the `Fixed_t`/`Packed_Fixed_t` inline buffers of [CElementsPack](BTL.CElementsPack.md).
 - Unlike [CView](BTL.CView.md) it owns its elements; unlike [CVector](BTL.CVector.md) it cannot grow.
 
 ## Invariants

@@ -4,10 +4,10 @@ Ball is organized as a strict layering of headers under [include/ball/](../inclu
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│ facades      CString  CRBTree/CMultiRBTree  CHashMap/CMultiHashMap │
+│ facades      CString  CRBTree/CRBTree  CHashMap/CHashMap │
 │              CDelegate/CMulticastDelegate                          │
 ├────────────────────────────────────────────────────────────────────┤
-│ containers   CVector  CMultiVector  CView  CViewBase               │
+│ containers   CVector (single/SoA)  CView  CViewBase                │
 │              CElementsPack  CArray  CSlotIterator                  │
 ├────────────────────────────────────────────────────────────────────┤
 │ policies     CAllocator  CFibonacciHash  CRBTreeLess  CReflect     │
@@ -36,9 +36,8 @@ The linear containers are assembled by stacking CRTP-style layers, each adding o
 1. **[CElementsPack](types/BTL.CElementsPack.md)** — typed collection of [CElementsNode](types/BTL.CElementsNode.md) unions, stored in `MPack`; each node provides an inline `CArray`, an external pointer, and their bit-packed counterparts.
 2. **[CViewBase](types/BTL.CViewBase.md)** — adds the shared row count, typed column accessors, packed bit get/set/shift, batched find, subviews, and copy/move/swap of the view state.
 3. **[CView](types/BTL.CView.md)** — single-column convenience wrapper (element access, iterators, find/rfind, comparisons); also the base of `CStringView`.
-4. **[CVectorBase / CVectorImpl / CVector](types/BTL.CVector.md)** — adds ownership: allocator policy, `EnsureCapacity` growth/migration, insert/remove/replace, element lifetime.
-5. **[CMultiVectorBase / CMultiVectorImpl / CMultiVector](types/BTL.CMultiVector.md)** — the multi-column (SoA) equivalent; all columns share a single heap block and a single count.
-6. **Facades** — [CString](types/BTL.CString.md) over the vector stack; [CMultiRBTree](types/BTL.CMultiRBTree.md) and [CMultiHashMap](types/BTL.CMultiHashMap.md) over `CBufferMultiVector`, adding their metadata columns (color/links, slot state) in front of the payload columns.
+4. **[CVectorBase / CVectorImpl / CVector](types/BTL.CVector.md)** — one common SoA ownership layer over `CViewBase` for every arity; `CVector< I, T >` is its single-column case, while optional types after `T` add columns to the same shared block and count.
+5. **Facades** — [CString](types/BTL.CString.md) over the single-column vector stack; [CRBTree](types/BTL.CRBTree.md) and [CHashMap](types/BTL.CHashMap.md) over variadic `CBufferVector`, adding their metadata columns (color/links, slot state) in front of the payload columns.
 
 Every level of the stack exists in two capacity flavors selected by the inline count `N`: a heap-backed default (`N == 0`) and a `Buffer*` form that keeps up to `N` elements inline. Cross-capacity copy/move conversions rebuild content rather than stealing pointers.
 
@@ -65,5 +64,5 @@ The SoA substrate addresses columns **by type**. Two columns of the same type wo
 | associative | containers, hash policy, reflection (column tags), slot iterator |
 | strings | containers (vector stack), number/math |
 | reflection | meta/reflect*, strings (name views) |
-| delegates | containers (`CMultiVector`, `BufferVector_t`), meta/ |
+| delegates | containers (variadic `CVector`, `BufferVector_t`), meta/ |
 | time | base/ only (`Ball.Time` is independent of `Ball.Types`) |

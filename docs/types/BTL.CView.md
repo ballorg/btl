@@ -44,7 +44,7 @@ A view into an owning container is invalidated by any reallocation of that conta
 ## Operations
 
 - Construction from `(count, pointer)`, a C array, or a `[begin, end)` pointer pair.
-- Element access (`Get`, `operator[]`, `Front`, `Back`, `GetValue`), iterators, `Empty`.
+- Element access (`Get`, `operator[]`, `Front`, `Back`), iterators, `Empty`.
 - Search: `Find`/`RFind` for a single value and for a subrange needle (batched probing; empty-needle convention returns the clamped start).
 - Prefix/suffix tests `StartsWith`/`EndsWith`; lexicographic `==`/`!=`/`<`/`>`/`<=`/`>=`.
 - Slicing (`Subview`, `First`, `Last`, `DropFront`, `DropBack`) and `Const()` conversion.

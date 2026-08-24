@@ -24,8 +24,8 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 | [base](modules/base.md) | C-compatible base layer: architecture/fixed-width integer aliases, character types, platform macros, assertions, CRT imports |
 | [meta](modules/meta.md) | Metaprogramming toolkit: type traits, packs, sequences, fixed-width metadata, Fibonacci-hash constants, type info |
 | [utilities](modules/utilities.md) | Free-function helpers: element construction/copy/shift, bit operations, integer math, digit writing, `Move`/`Forward`/`Swap`, `Pair_t` |
-| [containers](modules/containers.md) | Linear storage: `CArray`, `CView`/`CViewBase`, `CElementsPack`, `CVector`, `CMultiVector`, allocators |
-| [associative](modules/associative.md) | Ordered and hashed containers: `CMultiRBTree`/`CRBTree`, `CMultiHashMap`/`CHashMap`, `CFibonacciHash`, `CSlotIterator` |
+| [containers](modules/containers.md) | Linear storage: `CArray`, `CView`/`CViewBase`, `CElementsPack`, variadic `CVector`, allocators |
+| [associative](modules/associative.md) | Ordered and hashed containers: `CRBTree`/`CRBTree`, `CHashMap`/`CHashMap`, `CFibonacciHash`, `CSlotIterator` |
 | [strings](modules/strings.md) | `CStringView`, `CString` and their alias families; number-to-text formatting |
 | [reflection](modules/reflection.md) | `CReflect`, `BALL_REFLECT_*` macros, field descriptors, raw serialization |
 | [delegates](modules/delegates.md) | Type-erased callables: `CDelegate`, `CMulticastDelegate`, `DelegateHandle_t` |
@@ -39,12 +39,12 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 - [BTL::CViewBase](types/BTL.CViewBase.md) — multi-column (SoA) view core
 - [BTL::CElementsPack](types/BTL.CElementsPack.md) — per-column inline/heap storage substrate
 - [BTL::CElementsNode](types/BTL.CElementsNode.md) — internal single-column storage node used by `CElementsPack`
-- [BTL::CVector](types/BTL.CVector.md) — growable vector (`CVectorBase`, `CVectorImpl`, `CBufferVector`)
-- [BTL::CMultiVector](types/BTL.CMultiVector.md) — growable SoA multi-column vector (`CBufferMultiVector`)
+- [BTL::CVector](types/BTL.CVector.md) — growable single-column or SoA vector (`CVectorBase`, `CVectorImpl`, `CBufferVector`)
+- [BTL::CVector_Packed_Iterator](types/BTL.CVector_Packed_Iterator.md) — byte-pointer iterator for packed elements; ordinary columns use native pointers
 
 ### Associative containers
-- [BTL::CMultiRBTree](types/BTL.CMultiRBTree.md) — SoA red-black tree family (`CRBTree`, `CBufferMultiRBTree`)
-- [BTL::CMultiHashMap](types/BTL.CMultiHashMap.md) — SoA open-addressing hash map family (`CHashMap`, `CBufferMultiHashMap`)
+- [BTL::CRBTree](types/BTL.CRBTree.md) — SoA red-black tree family (`CRBTree`, `CBufferMultiRBTree`)
+- [BTL::CHashMap](types/BTL.CHashMap.md) — SoA open-addressing hash map family (`CHashMap`, `CBufferMultiHashMap`)
 - [BTL::CFibonacciHash](types/BTL.CFibonacciHash.md) — golden-ratio hashing policy (`MFibonacci`)
 - [BTL::CSlotIterator](types/BTL.CSlotIterator.md) — slot iterator shared by tree and hash map
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The linear-storage stack: fixed arrays, non-owning views, the inline/heap storage substrate, and the owning growable containers (single-column vector and multi-column SoA multivector). See [architecture.md](../architecture.md#the-storage-stack) for how the layers compose.
+The linear-storage stack: fixed arrays, non-owning views, the inline/heap storage substrate, and the unified owning vector with single-column and multi-column SoA specializations. See [architecture.md](../architecture.md#the-storage-stack) for how the layers compose.
 
 ## Responsibilities
 
@@ -19,11 +19,11 @@ The linear-storage stack: fixed arrays, non-owning views, the inline/heap storag
 | `CElementsPack< I, N, TI, Ts... >`, `CElementsNode< I, N, T >`, `MElementsPack` | [BTL.CElementsPack.md](../types/BTL.CElementsPack.md), [BTL.CElementsNode.md](../types/BTL.CElementsNode.md) | typed column pack and its per-column inline / heap / packed storage node |
 | `CViewBase< I, N, TI, Ts... >` | [BTL.CViewBase.md](../types/BTL.CViewBase.md) | multi-column view: shared count, typed access, packed bits, find |
 | `CView< I, T, N >` | [BTL.CView.md](../types/BTL.CView.md) | single-column view; `View_t`/`BufferView_t` alias families |
-| `CVectorBase/Impl`, `CVector`, `CBufferVector` | [BTL.CVector.md](../types/BTL.CVector.md) | growable vector; `Vector_t`/`BufferVector_t` families |
-| `CMultiVectorBase/Impl`, `CMultiVector`, `CBufferMultiVector` | [BTL.CMultiVector.md](../types/BTL.CMultiVector.md) | growable SoA container; `MultiVector_t`/`BufferMultiVector_t` families |
+| `CVectorBase/Impl`, `CVector< I, T, Args... >`, `CBufferVector` | [BTL.CVector.md](../types/BTL.CVector.md) | growable single-column or SoA vector; variadic `Vector_t`/`BufferVector_t` families |
+| `CVector_Packed_Iterator< I, T, CONST >` | [BTL.CVector_Packed_Iterator.md](../types/BTL.CVector_Packed_Iterator.md) | byte-pointer/bit-offset iterator for packed columns; non-packed columns use pointers |
 | `CAllocatorBase`, `CAllocator< I, T >` | [BTL.CAllocator.md](../types/BTL.CAllocator.md) | aligned heap allocation policy |
 
-Free helpers used throughout are in the [utilities module](utilities.md); the shared find batching width is configurable via `BALL_FIND_BATCH_COUNT` (default 4, in [viewbase.hpp](../../include/ball/types/viewbase.hpp)).
+Free helpers used throughout are in the [utilities module](utilities.md); the shared find batching width is configurable via `BALL_FIND_BATCH_COUNT` (default 8, in [viewbase.hpp](../../include/ball/types/viewbase.hpp)).
 
 ## Dependencies
 
@@ -36,8 +36,8 @@ All types listed above; see individual documents.
 ## Relationships
 
 - [strings](strings.md) derives `CString` from the vector stack with `CStringView` as its view layer.
-- [associative](associative.md) builds the red-black tree and hash map on `CBufferMultiVector`.
-- [delegates](delegates.md) uses `BufferVector_t` for inline delegate storage and `MultiVector32_t` for multicast slot lists.
+- [associative](associative.md) builds the red-black tree and hash map on variadic `CBufferVector`.
+- [delegates](delegates.md) uses `BufferVector_t` for inline delegate storage and `Vector32_t< DelegateHandle_t, SingleDelegate_t >` for multicast slot lists.
 
 ## Notes
 

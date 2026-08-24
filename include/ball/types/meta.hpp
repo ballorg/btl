@@ -22,6 +22,9 @@
 #	include "meta/sequence.hpp"
 #	include "meta/signed.hpp"
 #	include "meta/unsigned.hpp"
+#	include "meta/typecount.hpp"
+#	include "meta/vectorallocatortype.hpp"
+#	include "meta/vectorviewtypes.hpp"
 #	include "meta/xvalue.hpp"
 
 #endif // !defined( _INCLUDE_BALL_TYPES_META_HPP_ )

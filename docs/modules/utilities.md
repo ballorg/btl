@@ -10,17 +10,17 @@ Raw-memory element helpers used by every owning container:
 
 - `ConstructElement( p, args... )` / `ConstructElements( first, end )` — placement-new construction (uses Ball's own placement `new` from [ball/new.hpp](../../include/ball/new.hpp)).
 - `DestructElement` / `DestructElements` — explicit destructor calls over a range.
-- `CopyElements( n, dst, src )` — forward byte copy (`memcpy` at run time, an element loop under constant evaluation via `CopyElements_Unified`); asserts against unsafe overlap.
+- `CopyElements( n, dst, src )` — forward byte move (`memmove` at run time, an element loop under constant evaluation via `CopyElements_Unified`); supports overlapping left shifts and asserts against overlapping right copies.
 - `CopyElementsFromEnd` — backward copy for overlapping right-shifts.
-- `ShiftElementsLeft/Right/Diff/ShiftElements` — overlap-safe range shifts; `ShiftElementsRight` dispatches between a non-overlapping copy, a by-one carry loop (`ShiftElementsRight_ByOne`), and a backward copy, deliberately avoiding one bulk `memmove` that provoked spurious GCC warnings in fixed-buffer callers.
+- `ShiftElementsLeft/Right/Diff/ShiftElements` — overlap-safe range shifts. At run time, shifts use the platform-tuned `memmove` path; constant evaluation retains the explicit non-overlapping, by-one carry, and backward-copy algorithms.
 - `CompareElements( n, l, r )` — bytewise `memcmp`-style comparison.
 
 These helpers treat memory as raw storage: callers are responsible for matching construction/destruction to the container's element-lifetime model.
 
 ## Bit operations — [bits.hpp](../../include/ball/types/bits.hpp)
 
-- `BitWidth( x )` — index of the highest set bit of `x - 1` plus one, via `_BitScanReverse(64)` / `__builtin_clz(ll)`.
-- `BitCeil( x )` — next power of two `>= x` computed from `BitWidth`; this is the library's capacity function (capacity is always `BitCeil( count )`).
+- `BitWidth( x )` — index of the highest set bit of `x - 1` plus one, via `_BitScanReverse(64)` / `__builtin_clz(ll)`; zero and one produce zero through a branchless nonzero scan mask.
+- `BitCeil( x )` — next power of two `>= x` computed as a direct shift by `BitWidth`; `if constexpr` removes unsupported-width handling from the runtime path, while zero and one map to one without a separate branch. This is the library's capacity function (capacity is always `BitCeil( count )`).
 - `BitCeil_Unified` / `BitCeil_Const` — portable/consteval bit-spreading variants (saturating).
 - `PopCount( x )` — hardware population count; requires an unsigned type. Used by the hash map to recover its live count from the packed state column.
 

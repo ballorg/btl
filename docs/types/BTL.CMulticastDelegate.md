@@ -17,7 +17,7 @@ An event/observer primitive: many listeners, one broadcast, handle- and owner-ba
 
 ## Data Structure
 
-Two members: a lock counter (`m_nLocks`, plain `size32_t` — a TODO in the source notes it is not atomic) and `MultiVector32_t< DelegateHandle_t, SingleDelegate_t > m_Events` — a two-column [SoA container](BTL.CMultiVector.md) pairing each slot's handle with its delegate. A slot with an invalid handle is free and reusable. `DelegateHandle_t` wraps a `uint_t` id drawn from a process-wide monotonically increasing counter (`INVALID_ID == ~0`); its move resets the source.
+Two members: a lock counter (`m_nLocks`, plain `size32_t` — a TODO in the source notes it is not atomic) and `Vector32_t< DelegateHandle_t, SingleDelegate_t > m_Events` — a two-column [SoA container](BTL.CVector.md) pairing each slot's handle with its delegate. A slot with an invalid handle is free and reusable. `DelegateHandle_t` wraps a `uint_t` id drawn from a process-wide monotonically increasing counter (`INVALID_ID == ~0`); its move resets the source.
 
 ## Ownership and Lifetime
 
@@ -25,7 +25,7 @@ Owns its delegate entries (which in turn own their bound implementations, but no
 
 ## Type Relationships
 
-- Slots: [CMultiVector](BTL.CMultiVector.md); entries: [CDelegate](BTL.CDelegate.md).
+- Slots: [CVector](BTL.CVector.md); entries: [CDelegate](BTL.CDelegate.md).
 
 ## Invariants
 

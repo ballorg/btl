@@ -24,7 +24,7 @@ public:
 	template< I GN > using GrowableView_t = CView< Index_t, Element_t, GN >;
 	template< I GN > using ConstGrowableView_t = CView< Index_t, const Element_t, GN >;
 	using Fixed_t = MFixed< Index_t >;
-	using PackedTraits_t = typename Base_t::template PackedTraits_t< Element_t >;
+	using Packed_Traits_t = typename Base_t::template Packed_Traits_t< Element_t >;
 
 	using Base_t::Base_t;
 	using Base_t::operator=;
@@ -64,39 +64,39 @@ public:
 	constexpr size_t FixedCapacitySize() const noexcept { return Base_t::template FixedCapacitySizeBy< T >(); }
 	constexpr bool IsOverflow( I nCount ) const { return Base_t::template IsOverflowBy< T >( nCount ); }
 	constexpr bool IsOverflow() const { return IsOverflow( Count() ); }
-	constexpr bool IsPackedOverflow( I nCount ) const { return Base_t::template IsPackedOverflowBy< T >( nCount ); }
-	constexpr bool IsPackedOverflow() const { return IsPackedOverflow( Count() ); }
+	constexpr bool Packed_IsOverflow( I nCount ) const { return Base_t::template Packed_IsOverflowBy< T >( nCount ); }
+	constexpr bool Packed_IsOverflow() const { return Packed_IsOverflow( Count() ); }
 
 	constexpr T *FixedData() noexcept { return Base_t::template FixedDataBy< T >(); }
 	constexpr const T *FixedData() const noexcept { return Base_t::template FixedDataBy< T >(); }
-	constexpr uchar_t *PackedFixedData() noexcept { return Base_t::template PackedFixedDataBy< T >(); }
-	constexpr const uchar_t *PackedFixedData() const noexcept { return Base_t::template PackedFixedDataBy< T >(); }
+	constexpr uchar_t *Packed_FixedData() noexcept { return Base_t::template Packed_FixedDataBy< T >(); }
+	constexpr const uchar_t *Packed_FixedData() const noexcept { return Base_t::template Packed_FixedDataBy< T >(); }
 	constexpr T *Data() noexcept { return Base_t::template DataBy< T >(); }
 	constexpr const T *Data() const noexcept { return Base_t::template DataBy< T >(); }
-	constexpr uchar_t *PackedData() noexcept { return Base_t::template PackedDataBy< T >(); }
-	constexpr const uchar_t *PackedData() const noexcept { return Base_t::template PackedDataBy< T >(); }
+	constexpr uchar_t *Packed_Data() noexcept { return Base_t::template Packed_DataBy< T >(); }
+	constexpr const uchar_t *Packed_Data() const noexcept { return Base_t::template Packed_DataBy< T >(); }
 	constexpr T *Base() noexcept { return Base_t::template BaseBy< T >(); }
 	constexpr const T *Base() const noexcept { return Base_t::template BaseBy< T >(); }
-	constexpr uchar_t *PackedBase() noexcept { return Base_t::template PackedBaseBy< T >(); }
-	constexpr const uchar_t *PackedBase() const noexcept { return Base_t::template PackedBaseBy< T >(); }
+	constexpr uchar_t *Packed_Base() noexcept { return Base_t::template Packed_BaseBy< T >(); }
+	constexpr const uchar_t *Packed_Base() const noexcept { return Base_t::template Packed_BaseBy< T >(); }
 
-	static constexpr bits_t PackedBits() noexcept { return Base_t::template PackedBitsBy< T >(); }
-	static constexpr size_t PackedSize( I nCount ) noexcept { return Base_t::template PackedSizeBy< T >( nCount ); }
-	constexpr void PackedClearRows( I iFrom, I nRows ) noexcept { return Base_t::template PackedClearRowsBy< T >( iFrom, nRows ); }
-	constexpr void PackedShiftRowsLeft( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsLeftBy< T >( iFrom, nRows, nShiftRows ); }
-	constexpr void PackedShiftRowsRight( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template PackedShiftRowsRightBy< T >( iFrom, nRows, nShiftRows ); }
-	constexpr T PackedGet( I i ) const noexcept { return Base_t::template PackedGetBy< T >( i ); }
-	constexpr void PackedSet( I i, const T &value ) noexcept { return Base_t::template PackedSetBy< T >( i, value ); }
+	static constexpr bits_t Packed_Bits() noexcept { return Base_t::template Packed_BitsBy< T >(); }
+	static constexpr size_t Packed_SizeBy( I nCount ) noexcept { return Base_t::template Packed_SizeBy< T >( nCount ); }
+	constexpr void Packed_ClearRows( I iFrom, I nRows ) noexcept { return Base_t::template Packed_ClearRowsBy< T >( iFrom, nRows ); }
+	constexpr void Packed_ShiftRowsLeftBy( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template Packed_ShiftRowsLeftBy< T >( iFrom, nRows, nShiftRows ); }
+	constexpr void Packed_ShiftRowsRightBy( I iFrom, I nRows, I nShiftRows ) noexcept { return Base_t::template Packed_ShiftRowsRightBy< T >( iFrom, nRows, nShiftRows ); }
+	constexpr T Packed_Get( I i ) const noexcept { return Base_t::template Packed_GetBy< T >( i ); }
+	constexpr void Packed_Set( I i, const T &value ) noexcept { return Base_t::template Packed_SetBy< T >( i, value ); }
 
 	// --------- basic access ----------
 	using Base_t::Empty;
-	constexpr const T *Get() const noexcept       { return Base(); }
+	constexpr const T *Get() const noexcept { return Base(); }
 
 	class Ref_t
 	{
 	public:
 		constexpr Ref_t( CView *pOwner, I i ) noexcept : m_pOwner( pOwner ), m_index( i ) {}
-		constexpr operator T() const noexcept { return m_pOwner->GetValue( m_index ); }
+		constexpr operator T() const noexcept { return m_pOwner->Get( m_index ); }
 
 		template < typename Q = T, EnableIf_t< !IS_CONST< Q >, int > = 0 >
 		constexpr Ref_t &operator=( const T &value ) noexcept { m_pOwner->SetTo( m_index, value ); return *this; }
@@ -108,14 +108,6 @@ public:
 		I m_index;
 		CView *m_pOwner;
 	};
-
-	constexpr decltype( auto ) GetValue( I i ) const noexcept
-	{
-		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGet( i );
-		else
-			return Base()[ i ];
-	}
 
 	// --------- iterators ----------
 	constexpr iterator begin() { return Base(); }
@@ -139,7 +131,7 @@ public:
 		BALL_ASSERT( 0 <= i && i < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGet( i );
+			return Packed_Get( i );
 		else
 			return Base_t::template Get< T >( i );
 	}
@@ -150,7 +142,7 @@ public:
 		BALL_ASSERT( 0 <= i && i < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGet( i );
+			return Packed_Get( i );
 		else
 			return Base_t::template Get< T >( i );
 	}
@@ -164,7 +156,7 @@ public:
 		BALL_ASSERT( 0 < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGet( 0 );
+			return Packed_Get( 0 );
 		else
 			return Base_t::template Front< T >();
 	}
@@ -174,7 +166,7 @@ public:
 		BALL_ASSERT( 0 < Count() );
 
 		if constexpr ( IS_PACKED_STORAGE )
-			return PackedGet( Count() - 1 );
+			return Packed_Get( Count() - 1 );
 		else
 			return Base_t::template Back< T >();
 	}
@@ -222,7 +214,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I i = 0; i < nPrefixCount; ++i )
-				if ( !( PackedGet( i ) == vPrefix.PackedGet( i ) ) )
+				if ( !( Packed_Get( i ) == vPrefix.Packed_Get( i ) ) )
 					return false;
 		}
 		else
@@ -250,7 +242,7 @@ public:
 		if constexpr ( IS_PACKED_STORAGE )
 		{
 			for ( I i = 0; i < nSuffixCount; ++i )
-				if ( !( PackedGet( nOffset + i ) == vSuffix.PackedGet( i ) ) )
+				if ( !( Packed_Get( nOffset + i ) == vSuffix.Packed_Get( i ) ) )
 					return false;
 		}
 		else
@@ -456,7 +448,7 @@ public:
 			return false;
 
 		for ( I i = FIRST_INDEX; i < a.Count(); ++i )
-			if ( !( a.GetValue( i ) == b.GetValue( i ) ) )
+			if ( !( a.Get( i ) == b.Get( i ) ) )
 				return false;
 
 		return true;
@@ -473,8 +465,8 @@ public:
 
 			for ( I i = FIRST_INDEX; i < n; ++i )
 			{
-				const auto &va = a.GetValue( i );
-				const auto &vb = b.GetValue( i );
+				const auto &va = a.Get( i );
+				const auto &vb = b.Get( i );
 
 			if ( va < vb )
 				return true;
@@ -513,7 +505,7 @@ protected:
 		{
 			for ( I k = FIRST_INDEX; k < nViewCount; ++k )
 			{
-				if ( !( PackedGet( i + k ) == v.PackedGet( k ) ) )
+				if ( !( Packed_Get( i + k ) == v.Packed_Get( k ) ) )
 					return false;
 			}
 		}
@@ -528,7 +520,7 @@ protected:
 	constexpr void SetTo( I i, const T &value ) noexcept
 	{
 		if constexpr ( IS_PACKED_STORAGE )
-			Base_t::template PackedSet< T >( i, value );
+			Base_t::template Packed_Set< T >( i, value );
 		else
 			Base_t::template Base< T >()[ i ] = value;
 	}

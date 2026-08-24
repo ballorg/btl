@@ -25,7 +25,7 @@ The allocator owns nothing; containers own the blocks they obtain through it and
 
 ## Type Relationships
 
-- Empty base `A` of [CVectorBase](BTL.CVector.md); `CAllocatorBase` is a base of [CMultiVectorBase](BTL.CMultiVector.md) (which sizes its shared block in bytes) and is used directly for packed vector storage.
+- Empty policy base `A` exclusively of [CVectorBase](BTL.CVector.md). Strings supply their typed allocator to that owning layer; ordinary vectors use `CAllocatorBase`. `CVectorImpl` is allocator-independent.
 
 ## Notes
 

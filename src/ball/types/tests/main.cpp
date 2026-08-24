@@ -47,8 +47,8 @@ int main()
 	str.AppendMultiple( "std::vector", ": ", "Done in ", nsCase01.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::Vector_t", ": ", "Done in ", nsCase02.AsMillisF(), " milliseconds\n" );
 	str += "---\n";
-	str.AppendMultiple( "BTL::MultiVector_t", ": ", "Done in ", nsCase03.AsMillisF(), " milliseconds\n" );
-	str.AppendMultiple( "BTL::MultiVector_t fixed", ": ", "Done in ", nsCase04.AsMillisF(), " milliseconds\n" );
+	str.AppendMultiple( "BTL::Vector_t", ": ", "Done in ", nsCase03.AsMillisF(), " milliseconds\n" );
+	str.AppendMultiple( "BTL::Vector_t fixed", ": ", "Done in ", nsCase04.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::RBTree_t", ": ", "Done in ", nsCase05.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::Reflection_t", ": ", "Done in ", nsCase06.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::Hash_t", ": ", "Done in ", nsCase07.AsMillisF(), " milliseconds\n" );

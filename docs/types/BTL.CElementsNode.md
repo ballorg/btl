@@ -46,4 +46,4 @@ The class derives aliases and storage constants from `MElementsPack< I, N, T >`.
 
 ## Notes
 
-This is an implementation type. Container users normally interact with `CViewBase`, `CVector`, or `CMultiVector`.
+This is an implementation type. Container users normally interact with `CViewBase` or `CVector`.

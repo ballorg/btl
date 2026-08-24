@@ -66,7 +66,7 @@ BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_UNCERTAIN )
 BALL_FIXED_FOR_EACH_BITS( BALL_FIXED_DECLARE_UNSIGNED )
 
 #	define BALL_FIXED_DECLARE_BASE_TRAIT( typeDef, bits, typeName, isSigned, isUnsigned ) \
-	template <> struct MFixedPackedBase< typeName > : public MFixedPackedBase< typeDef > \
+	template <> struct MFixedPacked_Base< typeName > : public MFixedPacked_Base< typeDef > \
 	{ \
 		static constexpr bool IS_SIGNED = isSigned; \
 		static constexpr bool IS_UNSIGNED = isUnsigned; \

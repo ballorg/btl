@@ -87,7 +87,7 @@ struct MFixedBase
 };
 
 template < typename T >
-struct MFixedPackedBase
+struct MFixedPacked_Base
 {
 	using Type = T;
 	using Raw_t = RemoveCV_t< Type >;
@@ -102,7 +102,7 @@ struct MFixedPackedBase
 };
 
 template <>
-struct MFixedPackedBase< bool >
+struct MFixedPacked_Base< bool >
 {
 	using Type = bool;
 	using Raw_t = bool;
@@ -115,7 +115,7 @@ struct MFixedPackedBase< bool >
 };
 
 template <>
-struct MFixedPackedBase< FixedTag_t >
+struct MFixedPacked_Base< FixedTag_t >
 {
 	using Type = FixedTag_t;
 	using Raw_t = FixedTag_t;
@@ -128,7 +128,7 @@ struct MFixedPackedBase< FixedTag_t >
 };
 
 template < typename T, typename TRaw, bits_t TBITS, bool TIS_SIGNED, bool TIS_UNSIGNED >
-struct MFixedPackedEnumBase
+struct MFixedPacked_EnumBase
 {
 	using Type = T;
 	using Raw_t = TRaw;
@@ -162,13 +162,13 @@ template < bits_t BITS >
 using FixedUnsignedStorage_t = typename MUnsigned< FixedSignedStorage_t< BITS > >::Type;
 
 #	define BALL_FIXED_DECLARE_SIGNED_ENUM_TRAIT( enumName, bits ) \
-	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, FixedSignedStorage_t< bits >, bits_t( bits ), true, false > {};
+	template <> struct MFixedPacked_Base< enumName > : public MFixedPacked_EnumBase< enumName, FixedSignedStorage_t< bits >, bits_t( bits ), true, false > {};
 
 #	define BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT( enumName, bits ) \
-	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, FixedSignedStorage_t< bits >, bits_t( bits ), true, false > {};
+	template <> struct MFixedPacked_Base< enumName > : public MFixedPacked_EnumBase< enumName, FixedSignedStorage_t< bits >, bits_t( bits ), true, false > {};
 
 #	define BALL_FIXED_DECLARE_UNSIGNED_ENUM_TRAIT( enumName, bits ) \
-	template <> struct MFixedPackedBase< enumName > : public MFixedPackedEnumBase< enumName, FixedUnsignedStorage_t< bits >, bits_t( bits ), false, true > {};
+	template <> struct MFixedPacked_Base< enumName > : public MFixedPacked_EnumBase< enumName, FixedUnsignedStorage_t< bits >, bits_t( bits ), false, true > {};
 
 #	define BALL_FIXED_SIGNED_ENUM_TRAIT( enumName, bits ) BALL_FIXED_DECLARE_SIGNED_ENUM_TRAIT( enumName, bits )
 #	define BALL_FIXED_UNCERTAIN_ENUM_TRAIT( enumName, bits ) BALL_FIXED_DECLARE_UNCERTAIN_ENUM_TRAIT( enumName, bits )
@@ -184,10 +184,10 @@ using FixedUnsignedStorage_t = typename MUnsigned< FixedSignedStorage_t< BITS > 
 #	define BALL_FIXED_UNSIGNED_ENUM_CLASS( enumName, bits ) BALL_FIXED_DECLARE_ENUM_CLASS_BASE( BALL_FIXED_DECLARE_UNSIGNED_ENUM_TRAIT, enumName, FixedUnsignedStorage_t< bits >, bits )
 
 template < typename T >
-struct MFixedMetadataBase : public MFixedPackedBase< T >
+struct MFixedMetadataBase : public MFixedPacked_Base< T >
 {
 	using Type = T;
-	using Base_t = MFixedPackedBase< T >;
+	using Base_t = MFixedPacked_Base< T >;
 	using typename Base_t::Raw_t;
 	using typename Base_t::Signed_t;
 	using typename Base_t::Unsigned_t;
@@ -201,6 +201,41 @@ struct MFixedMetadataBase : public MFixedPackedBase< T >
 	static constexpr bits_t UNSIGNED_BITS = static_cast< bits_t >( sizeof( Unsigned_t ) * 8u );
 	static constexpr bytes_t BYTES = IS_PACKED ? ( BITS + bits_t( 7 ) ) / bits_t( 8 ) : sizeof( Raw_t );
 	static constexpr Unsigned_t MASK = static_cast< Unsigned_t >( MFixedMask< BITS >::VALUE );
+
+	template < typename I > static constexpr size_t Packed_Bits( I nCount ) noexcept { return static_cast< size_t >( nCount ) * BITS; }
+	template < typename I > static constexpr size_t Packed_ByteOffset( I i ) noexcept { return Packed_Bits( i ) >> 3; }
+	template < typename I > static constexpr bits_t Packed_BitShift( I i ) noexcept { return static_cast< bits_t >( Packed_Bits( i ) & 7 ); }
+
+	static constexpr Type Packed_Get( const unsigned char *pData, bits_t iShift ) noexcept
+	{
+		Unsigned_t nValue = 0;
+
+		for ( bits_t n = 0; n < BITS; ++n )
+		{
+			nValue |= static_cast< Unsigned_t >( ( *pData >> iShift ) & 1u ) << n;
+			if ( ++iShift == 8 ) { iShift = 0; ++pData; }
+		}
+
+		return static_cast< Type >( static_cast< Raw_t >( nValue & MASK ) );
+	}
+
+	static constexpr void Packed_Set( unsigned char *pData, bits_t iShift, const Type &value ) noexcept
+	{
+		const Unsigned_t nValue = static_cast< Unsigned_t >( static_cast< Raw_t >( value ) ) & MASK;
+
+		for ( bits_t n = 0; n < BITS; ++n )
+		{
+			const unsigned char nMask = static_cast< unsigned char >( 1u << iShift );
+
+			*pData = ( nValue >> n ) & 1u ? static_cast< unsigned char >( *pData | nMask ) : static_cast< unsigned char >( *pData & static_cast< unsigned char >( ~nMask ) );
+
+			if ( ++iShift == 8 )
+			{
+				iShift = 0;
+				++pData;
+			}
+		}
+	}
 };
 
 template < typename T >

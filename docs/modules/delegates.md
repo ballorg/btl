@@ -26,8 +26,8 @@ Type-erased callable binding in the style of Unreal's delegates, in [delegate.hp
 
 ## Dependencies
 
-[containers](containers.md) (`BufferVector_t` inline storage, `MultiVector32_t` slot list), [meta](meta.md) (`MPack`, member-function traits, `Decay_t`, `MReturn`, `Variant_t`).
+[containers](containers.md) (`BufferVector_t` inline storage, `Vector32_t` slot list), [meta](meta.md) (`MPack`, member-function traits, `Decay_t`, `MReturn`, `Variant_t`).
 
 ## Relationships
 
-A delegate is not memmove-safe (its implementation object may hold interior state), which is why `MTypeInfo::IS_MEMMOVE_SAFE` gates relocation in [CMultiVector](../types/BTL.CMultiVector.md): delegate columns are relocated by move-construct + destroy. Exercised by [case10_delegate.cpp](../../src/ball/types/tests/case10_delegate.cpp).
+A delegate is not memmove-safe (its implementation object may hold interior state), which is why `MTypeInfo::IS_MEMMOVE_SAFE` gates relocation in [CVector](../types/BTL.CVector.md): delegate columns are relocated by move-construct + destroy. Exercised by [case10_delegate.cpp](../../src/ball/types/tests/case10_delegate.cpp).

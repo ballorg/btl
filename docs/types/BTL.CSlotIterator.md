@@ -2,7 +2,7 @@
 
 ## Overview
 
-The iterator shared by the [red-black tree](BTL.CMultiRBTree.md) and the [hash map](BTL.CMultiHashMap.md). Both containers iterate by walking slot indices of a node-owning container and dereferencing to the key; only the *step* differs (in-order successor vs. next-occupied-slot scan), so the iterator delegates every traversal decision to its owner.
+The iterator shared by the [red-black tree](BTL.CRBTree.md) and the [hash map](BTL.CHashMap.md). Both containers iterate by walking slot indices of a node-owning container and dereferencing to the key; only the *step* differs (in-order successor vs. next-occupied-slot scan), so the iterator delegates every traversal decision to its owner.
 
 ## Declaration
 
@@ -25,7 +25,7 @@ Borrows the owner; valid only while the owner outlives it and while the slot it 
 
 ## Type Relationships
 
-- `iterator`/`const_iterator` of [CMultiRBTree](BTL.CMultiRBTree.md) (bidirectional — the tree supplies `PrevIndex`) and of [CMultiHashMap](BTL.CMultiHashMap.md) (forward-only — `operator--` is a template body that is simply never instantiated).
+- `iterator`/`const_iterator` of [CRBTree](BTL.CRBTree.md) (bidirectional — the tree supplies `PrevIndex`) and of [CHashMap](BTL.CHashMap.md) (forward-only — `operator--` is a template body that is simply never instantiated).
 
 ## Invariants
 

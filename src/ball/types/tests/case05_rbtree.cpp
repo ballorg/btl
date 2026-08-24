@@ -17,7 +17,7 @@ namespace
 	// halves of the value in separate (distinctly typed) SoA columns.
 	using Tree_t = BTL::MultiRBTree_t< size_t, First_t, Second_t >;
 
-	// Single-value map spelling used only to exercise CRBTree's Key()/Value().
+	// Single-value map spelling used only to exercise CRBTree's Key()/Get< 1 >().
 	using MapTree_t = BTL::RBTree_t< BTL::size32_t, size_t, Node_t >;
 
 	static Node_t Make( size_t key )
@@ -27,7 +27,7 @@ namespace
 
 	// Rebuild a Node_t from a row's two value columns (1 = first, 2 = second).
 	template < typename Loc >
-	static Node_t ValueAt( const Tree_t &tree, Loc loc )
+	static Node_t ValueElement( const Tree_t &tree, Loc loc )
 	{
 		return Node_t( tree.Get< 1 >( loc ), tree.Get< 2 >( loc ) );
 	}
@@ -89,7 +89,7 @@ namespace
 				if ( !IsEndIndex( tree, iTreeLower ) )
 					return false;
 			}
-			else if ( IsEndIndex( tree, iTreeLower ) || !MatchesEntry( ValueAt( tree, iTreeLower ), *itRefLower ) )
+			else if ( IsEndIndex( tree, iTreeLower ) || !MatchesEntry( ValueElement( tree, iTreeLower ), *itRefLower ) )
 			{
 				return false;
 			}
@@ -99,7 +99,7 @@ namespace
 				if ( !IsEndIndex( tree, iTreeUpper ) )
 					return false;
 			}
-			else if ( IsEndIndex( tree, iTreeUpper ) || !MatchesEntry( ValueAt( tree, iTreeUpper ), *itRefUpper ) )
+			else if ( IsEndIndex( tree, iTreeUpper ) || !MatchesEntry( ValueElement( tree, iTreeUpper ), *itRefUpper ) )
 			{
 				return false;
 			}
@@ -119,7 +119,7 @@ namespace
 		std::vector< Node_t > values;
 
 		for ( Tree_t::Index_t i = tree.FirstIndex(); i != tree.EndIndex(); i = tree.NextIndex( i ) )
-			values.push_back( ValueAt( tree, i ) );
+			values.push_back( ValueElement( tree, i ) );
 
 		if ( values != MakeExpectedValues( ref ) )
 			return false;
@@ -127,7 +127,7 @@ namespace
 		values.clear();
 
 		for ( auto it = tree.begin(); it != tree.end(); ++it )
-			values.push_back( ValueAt( tree, it ) );
+			values.push_back( ValueElement( tree, it ) );
 
 		if ( values != MakeExpectedValues( ref ) )
 			return false;
@@ -142,8 +142,8 @@ namespace
 			if ( IsEndIndex( tree, tree.FirstIndex() ) )
 				return false;
 
-			const auto &front = ValueAt( tree, tree.FirstIndex() );
-			const auto &back = ValueAt( tree, tree.PrevIndex( tree.EndIndex() ) );
+			const auto &front = ValueElement( tree, tree.FirstIndex() );
+			const auto &back = ValueElement( tree, tree.PrevIndex( tree.EndIndex() ) );
 
 			if ( !MatchesEntry( front, *ref.begin() ) )
 				return false;
@@ -156,7 +156,7 @@ namespace
 		{
 			const Tree_t::Index_t iFound = tree.Find( entry.first );
 
-			if ( IsEndIndex( tree, iFound ) || !MatchesEntry( ValueAt( tree, iFound ), entry ) || !tree.Contains( entry.first ) )
+			if ( IsEndIndex( tree, iFound ) || !MatchesEntry( ValueElement( tree, iFound ), entry ) || !tree.Contains( entry.first ) )
 				return false;
 		}
 
@@ -224,7 +224,7 @@ namespace
 	{
 		// Multi-column tree: key = column 0 (size_t), extra payload columns float and char.
 		// Column 0 is the size_t key; columns 1.. are value columns (distinct types).
-		using MultiTree_t = BTL::CMultiRBTree< BTL::size32_t, BTL::CRBTreeLess< size_t >, size_t, float, char >;
+		using MultiTree_t = BTL::CRBTree< BTL::size32_t, BTL::CRBTreeLess< size_t >, size_t, float, char >;
 
 		MultiTree_t tree;
 
@@ -267,7 +267,7 @@ namespace
 		bOk &= buffer.Count() == 3u && buffer.Validate() && buffer.Get< 2 >( buffer.Find( 8u ) ) == 'c';
 
 		// A tree keyed on a different column type (float key + size_t value).
-		BTL::CMultiRBTree< BTL::size32_t, BTL::CRBTreeLess< float >, float, size_t > byFloat;
+		BTL::CRBTree< BTL::size32_t, BTL::CRBTreeLess< float >, float, size_t > byFloat;
 
 		byFloat.Insert( 3.0f, 100u );
 		byFloat.Insert( 1.0f, 200u );
@@ -322,7 +322,7 @@ namespace
 
 		ref.erase( key );
 
-		const bool bNextOk = ( itRefNext == ref.end() && IsEndIndex( tree, iNext ) ) || ( itRefNext != ref.end() && !IsEndIndex( tree, iNext ) && MatchesEntry( ValueAt( tree, iNext ), *itRefNext ) );
+		const bool bNextOk = ( itRefNext == ref.end() && IsEndIndex( tree, iNext ) ) || ( itRefNext != ref.end() && !IsEndIndex( tree, iNext ) && MatchesEntry( ValueElement( tree, iNext ), *itRefNext ) );
 
 		const bool bOk = bRemoved && bNextOk && CheckTreeMatchesRef( tree, ref ) && CheckPayloadSnapshot( tree, {} );
 
@@ -337,21 +337,21 @@ void Case05_RBTree( TestsOutput_t &sOut )
 	bool bAllOk = true;
 
 	{
-		// Single-value map Key()/Value() accessors (key = column 0, value = column 1).
+		// Single-value map Key()/Get< 1 >() accessors (key = column 0, value = column 1).
 		MapTree_t tree;
 
 		const auto it = tree.InsertIterator( 42u, Make( 42u ) );
 
 		bool bOk = it != tree.end();
 		bOk &= tree.Key( it ) == 42u;
-		bOk &= tree.Value( it ).First() == 42u && tree.Value( it ).Second() == Make( 42u ).Second();
+		bOk &= tree.Get< 1 >( it ).First() == 42u && tree.Get< 1 >( it ).Second() == Make( 42u ).Second();
 
 		const MapTree_t::Index_t idx = tree.Find( 42u );
 
-		bOk &= tree.Key( idx ) == 42u && tree.Value( idx ).Second() == Make( 42u ).Second();
+		bOk &= tree.Key( idx ) == 42u && tree.Get< 1 >( idx ).Second() == Make( 42u ).Second();
 
-		tree.Value( idx ) = Make( 7u );   // mutate through the value reference
-		bOk &= tree.Value( idx ).First() == 7u;
+		tree.Get< 1 >( idx ) = Make( 7u );   // mutate through the value reference
+		bOk &= tree.Get< 1 >( idx ).First() == 7u;
 
 		LogTreeCheck( sOut, "key/value accessors", bOk );
 		bAllOk = bAllOk && bOk;

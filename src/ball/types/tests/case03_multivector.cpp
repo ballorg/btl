@@ -2,7 +2,7 @@
 
 void Case03_MultiVector( TestsOutput_t &sOut )
 {
-	using C = BTL::MultiVector_t< size_t, uint32_t >;
+	using C = BTL::Vector_t< size_t, uint32_t >;
 
 	C vec;
 	std::vector< TestPair_t > ref;
@@ -31,7 +31,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 			}
 		}
 
-		sOut.AppendMultiple( "BTL::MultiVector_t: ", svLabel, ": " );
+		sOut.AppendMultiple( "BTL::Vector_t: ", svLabel, ": " );
 
 		if ( bOk )
 			sOut.AppendMultiple( "ok (", nVec, " elements)\n" );
@@ -61,11 +61,11 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	funcCheck( "AddToTail" );
 
 	vec.AddToHead( 0, 0 );
-	ref.insert( ref.begin(), { 0, 0 } );
+	ref.insert( ref.begin(), TestPair_t{ 0, 0 } );
 	funcCheck( "AddToHead" );
 
 	vec.Insert( 1, 9, 99 );
-	ref.insert( ref.begin() + 1, { 9, 99 } );
+	ref.insert( ref.begin() + 1, TestPair_t{ 9, 99 } );
 	funcCheck( "Insert single row" );
 
 	vec.InsertMultiple( 2, 2, 5, 50 );
@@ -92,13 +92,21 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	{
 		vec.template Get< uint32_t >( 0 ) += uint32_t( 1 );
 		ref[ 0 ].Second() += 1;
+		auto it = vec.begin();
+		*it += size_t( 1 );
+		ref[ 0 ].First() += 1;
+		const C &constVec = vec;
+		const bool bIteratorOk = *constVec.begin() == ref[ 0 ].First()
+			&& *constVec.template begin< uint32_t >() == static_cast< uint32_t >( ref[ 0 ].Second() )
+			&& constVec.template end< uint32_t >() - constVec.template begin< uint32_t >() == vec.Count()
+			&& vec.end() - vec.begin() == vec.Count();
 
 		const bool bFrontOk = vec.template Front< size_t >() == ref.front().First() && vec.template Front< uint32_t >() == static_cast< uint32_t >( ref.front().Second() );
 		const bool bBackOk = vec.template Back< size_t >() == ref.back().First() && vec.template Back< uint32_t >() == static_cast< uint32_t >( ref.back().Second() );
 
-		sOut.AppendMultiple( "BTL::MultiVector_t: typed access: " );
+		sOut.AppendMultiple( "BTL::Vector_t: typed access: " );
 
-		if ( bFrontOk && bBackOk )
+		if ( bFrontOk && bBackOk && bIteratorOk )
 			sOut += "ok\n";
 		else
 			sOut += "mismatch\n";
@@ -126,7 +134,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 		const size_t iFindRow = vec.Find( nProbeFirst, nProbeSecond );
 		const size_t iRefFindRow = funcFindRow( nProbeFirst, nProbeSecond );
 
-		sOut.AppendMultiple( "BTL::MultiVector_t: Find row: " );
+		sOut.AppendMultiple( "BTL::Vector_t: Find row: " );
 
 		if ( iFindRow == iRefFindRow )
 			sOut.AppendMultiple( "ok (", iFindRow, ")\n" );
@@ -146,7 +154,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 
 		const size_t iRFindRow = vec.RFind( nProbeFirst, nProbeSecond );
 
-		sOut.AppendMultiple( "BTL::MultiVector_t: RFind row: " );
+		sOut.AppendMultiple( "BTL::Vector_t: RFind row: " );
 
 		if ( iRFindRow == iRefRFindRow )
 			sOut.AppendMultiple( "ok (", iRFindRow, ")\n" );
@@ -177,7 +185,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 		const size_t iFindFirstCol = vec.template FindBy< size_t >( nProbeFirst );
 		const size_t iRFindFirstCol = vec.template RFindBy< size_t >( nProbeFirst );
 
-		sOut.AppendMultiple( "BTL::MultiVector_t: FindBy<size_t>: " );
+		sOut.AppendMultiple( "BTL::Vector_t: FindBy<size_t>: " );
 
 		if ( iFindFirstCol == iRefFindFirstCol && iRFindFirstCol == iRefRFindFirstCol )
 			sOut.AppendMultiple( "ok (first=", iFindFirstCol, ", last=", iRFindFirstCol, ")\n" );
@@ -196,7 +204,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 			}
 		}
 
-		sOut.AppendMultiple( "BTL::MultiVector_t: FindBy<uint32_t>: " );
+		sOut.AppendMultiple( "BTL::Vector_t: FindBy<uint32_t>: " );
 
 		if ( iFindSecondCol == iRefFindSecondCol )
 			sOut.AppendMultiple( "ok (", iFindSecondCol, ")\n" );
@@ -210,7 +218,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	const size_t iMissingByFirst = vec.template FindBy< size_t >( nMissingFirst );
 	const size_t iMissingBySecond = vec.template FindBy< uint32_t >( nMissingSecond );
 
-	sOut.AppendMultiple( "BTL::MultiVector_t: " );
+	sOut.AppendMultiple( "BTL::Vector_t: " );
 
 	if ( vec.IsValidIndex( iMissing ) || vec.IsValidIndex( iMissingByFirst ) || vec.IsValidIndex( iMissingBySecond ) )
 		sOut.AppendMultiple( "Missing element was unexpectedly found (row=", iMissing, ", first=", iMissingByFirst, ", second=", iMissingBySecond, ")\n" );

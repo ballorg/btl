@@ -11,10 +11,10 @@
 #	include "vector.hpp"
 
 template < class B, typename I, typename T >
-class CStringImpl : public CVectorImpl< B, I, T >
+class CStringImpl : public B
 {
 public:
-	using Base_t = CVectorImpl< B, I, T >;
+	using Base_t = B;
 	using View_t = Base_t::View_t;
 	using ConstView_t = Base_t::ConstView_t;
 	template < I GN > using GrowableView_t = typename Base_t::template GrowableView_t< GN >;
@@ -244,10 +244,10 @@ public:
 template < typename I, typename T, I N, class A > class CBufferString;
 
 template < typename I = size_t, typename T = char_t, class A = CAllocator< I, T > >
-class CString : public CStringImpl< CVectorBase< CStringView< I, T >, I, T, A >, I, T >
+class CString : public CStringImpl< CVectorImpl< CVectorBase< A, CStringView< I, T, 0 >, I, 0, size8_t, T >, I, size8_t, T >, I, T >
 {
 public:
-	using Base_t = CStringImpl< CVectorBase< CStringView< I, T >, I, T >, I, T >;
+	using Base_t = CStringImpl< CVectorImpl< CVectorBase< A, CStringView< I, T, 0 >, I, 0, size8_t, T >, I, size8_t, T >, I, T >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 
@@ -256,10 +256,10 @@ public:
 };
 
 template < typename I, typename T, I N, class A = CAllocator< I, T > >
-class CBufferString : public CStringImpl< CVectorBase< CStringView< I, T, N >, I, T, A >, I, T >
+class CBufferString : public CStringImpl< CVectorImpl< CVectorBase< A, CStringView< I, T, N >, I, N, size8_t, T >, I, size8_t, T >, I, T >
 {
 public:
-	using Base_t = CStringImpl< CVectorBase< CStringView< I, T, N >, I, T >, I, T >;
+	using Base_t = CStringImpl< CVectorImpl< CVectorBase< A, CStringView< I, T, N >, I, N, size8_t, T >, I, size8_t, T >, I, T >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom;
 

@@ -37,7 +37,7 @@ namespace
 		{
 			const auto iSlot = map.Find( kv.first );
 
-			if ( iSlot == map.EndIndex() || map.Value( iSlot ) != kv.second )
+			if ( iSlot == map.EndIndex() || map.Get< 1 >( iSlot ) != kv.second )
 				return false;
 		}
 
@@ -111,7 +111,7 @@ void Case08_HashMap( TestsOutput_t &sOut )
 			const size_t nKey = i * 1315423911u + 17u;
 			const auto iSlot = map.Find( nKey );
 
-			bOk = bOk && iSlot != map.EndIndex() && map.Value( iSlot ) == ValueOf( nKey );
+			bOk = bOk && iSlot != map.EndIndex() && map.Get< 1 >( iSlot ) == ValueOf( nKey );
 		}
 
 		// A key never inserted must miss.
@@ -197,7 +197,7 @@ void Case08_HashMap( TestsOutput_t &sOut )
 			{
 				const auto iSlot = buffered.Find( kv.first );
 
-				bOk = bOk && iSlot != buffered.EndIndex() && buffered.Value( iSlot ) == kv.second;
+				bOk = bOk && iSlot != buffered.EndIndex() && buffered.Get< 1 >( iSlot ) == kv.second;
 			}
 		}
 

@@ -100,7 +100,7 @@ namespace
 		{
 			const auto iSlot = map.Find( key );
 
-			return iSlot != map.EndIndex() && map.Value( iSlot ) == key * 17u + 3u;
+			return iSlot != map.EndIndex() && map.Get< 1 >( iSlot ) == key * 17u + 3u;
 		}
 		static bool Erase( C &map, size_t key ) { return map.Remove( key ); }
 		static size_t Count( const C &map ) { return map.Count(); }

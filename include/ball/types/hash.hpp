@@ -21,7 +21,7 @@
 /// @brief Stateless Fibonacci (multiplicative golden-ratio) hashing policy.
 ///
 /// @details The policy is the reusable, container-independent building block the
-/// hash table plugs in through a template parameter, the same way `CMultiRBTree`
+/// hash table plugs in through a template parameter, the same way `CRBTree`
 /// takes the `CRBTreeLess` comparator. It splits into two composable steps:
 ///
 ///   1. @ref Make "hashing" reduces a key of any supported type to a single

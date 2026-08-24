@@ -1,4 +1,4 @@
-# BTL::CMultiHashMap
+# BTL::CHashMap
 
 ## Overview
 
@@ -6,10 +6,10 @@ A structure-of-arrays open-addressing hash table with unique keys: linear probin
 
 Family members:
 
-- `CMultiHashMapBase< I, N, TI, C, K, Ts... >` — protected core (probing, growth, rehash).
-- `CMultiHashMapImpl< … >` — public facade (`Insert`, `Find`, `Remove`, iteration, copy/move).
-- `CMultiHashMap< I, K, C, Ts... >` (heap) / `CBufferMultiHashMap< I, N, K, C, Ts... >` (inline) — capacity wrappers.
-- `CHashMap< I, K, V, C, N >` — single-value map spelling with `Key()`/`Value()`.
+- `CHashMapBase< I, N, TI, C, K, Ts... >` — protected core (probing, growth, rehash).
+- `CHashMapImpl< … >` — public facade (`Insert`, `Find`, `Remove`, iteration, copy/move).
+- `CHashMap< I, K, C, Ts... >` (heap) / `CBufferMultiHashMap< I, N, K, C, Ts... >` (inline) — capacity wrappers.
+- `CHashMap< I, K, C, Ts... >` provides `Key()` and indexed or typed column access through `Get`; the `HashMap*_t` aliases select the one-value form.
 - `EHashSlotState` — 1-bit `FREE`/`OCCUPIED` state enum (packed column).
 - **Aliases:** `HashMap_t`/`HashMap8_t`…`HashMap64_t`, `BufferHashMap*_t`, `MultiHashMap*_t`, `BufferMultiHashMap*_t`.
 
@@ -17,7 +17,7 @@ Family members:
 
 - **Namespace:** `BTL`
 - **Module:** [associative](../modules/associative.md)
-- **Kind:** class templates; `CMultiHashMapBase` derives from the hash policy `C` (default [CFibonacciHash](BTL.CFibonacciHash.md), empty base) and from `CBufferMultiVector< I, N, TI, EHashSlotState, HashKeyColumn_t< K >, Ts... >`
+- **Kind:** class templates; `CHashMapBase` derives from the hash policy `C` (default [CFibonacciHash](BTL.CFibonacciHash.md), empty base) and from `CBufferVector< I, N, EHashSlotState, HashKeyColumn_t< K >, Ts... >`
 - **Declared in:** [include/ball/types/hashmap.hpp](../../include/ball/types/hashmap.hpp)
 
 ## Purpose
@@ -36,16 +36,16 @@ A key's home bucket is `Hasher()( key )` mapped through the Fibonacci multiply-s
 
 ## Storage Model
 
-Bucket columns follow the [CMultiVector storage model](BTL.CMultiVector.md): inline column buffers up to `N` rows (`CBufferMultiHashMap`), then one shared heap block. Resizing goes through `Rehash`: live rows are snapshotted into an always-heap-backed scratch `CMultiVector` (`SetCountRaw` plus move-construction), so large inline maps do not duplicate `N` rows on the call stack. The moved-from old rows are then dropped (releasing overflow storage when present), the table is sized to the new power-of-two bucket count, and each row is re-probed into its new home. The packed state column is cleared as one byte range rather than one slot at a time. `GrowTable` doubles the bucket count; the table never shrinks on removal.
+Bucket columns follow the [multi-column CVector storage model](BTL.CVector.md): inline column buffers up to `N` rows (`CBufferMultiHashMap`), then one shared heap block. Resizing goes through `Rehash`: live rows are snapshotted into an always-heap-backed scratch multi-column `CVector` (`SetCountRaw` plus move-construction), so large inline maps do not duplicate `N` rows on the call stack. The moved-from old rows are then dropped (releasing overflow storage when present), the table is sized to the new power-of-two bucket count, and each row is re-probed into its new home. The packed state column is cleared as one byte range rather than one slot at a time. `GrowTable` doubles the bucket count; the table never shrinks on removal.
 
 ## Ownership and Lifetime
 
-Bucket storage is owned by the `CBufferMultiVector` base. All buckets' payload cells are value-constructed when the table is sized (grow constructs every row); stale cells left by removal or growth are ignored while their state bit reads `FREE`.
+Bucket storage is owned by the `CBufferVector` base. All buckets' payload cells are value-constructed when the table is sized (grow constructs every row); stale cells left by removal or growth are ignored while their state bit reads `FREE`.
 
 ## Type Relationships
 
 - Hash policy: [CFibonacciHash](BTL.CFibonacciHash.md) (reachable via `Hasher()`).
-- Storage: [CMultiVector](BTL.CMultiVector.md); iterator: [CSlotIterator](BTL.CSlotIterator.md); ordered counterpart: [CMultiRBTree](BTL.CMultiRBTree.md).
+- Storage: [CVector](BTL.CVector.md); iterator: [CSlotIterator](BTL.CSlotIterator.md); ordered counterpart: [CRBTree](BTL.CRBTree.md).
 
 ## Invariants
 
@@ -64,7 +64,7 @@ Slot indices, iterators, and references are stable only until the next mutation:
 - `Remove( key )` — backward-shift deletion (Knuth 6.4R): slides trailing cluster entries whose home bucket permits it back over the hole, keeping chains contiguous with no tombstones.
 - `Rehash( capacity )` — snapshots live rows into a raw-reserved scratch table (`SetCountRaw` + move-construct), resets the table to the new power-of-two size, and re-probes every row (run-time-only path; used by `GrowTable`, which doubles).
 - Iteration: `FirstIndex`/`NextIndex`/`EndIndex` scan occupied slots in bucket order; forward-only [CSlotIterator](BTL.CSlotIterator.md) `begin()/end()`; `BALL_HASHMAP_FOREACH` macro. `Clear()` marks every slot free without releasing storage.
-- Column access `Get< TN >( slot )` (0 = key); `CHashMap` adds `Key()`/`Value()`.
+- Column access `Get< TN >( slot )` (0 = key); `CHashMap` adds `Key()`/`Get< 1 >()`.
 - Copy/move (same or cross capacity) rebuild by re-inserting every row; move clears the source.
 
 ## Usage
@@ -73,9 +73,9 @@ Slot indices, iterators, and references are stable only until the next mutation:
 BTL::HashMap32_t< BTL::size32_t, int > map;
 auto i = map.Insert( 7u, 100 );          // slot index or NIL_INDEX if present
 if ( map.Contains( 7u ) )
-    map.Value( map.Find( 7u ) ) += 1;
+    map.Get< 1 >( map.Find( 7u ) ) += 1;
 BALL_HASHMAP_FOREACH( map, it )          // occupied slots, bucket order
-    Use( map.Key( it ), map.Value( it ) );
+    Use( map.Key( it ), map.Get< 1 >( it ) );
 ```
 
 ## Notes

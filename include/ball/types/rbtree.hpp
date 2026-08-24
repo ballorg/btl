@@ -12,7 +12,6 @@
 #	include "meta/indexsequence.hpp"
 #	include "meta/indextype.hpp"
 #	include "meta/xvalue.hpp"
-#	include "multivector.hpp"
 #	include "pair.hpp"
 #	include "reflect.hpp"
 #	include "slotiterator.hpp"
@@ -141,10 +140,10 @@ BALL_REFLECT_TAGGED_TEMPLATE( RBTreeKeyColumn );
 /// columns (color, left, right, parent). The ordering key is column 0 (type 
 /// @p K) and is compared with @p C. @p TI is the type used to index columns in 
 /// the underlying SoA storage. Payload columns are reachable by compile-time 
-/// index through `Column_t< TN >` / `Get< TN >`, mirroring `CMultiVector` 
+/// index through `Column_t< TN >` / `Get< TN >`, mirroring multi-column `CVector`
 /// (column 0 is the key, columns 1.. are @p Ts).
 template < typename I, I N, typename TI, typename C, typename K, typename... Ts >
-class CMultiRBTreeBase : public C, public CBufferMultiVector< I, N, TI, ERBTreeColor, RBTreeLeftColumn_t< I >, RBTreeRightColumn_t< I >, RBTreeParentColumn_t< I >, RBTreeKeyColumn_t< K >, Ts... >
+class CRBTreeBase : public C, public CBufferVector< I, N, ERBTreeColor, RBTreeLeftColumn_t< I >, RBTreeRightColumn_t< I >, RBTreeParentColumn_t< I >, RBTreeKeyColumn_t< K >, Ts... >
 {
 public:
 	using TagColumn_t = ERBTreeColor;
@@ -160,7 +159,7 @@ public:
 	template < TI TN > using Column_t = typename MIndexType< TI, TN, K, Ts... >::Type;
 
 	// The SoA node storage is the protected base; Nodes() exposes it as Base_t.
-	using Base_t = CBufferMultiVector< I, N, TI, TagColumn_t, LeftColumn_t, RightColumn_t, ParentColumn_t, KeyColumn_t, Ts... >;
+	using Base_t = CBufferVector< I, N, TagColumn_t, LeftColumn_t, RightColumn_t, ParentColumn_t, KeyColumn_t, Ts... >;
 	using Tree_t = Base_t;
 	using Value_t = Column_t< 0 >;
 	using Key_t = K;
@@ -190,7 +189,7 @@ public:
 
 	// Metadata columns (color, left, right, parent) precede the payload columns 
 	// (key + values); their count is whatever Tree_t carries beyond the payload.
-	static constexpr TI PAYLOAD_COLUMN_OFFSET = Tree_t::NUM_TYPES - COLUMN_COUNT;
+	static constexpr TI PAYLOAD_COLUMN_OFFSET = Tree_t::TYPE_COUNT - COLUMN_COUNT;
 
 	using ColumnSequence_t = MakeIndexSequence_t< size_t, 1 + sizeof...( Ts ) >;
 
@@ -213,22 +212,22 @@ public:
 	// (@ref CSlotIterator). This tree owner supplies the traversal contract --
 	// Index_t/Key_t, NIL_INDEX, Key(), IsOccupied(), NextIndex() (inorder successor)
 	// and PrevIndex() (inorder predecessor, so `--end()` yields the rightmost node).
-	using iterator = CSlotIterator< CMultiRBTreeBase, false >;
-	using const_iterator = CSlotIterator< CMultiRBTreeBase, true >;
+	using iterator = CSlotIterator< CRBTreeBase, false >;
+	using const_iterator = CSlotIterator< CRBTreeBase, true >;
 
 	// The shared iterator reaches the traversal contract (Key/IsOccupied/NextIndex/
 	// PrevIndex), which is protected here, exactly as the former nested iterator did.
 	template < typename, bool > friend class CSlotIterator;
 
 	/// @complexity O(1).
-	constexpr CMultiRBTreeBase() noexcept : CMultiRBTreeBase( Compare_t() ) {}
+	constexpr CRBTreeBase() noexcept : CRBTreeBase( Compare_t() ) {}
 
 	/// No reserved sentinel row: NIL is the out-of-band -1, so storage starts empty 
 	/// and the 0th BLACK node is used for real data only once the first insert has 
 	/// values to fill it, never seeded with a placeholder up front.
 	/// 
 	/// @complexity O(1).
-	constexpr explicit CMultiRBTreeBase( const Compare_t &compare ) noexcept :
+	constexpr explicit CRBTreeBase( const Compare_t &compare ) noexcept :
 		Compare_t( compare ),
 		Base_t()
 	{
@@ -240,15 +239,15 @@ public:
 	/// the whole range directly; there are no raw holes to revive first.
 	/// 
 	/// @complexity O(n): the storage base destructs every live row.
-	~CMultiRBTreeBase() noexcept = default;
+	~CRBTreeBase() noexcept = default;
 
 protected:
 	// Bring the inherited SoA storage helper into scope so the tree calls it directly 
 	// instead of qualifying through Nodes(). Count() is not pulled in: it would collide 
 	// with the occupied-node Count() below, so storage row count is reached through 
 	// TreeCount() / Tree_t::Count(). Member templates taking explicit type args 
-	// (Get<>, PackedBaseBy<>) still need the this->template form, not a using.
-	using Tree_t::PackedBaseBy;
+	// (Get<>, Packed_BaseBy<>) still need the this->template form, not a using.
+	using Tree_t::Packed_BaseBy;
 	using Tree_t::AddToTail;
 
 	/// Storage is kept dense by compact-on-erase, so the live-node count is exactly the 
@@ -400,8 +399,8 @@ protected:
 	constexpr const RightColumn_t *RightColumn() const noexcept { return Get< RightColumn_t >( Nodes() ); }
 	constexpr ParentColumn_t *ParentColumn() noexcept { return Get< ParentColumn_t >( Nodes() ); }
 	constexpr const ParentColumn_t *ParentColumn() const noexcept { return Get< ParentColumn_t >( Nodes() ); }
-	constexpr uchar_t *TagColumn() noexcept { return Tree_t::template PackedBaseBy< TagColumn_t >(); }
-	constexpr const uchar_t *TagColumn() const noexcept { return Tree_t::template PackedBaseBy< TagColumn_t >(); }
+	constexpr uchar_t *TagColumn() noexcept { return Tree_t::template Packed_BaseBy< TagColumn_t >(); }
+	constexpr const uchar_t *TagColumn() const noexcept { return Tree_t::template Packed_BaseBy< TagColumn_t >(); }
 
 	///-----------------------------------------------------------------------------
 	/// @brief Validates the full RB-tree topology and all SoA payload links.
@@ -429,7 +428,7 @@ protected:
 		vecVisited.Grow( TreeCount() );
 
 		for ( I i = 0; i < TreeCount(); ++i )
-			vecVisited.PackedSet( i, false );
+			vecVisited.Packed_Set( i, false );
 
 		// NIL (-1) anchors "no in-order predecessor yet" for the ordering check below.
 		Index_t iPrev = NIL_INDEX;
@@ -1165,7 +1164,7 @@ protected:
 		if ( vecVisited[ iNode ] )
 			return false;
 
-		vecVisited.PackedSet( iNode, true );
+		vecVisited.Packed_Set( iNode, true );
 
 		if ( ParentOf( iNode ) != iExpectedParent )
 			return false;
@@ -1354,10 +1353,10 @@ protected:
 };
 
 template < typename I, I N, typename TI, typename C, typename K, typename... Ts >
-class CMultiRBTreeImpl : public CMultiRBTreeBase< I, N, TI, C, K, Ts... >
+class CRBTreeImpl : public CRBTreeBase< I, N, TI, C, K, Ts... >
 {
 private:
-	using Base_t = CMultiRBTreeBase< I, N, TI, C, K, Ts... >;
+	using Base_t = CRBTreeBase< I, N, TI, C, K, Ts... >;
 	using ColumnSequence_t = MakeIndexSequence_t< size_t, 1 + sizeof...( Ts ) >;
 
 	using Base_t::AddNode;
@@ -1418,7 +1417,7 @@ public:
 	template < TI TN > using Column_t = typename Base_t::template Column_t< TN >;
 	using Base_t::COLUMN_COUNT;
 
-	/// @brief Per-column row access by column index, mirroring `CMultiVector::Get< TN >`.
+	/// @brief Per-column row access by column index, mirroring variadic `CVector::Get< TN >`.
 	/// 
 	/// @complexity O(1) (all Get overloads, by index or by column type).
 	template < TI TN > constexpr Column_t< TN > &Get( Index_t iNode ) { return Base_t::template Column< TN >( iNode ); }
@@ -1431,6 +1430,10 @@ public:
 	template < typename T > constexpr const T &Get( Index_t iNode ) const { return Base_t::template Get< T >( iNode ); }
 	template < typename T > constexpr T &Get( iterator it ) { return Base_t::template Get< T >( it.SlotIndex() ); }
 	template < typename T > constexpr const T &Get( const_iterator it ) const { return Base_t::template Get< T >( it.SlotIndex() ); }
+	constexpr Key_t &Key( Index_t i ) { return Get< 0 >( i ); }
+	constexpr const Key_t &Key( Index_t i ) const { return Get< 0 >( i ); }
+	constexpr Key_t &Key( iterator it ) { return Get< 0 >( it ); }
+	constexpr const Key_t &Key( const_iterator it ) const { return Get< 0 >( it ); }
 
 private:
 	/// @complexity O(log n): a single Insert of one source row (CopyRowFrom and MoveRowFrom).
@@ -1449,7 +1452,7 @@ private:
 public:
 	/// @complexity O(m + n log n): clear m current rows, then insert the n source rows.
 	template < I ON >
-	constexpr CMultiRBTreeImpl &CopyFrom( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other )
+	constexpr CRBTreeImpl &CopyFrom( const CRBTreeImpl< I, ON, TI, C, K, Ts... > &other )
 	{
 		if ( reinterpret_cast< const void * >( this ) == reinterpret_cast< const void * >( &other ) )
 			return *this;
@@ -1470,7 +1473,7 @@ public:
 	/// @complexity O(m + n log n): clear m current rows, then re-insert the n source rows 
 	/// (this is a structural rebuild, not a pointer steal, so it is not O(1)).
 	template < I ON >
-	constexpr CMultiRBTreeImpl &MoveFrom( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other )
+	constexpr CRBTreeImpl &MoveFrom( CRBTreeImpl< I, ON, TI, C, K, Ts... > &&other )
 	{
 		if ( reinterpret_cast< const void * >( this ) == reinterpret_cast< const void * >( &other ) )
 			return *this;
@@ -1497,13 +1500,13 @@ public:
 
 	/// @complexity O(m + n log n): the copy/move constructors and assignment operators all 
 	/// delegate to CopyFrom/MoveFrom, which rebuild the tree row by row.
-	template < I ON > constexpr CMultiRBTreeImpl( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other ) { CopyFrom( other ); }
-	template < I ON > constexpr CMultiRBTreeImpl &operator=( const CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &other ) { return CopyFrom( other ); }
-	template < I ON > constexpr CMultiRBTreeImpl( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	template < I ON > constexpr CMultiRBTreeImpl &operator=( CMultiRBTreeImpl< I, ON, TI, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
+	template < I ON > constexpr CRBTreeImpl( const CRBTreeImpl< I, ON, TI, C, K, Ts... > &other ) { CopyFrom( other ); }
+	template < I ON > constexpr CRBTreeImpl &operator=( const CRBTreeImpl< I, ON, TI, C, K, Ts... > &other ) { return CopyFrom( other ); }
+	template < I ON > constexpr CRBTreeImpl( CRBTreeImpl< I, ON, TI, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
+	template < I ON > constexpr CRBTreeImpl &operator=( CRBTreeImpl< I, ON, TI, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 
 	///-----------------------------------------------------------------------------
-	/// @brief Public unique-key tree facade over `CMultiRBTreeBase`.
+	/// @brief Public unique-key tree facade over `CRBTreeBase`.
 	/// 
 	/// @details Insert performs a standard BST descent followed by red-black 
 	/// fix-up; erase uses successor transplant plus delete fix-up. Search, 
@@ -1888,101 +1891,70 @@ template < typename I, I N, typename K, typename C, typename... Ts > class CBuff
 /// value columns @p Ts (a set when @p Ts is empty, an SoA multi-map otherwise).
 ///-----------------------------------------------------------------------------
 template < typename I = size32_t, typename C = CRBTreeLess<>, typename K = I, typename... Ts >
-class CMultiRBTree : public CMultiRBTreeImpl< I, 0, size8_t, C, K, Ts... >
+class CRBTree : public CRBTreeImpl< I, 0, size8_t, C, K, Ts... >
 {
 public:
-	using Base_t = CMultiRBTreeImpl< I, 0, size8_t, C, K, Ts... >;
+	using Base_t = CRBTreeImpl< I, 0, size8_t, C, K, Ts... >;
 	using Base_t::Base_t;
+	using Base_t::Get;
 	using Base_t::CopyFrom; using Base_t::MoveFrom;
+	using typename Base_t::Index_t;
+	using typename Base_t::Key_t;
+	using typename Base_t::iterator;
+	using typename Base_t::const_iterator;
+
+	constexpr Key_t &Key( Index_t i ) { return Base_t::template Get< 0 >( i ); }
+	constexpr const Key_t &Key( Index_t i ) const { return Base_t::template Get< 0 >( i ); }
+	constexpr Key_t &Key( iterator it ) { return Base_t::template Get< 0 >( it ); }
+	constexpr const Key_t &Key( const_iterator it ) const { return Base_t::template Get< 0 >( it ); }
 
 	/// @complexity O(m + n log n): cross-capacity copy/move conversions rebuild the tree via 
 	/// CopyFrom/MoveFrom.
-	template < I N > constexpr CMultiRBTree( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { CopyFrom( other ); }
-	template < I N > constexpr CMultiRBTree &operator=( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { return CopyFrom( other ); }
-	template < I N > constexpr CMultiRBTree( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	template < I N > constexpr CMultiRBTree &operator=( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
+	template < I N > constexpr CRBTree( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { CopyFrom( other ); }
+	template < I N > constexpr CRBTree &operator=( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { return CopyFrom( other ); }
+	template < I N > constexpr CRBTree( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
+	template < I N > constexpr CRBTree &operator=( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
-/// @brief Fixed-capacity (inline buffer) counterpart of `CMultiRBTree`.
+/// @brief Fixed-capacity (inline buffer) counterpart of `CRBTree`.
 template < typename I, I N, typename C = CRBTreeLess<>, typename K = I, typename... Ts >
-class CBufferMultiRBTree : public CMultiRBTreeImpl< I, N, size8_t, C, K, Ts... >
+class CBufferMultiRBTree : public CRBTreeImpl< I, N, size8_t, C, K, Ts... >
 {
 public:
-	using Base_t = CMultiRBTreeImpl< I, N, size8_t, C, K, Ts... >;
+	using Base_t = CRBTreeImpl< I, N, size8_t, C, K, Ts... >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom; using Base_t::MoveFrom;
 
 	/// @complexity O(m + n log n): cross-form copy/move conversions rebuild via CopyFrom/MoveFrom.
-	constexpr CBufferMultiRBTree( const CMultiRBTree< I, C, K, Ts... > &other ) { CopyFrom( other ); }
-	constexpr CBufferMultiRBTree &operator=( const CMultiRBTree< I, C, K, Ts... > &other ) { return CopyFrom( other ); }
-	constexpr CBufferMultiRBTree( CMultiRBTree< I, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	constexpr CBufferMultiRBTree &operator=( CMultiRBTree< I, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
+	constexpr CBufferMultiRBTree( const CRBTree< I, C, K, Ts... > &other ) { CopyFrom( other ); }
+	constexpr CBufferMultiRBTree &operator=( const CRBTree< I, C, K, Ts... > &other ) { return CopyFrom( other ); }
+	constexpr CBufferMultiRBTree( CRBTree< I, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
+	constexpr CBufferMultiRBTree &operator=( CRBTree< I, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
 ///-----------------------------------------------------------------------------
-/// @brief Single-value map: ordering key @p K and value @p V. A thin spelling of 
-/// the multi-column core with exactly one value column. @p N is the inline-buffer 
-/// capacity: `0` (the default) is heap-backed, a positive value keeps up to @p N 
-/// nodes inline before spilling to the heap.
-///-----------------------------------------------------------------------------
-template < typename I = size32_t, typename K = I, typename V = K, typename C = CRBTreeLess< K >, I N = 0 >
-class CRBTree : public CMultiRBTreeImpl< I, N, size8_t, C, K, V >
-{
-public:
-	using Base_t = CMultiRBTreeImpl< I, N, size8_t, C, K, V >;
-	using Base_t::Base_t;
-	using Base_t::Get;
-	using Base_t::CopyFrom; using Base_t::MoveFrom;
-
-	using typename Base_t::Index_t;
-	using typename Base_t::Key_t;
-	using typename Base_t::iterator; using typename Base_t::const_iterator;
-
-	/// @brief Accesses the ordering key (column 0) of a node by index or iterator.
-	/// 
-	/// @complexity O(1) (all Key and Value accessors).
-	constexpr Key_t &Key( Index_t iNode ) { return Base_t::template Get< 0 >( iNode ); }
-	constexpr const Key_t &Key( Index_t iNode ) const { return Base_t::template Get< 0 >( iNode ); }
-	constexpr Key_t &Key( iterator it ) { return Base_t::template Get< 0 >( it ); }
-	constexpr const Key_t &Key( const_iterator it ) const { return Base_t::template Get< 0 >( it ); }
-
-	/// @brief Accesses the mapped value (column 1) of a node by index or iterator.
-	constexpr V &Value( Index_t iNode ) { return Base_t::template Get< V >( iNode ); }
-	constexpr const V &Value( Index_t iNode ) const { return Base_t::template Get< V >( iNode ); }
-	constexpr V &Value( iterator it ) { return Base_t::template Get< V >( it ); }
-	constexpr const V &Value( const_iterator it ) const { return Base_t::template Get< V >( it ); }
-
-	/// Cross-capacity conversions (e.g. heap <-> inline buffer of any size).
-	/// 
-	/// @complexity O(m + n log n): each rebuilds the tree via CopyFrom/MoveFrom.
-	template < I ON > constexpr CRBTree( const CRBTree< I, K, V, C, ON > &other ) { CopyFrom( other ); }
-	template < I ON > constexpr CRBTree &operator=( const CRBTree< I, K, V, C, ON > &other ) { return CopyFrom( other ); }
-	template < I ON > constexpr CRBTree( CRBTree< I, K, V, C, ON > &&other ) { MoveFrom( Move( other ) ); }
-	template < I ON > constexpr CRBTree &operator=( CRBTree< I, K, V, C, ON > &&other ) { return MoveFrom( Move( other ) ); }
-};
-
 /// Convenience spellings with the comparator fixed to `CRBTreeLess< K >` (use the 
 /// classes directly for a custom comparator).
 /// 
 /// Single-value map: key @p K + value @p V.
-template < typename I = size32_t, typename K = I, typename V = K > using RBTree_t = CRBTree< I, K, V, CRBTreeLess< K > >;
-template < typename K, typename V = K > using RBTree8_t = CRBTree< size8_t, K, V, CRBTreeLess< K > >;
-template < typename K, typename V = K > using RBTree16_t = CRBTree< size16_t, K, V, CRBTreeLess< K > >;
-template < typename K, typename V = K > using RBTree32_t = CRBTree< size32_t, K, V, CRBTreeLess< K > >;
-template < typename K, typename V = K > using RBTree64_t = CRBTree< size64_t, K, V, CRBTreeLess< K > >;
+template < typename I = size32_t, typename K = I, typename V = K > using RBTree_t = CRBTree< I, CRBTreeLess< K >, K, V >;
+template < typename K, typename V = K > using RBTree8_t = CRBTree< size8_t, CRBTreeLess< K >, K, V >;
+template < typename K, typename V = K > using RBTree16_t = CRBTree< size16_t, CRBTreeLess< K >, K, V >;
+template < typename K, typename V = K > using RBTree32_t = CRBTree< size32_t, CRBTreeLess< K >, K, V >;
+template < typename K, typename V = K > using RBTree64_t = CRBTree< size64_t, CRBTreeLess< K >, K, V >;
 
-template < size_t N, typename K = size_t, typename V = K > using BufferRBTree_t = CRBTree< size_t, K, V, CRBTreeLess< K >, N >;
-template < size8_t N, typename K = size8_t, typename V = K > using BufferRBTree8_t = CRBTree< size8_t, K, V, CRBTreeLess< K >, N >;
-template < size16_t N, typename K = size16_t, typename V = K > using BufferRBTree16_t = CRBTree< size16_t, K, V, CRBTreeLess< K >, N >;
-template < size32_t N, typename K = size32_t, typename V = K > using BufferRBTree32_t = CRBTree< size32_t, K, V, CRBTreeLess< K >, N >;
-template < size64_t N, typename K = size64_t, typename V = K > using BufferRBTree64_t = CRBTree< size64_t, K, V, CRBTreeLess< K >, N >;
+template < size_t N, typename K = size_t, typename V = K > using BufferRBTree_t = CBufferMultiRBTree< size_t, N, CRBTreeLess< K >, K, V >;
+template < size8_t N, typename K = size8_t, typename V = K > using BufferRBTree8_t = CBufferMultiRBTree< size8_t, N, CRBTreeLess< K >, K, V >;
+template < size16_t N, typename K = size16_t, typename V = K > using BufferRBTree16_t = CBufferMultiRBTree< size16_t, N, CRBTreeLess< K >, K, V >;
+template < size32_t N, typename K = size32_t, typename V = K > using BufferRBTree32_t = CBufferMultiRBTree< size32_t, N, CRBTreeLess< K >, K, V >;
+template < size64_t N, typename K = size64_t, typename V = K > using BufferRBTree64_t = CBufferMultiRBTree< size64_t, N, CRBTreeLess< K >, K, V >;
 
 /// Multi-column: key @p K + value columns @p Ts (no @p Ts is a set).
-template < typename K, typename... Ts > using MultiRBTree_t = CMultiRBTree< size32_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree8_t = CMultiRBTree< size8_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree16_t = CMultiRBTree< size16_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree32_t = CMultiRBTree< size32_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree64_t = CMultiRBTree< size64_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using MultiRBTree_t = CRBTree< size32_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using MultiRBTree8_t = CRBTree< size8_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using MultiRBTree16_t = CRBTree< size16_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using MultiRBTree32_t = CRBTree< size32_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using MultiRBTree64_t = CRBTree< size64_t, CRBTreeLess< K >, K, Ts... >;
 
 template < size_t N, typename K = size_t, typename... Ts > using BufferMultiRBTree_t = CBufferMultiRBTree< size_t, N, CRBTreeLess< K >, K, Ts... >;
 template < size8_t N, typename K = size8_t, typename... Ts > using BufferMultiRBTree8_t = CBufferMultiRBTree< size8_t, N, CRBTreeLess< K >, K, Ts... >;

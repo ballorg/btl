@@ -21,7 +21,7 @@ Callable storage decoupled from the callable's concrete type, with owner-aware q
 
 ## Data Structure
 
-`CDelegateBase` stores a `BufferVector_t< Variant_t, INLINE_BLOCK_COUNT - 1 >`: raw storage measured in `Variant_t`-sized blocks (a union of scalar/pointer words, giving worst-case scalar alignment). The inline budget is `DELEGATE_INLINE_ALLOCATION_SIZE` (default 64 bytes); one block is deducted for the vector's own count field so the whole delegate stays compact. The implementation objects themselves store: function pointer (+ `MPack` payload), or object pointer + member-function pointer (+ payload), or the moved-in callable (+ payload). An unbound delegate holds an empty storage vector.
+`CDelegateBase` stores a `BufferVector_t< INLINE_BLOCK_COUNT - 1, Variant_t >`: raw storage measured in `Variant_t`-sized blocks (a union of scalar/pointer words, giving worst-case scalar alignment). The inline budget is `DELEGATE_INLINE_ALLOCATION_SIZE` (default 64 bytes); one block is deducted for the vector's own count field so the whole delegate stays compact. The implementation objects themselves store: function pointer (+ `MPack` payload), or object pointer + member-function pointer (+ payload), or the moved-in callable (+ payload). An unbound delegate holds an empty storage vector.
 
 ## Storage Model
 
@@ -35,7 +35,7 @@ The delegate owns its implementation object (constructed/destroyed in place). It
 
 - Storage: `BufferVector_t` from [CVector](BTL.CVector.md); payloads: `MPack` ([meta](../modules/meta.md)); default returns: `MReturn`.
 - Aggregated by [CMulticastDelegate](BTL.CMulticastDelegate.md) as `CDelegate< void, Ts... >` entries.
-- A delegate is not memmove-safe; containers relocate delegate elements by move-construct + destroy (see [CMultiVector](BTL.CMultiVector.md) `RelocateColumn`).
+- A delegate is not memmove-safe; containers relocate delegate elements by move-construct + destroy (see [CVector](BTL.CVector.md) `RelocateColumn`).
 
 ## Invariants
 

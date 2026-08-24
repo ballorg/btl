@@ -7,6 +7,7 @@
 #	include "base/fixed.h"
 #	include "c/assert.h"
 #	include "meta/constevaluated.hpp"
+#	include "meta/ismemmovesafe.hpp"
 #	include "meta/removereference.hpp"
 #	include "meta/xvalue.hpp"
 #	include "memory.h"
@@ -91,9 +92,9 @@ constexpr T *CopyElements( const I nCount, T *pDest, const T *pSrc ) noexcept
 	BALL_ASSERT_MESSAGE( nCount == 0 || ( pDest != nullptr && pSrc != nullptr ), "Empty elements" );
 	BALL_ASSERT_MESSAGE( nCount == 0 || pDest <= pSrc || pSrc + nCount <= pDest, "Unsafe overlap for forward copy" );
 
-	// Cast to void* so the intentional raw-byte copy does not trip -Wclass-memaccess
+	// Cast to void* so the intentional raw-byte move does not trip -Wclass-memaccess
 	// when T is not trivially copyable (callers guarantee a byte-copyable layout here).
-	return static_cast< T * >( memcpy( static_cast< void * >( pDest ), static_cast< const void * >( pSrc ), static_cast< size_t >( nCount ) * sizeof( T ) ) );
+	return static_cast< T * >( memmove( static_cast< void * >( pDest ), static_cast< const void * >( pSrc ), static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
 
 template < typename I, typename T >
@@ -207,12 +208,17 @@ constexpr T *ShiftElementsRight( T *pDest, const T *pSrc, const T *pSrcEnd ) noe
 	BALL_ASSERT_MESSAGE( pSrc <= pSrcEnd, "Invalid source range" );
 	BALL_ASSERT_MESSAGE( pDest >= pSrc, "Expects destination at/after source" );
 
-	// Overlap-safe element-wise shift instead of a single bulk memmove: the element
-	// count is a pointer difference GCC's value-range analysis cannot bound once this
-	// is inlined into a fixed-size-buffer caller, so the memmove form drew a spurious
-	// -Wstringop-overflow. The dispatched copy keeps the by-one and non-overlapping
-	// fast paths and stays usable in constant evaluation.
-	return ShiftElementsRight_Unified( pDest, pSrc, pSrcEnd );
+	if constexpr ( !IS_MEMMOVE_SAFE< T > )
+		return ShiftElementsRight_Unified( pDest, pSrc, pSrcEnd );
+
+	if ( IsConstantEvaluated() )
+		return ShiftElementsRight_Unified( pDest, pSrc, pSrcEnd );
+
+	// libc's memmove uses the platform's tuned wide-copy path and is substantially
+	// faster than an element loop for large head and middle insertions.
+	const auto nCount = pSrcEnd - pSrc;
+
+	return static_cast< T * >( memmove( pDest, pSrc, static_cast< size_t >( nCount ) * sizeof( T ) ) );
 }
 
 ///-----------------------------------------------------------------------------

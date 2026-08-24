@@ -19,7 +19,6 @@
 #	include "meta/sequence.hpp"
 #	include "meta/variant.hpp"
 #	include "meta/xvalue.hpp"
-#	include "multivector.hpp"
 #	include "vector.hpp"
 
 #	ifndef DELEGATE_INLINE_ALLOCATION_SIZE
@@ -348,7 +347,7 @@ protected:
 		}
 	}
 
-	BufferVector_t< Variant_t, INLINE_BLOCK_COUNT - 1 > m_Storage; // Subtract vector size field from block count to get align.
+	BufferVector_t< INLINE_BLOCK_COUNT - 1, Variant_t > m_Storage; // Subtract vector size field from block count to get align.
 };
 
 /// @brief Single-cast delegate wrapper with type-erased inline storage.
@@ -691,7 +690,7 @@ protected:
 
 private:
 	size32_t m_nLocks; //TODO: Make atomic family.
-	MultiVector32_t< DelegateHandle_t, SingleDelegate_t > m_Events; //TODO: Make ordered slotvector -> map.
+	Vector32_t< DelegateHandle_t, SingleDelegate_t > m_Events; //TODO: Make ordered slotvector -> map.
 };
 
 template < typename TSignature >
