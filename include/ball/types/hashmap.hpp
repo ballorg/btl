@@ -8,7 +8,6 @@
 #	include "bits.hpp"
 #	include "c/assert.h"
 #	include "c/nouniqueaddress.h"
-#	include "c/prefetch.h"
 #	include "elements.hpp"
 #	include "fixed.hpp"
 #	include "hash.hpp"
@@ -257,16 +256,10 @@ protected:
 	}
 
 	template < typename TKeyColumn >
-	static constexpr Index_t FindInTable( const Key_t &key, Index_t nCapacity, Index_t iHome, const uchar_t *pStateBits, const TKeyColumn *pKeys ) noexcept
+	constexpr Index_t FindInTable( const Key_t &key, Index_t nCapacity, Index_t iHome, const uchar_t *pStateBits, const TKeyColumn *pKeys ) const noexcept
 	{
 		const Index_t nMask = static_cast< Index_t >( nCapacity - 1 );
 		Index_t i = iHome;
-
-		if ( !IsConstantEvaluated() )
-		{
-			BALL_PREFETCH_READ( &pStateBits[ iHome >> 3 ] );
-			BALL_PREFETCH_READ( &pKeys[ iHome ] );
-		}
 
 		for ( ;; )
 		{
@@ -307,12 +300,6 @@ protected:
 		Index_t i = iHome;
 
 		nProbeLength = 0;
-
-		if ( !IsConstantEvaluated() )
-		{
-			BALL_PREFETCH_READ( &pStateBits[ iHome >> 3 ] );
-			BALL_PREFETCH_READ( &pKeys[ iHome ] );
-		}
 
 		for ( ;; )
 		{
@@ -428,13 +415,6 @@ protected:
 		for ( ;; )
 		{
 			Index_t i = iHole;
-			const Index_t iNext = static_cast< Index_t >( ( i + 1 ) & nMask );
-
-			if ( !IsConstantEvaluated() )
-			{
-				BALL_PREFETCH_READ( &pStateBits[ iNext >> 3 ] );
-				BALL_PREFETCH_READ( &pKeys[ iNext ] );
-			}
 
 			for ( ;; )
 			{

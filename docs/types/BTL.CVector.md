@@ -34,6 +34,8 @@ When a byte-relocatable one-column vector changes heap capacity, it asks the all
 
 For byte-relocatable single-column elements, middle insertion and removal use the platform `memmove` path directly. Tail insertion and suffix removal skip the zero-length shift; suffix removal commits the new count without resolving the active storage pointer. When the operation remains inside the current geometric allocation, only the logical row count is updated; the active storage pointer is not recomputed or recommitted.
 
+Contiguous copy, relocation, construction, destruction, and shift loops do not issue per-element software prefetch hints. Their addresses are sequential and predictable to the processor, while the byte-relocatable paths already use the platform `memcpy`/`memmove` implementations.
+
 `GetStorage<T>( vector, count[, block] )`, provided through `meta/get.hpp`, is the compact free-function form of `CVectorBase::StorageBy<T>` used by vector implementations when resolving a column pointer for a logical count and optional overflow block.
 
 ## Ownership and Lifetime

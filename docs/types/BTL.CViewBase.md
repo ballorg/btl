@@ -47,6 +47,7 @@ Non-owning. Copy is a shallow pointer/count copy; destruction does nothing. When
 
 - Sizes: `Count`, `Size` (count × summed per-column byte stride), `SizeBy< T >`, fixed capacity queries, `Empty`, overflow predicates; unsuffixed forms such as `FixedSize` and `IsOverflow` address the first column.
 - Typed access by column type or index: `BaseBy`/`DataBy`/`FixedDataBy` (+ packed forms), `Get< T >( i )`, `SetTo`, `Find`, `operator[]`, `Front`/`Back`, typed `begin`/`end`. Unsuffixed storage and packed helpers default their type to the first column so derived containers can expose them with `using` declarations only.
+- Protected cache hints: `PrefetchRow< ACCESS, Ks... >( i )` accepts [EPrefetchAccess](BTL.EPrefetchAccess.md) as its mode and prefetches the columns named by their compile-time indices; omitting `Ks...` prefetches every column in the SoA row. Packed columns address the byte containing the row.
 - Packed-bit machinery: size/offset math, single-bit get/set, `Packed_ClearRowsBy`, `Packed_ShiftRowsLeftBy`/`RightBy` (bitwise row shifting), value get/set with masking.
 - Search: `FindBy`/`RFindBy` over one column and `FindFrom`/`RFindFrom`/multi-value `Find`/`RFind` over complete SoA rows.
 - Slicing: `Subview`, `First`, `Last`, `DropFront`, `DropBack` (all columns advance together); `Const()` conversion to the all-`const` view.

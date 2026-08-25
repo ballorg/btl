@@ -23,6 +23,9 @@
 
 #	if defined( __arm__ ) || defined( __aarch64__ ) || defined( _M_ARM ) || defined( _M_ARM64 )
 #		define BALL_ARM 1
+#		if defined( __aarch64__ ) || defined( _M_ARM64 )
+#			define BALL_ARM64 1
+#		endif
 #	elif defined( __i386__ ) || defined( __x86_64__ ) || defined( _M_IX86 ) || defined( _M_X64 ) || defined( _M_AMD64 )
 #		define BALL_X86 1
 #	endif

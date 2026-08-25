@@ -22,6 +22,7 @@
 #	include "fixed.hpp"
 #	include "math.hpp"
 #	include "number.hpp"
+#	include "prefetch.hpp"
 
 #	ifndef BALL_FIND_BATCH_COUNT
 #		define BALL_FIND_BATCH_COUNT 4
@@ -527,6 +528,48 @@ public:
 	constexpr operator Const_t() const { return Const(); }
 
 protected:
+	template < EPrefetchAccess ACCESS, TI... Ks > constexpr void PrefetchRow( I i ) const noexcept
+	{
+		if ( !IsConstantEvaluated() )
+		{
+			if constexpr ( sizeof...( Ks ) )
+				( PrefetchColumn< ACCESS, Ks >( i ), ... );
+			else
+				PrefetchRowBy< ACCESS >( i, Sequence_t< Ts... >() );
+		}
+	}
+
+	template < EPrefetchAccess ACCESS, TI K >
+	constexpr void PrefetchColumn( I i ) const noexcept
+	{
+		using T = TypeByIndex_t< K >;
+
+		if constexpr ( TYPE_HAS_PACKED_BITS< T > )
+		{
+			const uchar_t *pBase = m_Elements.template Packed_BaseBy< K, T >( Count() );
+
+			if constexpr ( ACCESS == EPrefetchAccess::WRITE )
+				BALL_PREFETCH_WRITE( &pBase[ ( static_cast< bits_t >( i ) * PACKED_BITS< T > ) >> 3 ] );
+			else
+				BALL_PREFETCH_READ( &pBase[ ( static_cast< bits_t >( i ) * PACKED_BITS< T > ) >> 3 ] );
+		}
+		else
+		{
+			const T *pBase = m_Elements.template BaseBy< K, T >( Count() );
+
+			if constexpr ( ACCESS == EPrefetchAccess::WRITE )
+				BALL_PREFETCH_WRITE( &pBase[ i ] );
+			else
+				BALL_PREFETCH_READ( &pBase[ i ] );
+		}
+	}
+
+	template < EPrefetchAccess ACCESS, size_t... Is >
+	constexpr void PrefetchRowBy( I i, MSequence< Is... > ) const noexcept
+	{
+		( PrefetchColumn< ACCESS, static_cast< TI >( Is ) >( i ), ... );
+	}
+
 	template < typename Iter >
 	static constexpr Iter BatchOffset( Iter itBase, int nOffset ) noexcept
 	{

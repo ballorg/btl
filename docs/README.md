@@ -37,6 +37,7 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 - [BTL::CArray](types/BTL.CArray.md) — fixed-size owning array (plus `CEmptyArray`)
 - [BTL::CView](types/BTL.CView.md) — single-column non-owning view with optional inline buffer
 - [BTL::CViewBase](types/BTL.CViewBase.md) — multi-column (SoA) view core
+- [BTL::EPrefetchAccess](types/BTL.EPrefetchAccess.md) — read/write mode for row prefetching
 - [BTL::CElementsPack](types/BTL.CElementsPack.md) — per-column inline/heap storage substrate
 - [BTL::CElementsNode](types/BTL.CElementsNode.md) — internal single-column storage node used by `CElementsPack`
 - [BTL::CVector](types/BTL.CVector.md) — growable single-column or SoA vector (`CVectorBase`, `CVectorImpl`, `CBufferVector`)

@@ -23,6 +23,7 @@ BALL_EXPORT namespace BTL
 #	include "types/meta.hpp"
 #	include "types/number.hpp"
 #	include "types/pair.hpp"
+#	include "types/prefetch.hpp"
 #	include "types/rbtree.hpp"
 #	include "types/reflect.hpp"
 #	include "types/slotiterator.hpp"

@@ -43,7 +43,7 @@ Structural conventions:
 
 Node rows follow the [multi-column CVector storage model](BTL.CVector.md): inline column buffers up to the common inline capacity, then one shared heap block for all columns, with capacity derived as `BitCeil( count )`. Insert always appends at the tail (storage stays dense because erase compacts), so growth is amortized; erase shrinks the row count by one and may migrate or reallocate across a capacity boundary.
 
-Hot search and insertion descents resolve the key/left/right column bases once, then use one comparator call per visited level plus a final equivalence check. Rotations and insert/erase fix-ups retain frequently reused indices in local variables. These are algorithm-local optimizations only: the tree has no additional root, boundary, or traversal data members; the root remains encoded in the existing parent column.
+Hot search and insertion descents resolve the key/left/right column bases once, then use one comparator call per visited level plus a final equivalence check. The dependent next-node index is consumed immediately, so traversal deliberately avoids software prefetch instructions that cannot get far enough ahead of the load. Rotations and insert/erase fix-ups retain frequently reused indices in local variables. These are algorithm-local optimizations only: the tree has no additional root, boundary, or traversal data members; the root remains encoded in the existing parent column.
 
 ## Ownership and Lifetime
 

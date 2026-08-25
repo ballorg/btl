@@ -189,7 +189,7 @@ namespace
 	static void LogBenchmarkComparison( TestsOutput_t &sOut )
 	{
 #if defined( NDEBUG )
-		static constexpr size_t TRIAL_COUNT = 7u;
+		static constexpr size_t TRIAL_COUNT = 3u;
 		static constexpr size_t KEY_COUNT = 500'000u;
 #else
 		static constexpr size_t TRIAL_COUNT = 1u;
