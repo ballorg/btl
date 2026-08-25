@@ -263,7 +263,10 @@ protected:
 		Index_t i = iHome;
 
 		if ( !IsConstantEvaluated() )
+		{
+			BALL_PREFETCH_READ( &pStateBits[ iHome >> 3 ] );
 			BALL_PREFETCH_READ( &pKeys[ iHome ] );
+		}
 
 		for ( ;; )
 		{
@@ -304,6 +307,12 @@ protected:
 		Index_t i = iHome;
 
 		nProbeLength = 0;
+
+		if ( !IsConstantEvaluated() )
+		{
+			BALL_PREFETCH_READ( &pStateBits[ iHome >> 3 ] );
+			BALL_PREFETCH_READ( &pKeys[ iHome ] );
+		}
 
 		for ( ;; )
 		{
@@ -419,6 +428,13 @@ protected:
 		for ( ;; )
 		{
 			Index_t i = iHole;
+			const Index_t iNext = static_cast< Index_t >( ( i + 1 ) & nMask );
+
+			if ( !IsConstantEvaluated() )
+			{
+				BALL_PREFETCH_READ( &pStateBits[ iNext >> 3 ] );
+				BALL_PREFETCH_READ( &pKeys[ iNext ] );
+			}
 
 			for ( ;; )
 			{
