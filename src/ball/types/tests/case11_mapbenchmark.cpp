@@ -1,39 +1,26 @@
 #include "common.hpp"
 
+#include <algorithm>
 #include <map>
 #include <unordered_map>
 #include <vector>
 
 namespace
 {
-	using Node_t = BTL::Pair_t< size_t, size_t >;
 	using RefMap_t = std::map< size_t, size_t >;
 
-	// Distinct tags give each value column a unique CReflect type (both wrap size_t),
-	// so the SoA columns are addressed by type without aliasing one another.
-	BALL_REFLECT_TAGGED( First, size_t );
-	BALL_REFLECT_TAGGED( Second, size_t );
-
-	// Column-keyed tree: column 0 is the size_t key, columns 1 and 2 hold the two
-	// halves of the value in separate (distinctly typed) SoA columns.
-	using Tree_t = BTL::MultiRBTree_t< size_t, First_t, Second_t >;
-
-	static Node_t Make( size_t key )
-	{
-		return Node_t( key, key * 17u + 3u );
-	}
+	// Match std::map<size_t, size_t>: one key and one mapped value.
+	using Tree_t = BTL::RBTree32_t< size_t, size_t >;
 
 	static bool IsEndIndex( const Tree_t &tree, const Tree_t::Index_t iNode )
 	{
 		return iNode == tree.EndIndex();
 	}
 
-	// Insert a key with its value split across columns 1 and 2.
+	// Insert the same key/value pair as the std::map adapter.
 	static Tree_t::Index_t InsertNode( Tree_t &tree, size_t key )
 	{
-		const Node_t value = Make( key );
-
-		return tree.Insert( key, value.First(), value.Second() );
+		return tree.Insert( key, key * 17u + 3u );
 	}
 
 	struct BenchmarkResult_t
@@ -73,7 +60,7 @@ namespace
 		{
 			const Tree_t::Index_t iNode = tree.Find( key );
 
-			return !IsEndIndex( tree, iNode ) && tree.Get< 1 >( iNode ) == key;
+			return !IsEndIndex( tree, iNode ) && tree.Get< 1 >( iNode ) == key * 17u + 3u;
 		}
 		static bool Erase( C &tree, size_t key ) { return !IsEndIndex( tree, tree.FindAndRemove( key ) ); }
 		static size_t Count( const C &tree ) { return tree.Count(); }
@@ -171,6 +158,32 @@ namespace
 		return result;
 	}
 
+	static BTL::CTimeNS MedianTime( const std::vector< BenchmarkResult_t > &results, BTL::CTimeNS BenchmarkResult_t::*pTime )
+	{
+		std::vector< BTL::timens_t > times;
+		times.reserve( results.size() );
+
+		for ( const BenchmarkResult_t &result : results )
+			times.push_back( ( result.*pTime ).GetNSs() );
+
+		std::sort( times.begin(), times.end() );
+
+		return BTL::CTimeNS( times[ times.size() / 2u ] );
+	}
+
+	static BenchmarkResult_t MedianResult( const std::vector< BenchmarkResult_t > &results )
+	{
+		BenchmarkResult_t median;
+		median.m_Insert = MedianTime( results, &BenchmarkResult_t::m_Insert );
+		median.m_Find = MedianTime( results, &BenchmarkResult_t::m_Find );
+		median.m_Erase = MedianTime( results, &BenchmarkResult_t::m_Erase );
+
+		for ( const BenchmarkResult_t &result : results )
+			median.m_bOk = median.m_bOk && result.m_bOk;
+
+		return median;
+	}
+
 	static BTL::StringView_t BenchmarkStatus( bool bOk )
 	{
 		return bOk ? BTL::StringView_t( "ok" ) : BTL::StringView_t( "mismatch" );
@@ -178,19 +191,43 @@ namespace
 
 	static void LogBenchmarkComparison( TestsOutput_t &sOut )
 	{
-		// The RB tree no longer caches root/boundary/free-list state; deriving them on
-		// demand makes every operation O(n)+ (overall ~O(n^2 log n) across the run), so
-		// this comparison uses a moderate key count to stay responsive.
-		const std::vector< size_t > keys = MakeBenchmarkKeys( 100'000u );
-		const BenchmarkResult_t rbTree = RunMapBenchmark< CAdapter_RBTree >( keys );
-		const BenchmarkResult_t stdMap = RunMapBenchmark< CAdapter_StdMap >( keys );
+#if defined( NDEBUG )
+		static constexpr size_t TRIAL_COUNT = 7u;
+		static constexpr size_t KEY_COUNT = 500'000u;
+#else
+		static constexpr size_t TRIAL_COUNT = 1u;
+		static constexpr size_t KEY_COUNT = 100'000u;
+#endif
+		const std::vector< size_t > keys = MakeBenchmarkKeys( KEY_COUNT );
+		std::vector< BenchmarkResult_t > rbTreeTrials;
+		std::vector< BenchmarkResult_t > stdMapTrials;
+		rbTreeTrials.reserve( TRIAL_COUNT );
+		stdMapTrials.reserve( TRIAL_COUNT );
+
+		for ( size_t i = 0; i < TRIAL_COUNT; ++i )
+		{
+			if ( ( i & 1u ) == 0u )
+			{
+				rbTreeTrials.push_back( RunMapBenchmark< CAdapter_RBTree >( keys ) );
+				stdMapTrials.push_back( RunMapBenchmark< CAdapter_StdMap >( keys ) );
+			}
+			else
+			{
+				stdMapTrials.push_back( RunMapBenchmark< CAdapter_StdMap >( keys ) );
+				rbTreeTrials.push_back( RunMapBenchmark< CAdapter_RBTree >( keys ) );
+			}
+		}
+
+		const BenchmarkResult_t rbTree = MedianResult( rbTreeTrials );
+		const BenchmarkResult_t stdMap = MedianResult( stdMapTrials );
 		const BenchmarkResult_t hashMap = RunMapBenchmark< CAdapter_HashMap >( keys );
 		const BenchmarkResult_t stdUnorderedMap = RunMapBenchmark< CAdapter_StdUnorderedMap >( keys );
 
-		sOut.AppendMultiple( "BTL::RBTree_t: benchmark vs std::map vs BTL::HashMap_t vs std::unordered_map (", keys.size(), " keys)\n" );
+		sOut.AppendMultiple( "BTL::RBTree_t: benchmark median of ", TRIAL_COUNT, " trials vs std::map vs BTL::HashMap_t vs std::unordered_map (", keys.size(), " keys)\n" );
 		sOut.AppendMultiple( " - insert: rb=", rbTree.m_Insert.AsMillisF(), " ms, std=", stdMap.m_Insert.AsMillisF(), " ms, hashmap=", hashMap.m_Insert.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Insert.AsMillisF(), " ms\n" );
 		sOut.AppendMultiple( " - find: rb=", rbTree.m_Find.AsMillisF(), " ms, std=", stdMap.m_Find.AsMillisF(), " ms, hashmap=", hashMap.m_Find.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Find.AsMillisF(), " ms\n" );
 		sOut.AppendMultiple( " - erase: rb=", rbTree.m_Erase.AsMillisF(), " ms, std=", stdMap.m_Erase.AsMillisF(), " ms, hashmap=", hashMap.m_Erase.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Erase.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - ordered total: rb=", rbTree.m_Insert.AsMillisF() + rbTree.m_Find.AsMillisF() + rbTree.m_Erase.AsMillisF(), " ms, std=", stdMap.m_Insert.AsMillisF() + stdMap.m_Find.AsMillisF() + stdMap.m_Erase.AsMillisF(), " ms\n" );
 		sOut.AppendMultiple( " - status: rb=", BenchmarkStatus( rbTree.m_bOk ), ", std=", BenchmarkStatus( stdMap.m_bOk ), ", hashmap=", BenchmarkStatus( hashMap.m_bOk ), ", unordered=", BenchmarkStatus( stdUnorderedMap.m_bOk ), "\n" );
 	}
 }

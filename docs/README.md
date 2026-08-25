@@ -43,7 +43,7 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 - [BTL::CVector_Packed_Iterator](types/BTL.CVector_Packed_Iterator.md) — byte-pointer iterator for packed elements; ordinary columns use native pointers
 
 ### Associative containers
-- [BTL::CRBTree](types/BTL.CRBTree.md) — SoA red-black tree family (`CRBTree`, `CBufferMultiRBTree`)
+- [BTL::CRBTree](types/BTL.CRBTree.md) — SoA red-black tree family (`CRBTree`, `CBufferRBTree`)
 - [BTL::CHashMap](types/BTL.CHashMap.md) — SoA open-addressing hash map family (`CHashMap`, `CBufferMultiHashMap`)
 - [BTL::CFibonacciHash](types/BTL.CFibonacciHash.md) — golden-ratio hashing policy (`MFibonacci`)
 - [BTL::CSlotIterator](types/BTL.CSlotIterator.md) — slot iterator shared by tree and hash map

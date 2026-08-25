@@ -15,7 +15,7 @@ Key-addressed containers built as structure-of-arrays over [CBufferVector](../ty
 
 | Family | Wrappers | Convenience aliases |
 | --- | --- | --- |
-| Red-black tree | `CRBTree` (heap), `CBufferMultiRBTree` (inline) | `RBTree(8/16/32/64)_t`, `BufferRBTree*_t`, `MultiRBTree*_t`, `BufferMultiRBTree*_t` |
+| Red-black tree | `CRBTree` (heap), `CBufferRBTree` (inline) | Variadic `RBTree(8/16/32/64)_t` and `BufferRBTree*_t` aliases for sets, maps, and multi-column maps |
 | Hash map | `CHashMap` (heap), `CBufferMultiHashMap` (inline) | `HashMap(8/16/32/64)_t`, `BufferHashMap*_t`, `MultiHashMap*_t`, `BufferMultiHashMap*_t` |
 | Hash policy | `CFibonacciHash< U, INDEX >` | `Hash_t`, `Hash8_t` … `Hash64_t` |
 | Comparator | `CRBTreeLess< T >` (and transparent `CRBTreeLess< void >`) | — |

@@ -15,7 +15,8 @@ namespace
 
 	// Column-keyed tree: column 0 is the size_t key, columns 1 and 2 hold the two
 	// halves of the value in separate (distinctly typed) SoA columns.
-	using Tree_t = BTL::MultiRBTree_t< size_t, First_t, Second_t >;
+	using Tree_t = BTL::RBTree32_t< size_t, First_t, Second_t >;
+	using SetTree_t = BTL::RBTree32_t< size_t >;
 
 	// Single-value map spelling used only to exercise CRBTree's Key()/Get< 1 >().
 	using MapTree_t = BTL::RBTree_t< BTL::size32_t, size_t, Node_t >;
@@ -262,7 +263,7 @@ namespace
 		bOk &= tree.Validate();
 
 		// Buffer variant + cross-copy from the heap tree.
-		BTL::CBufferMultiRBTree< BTL::size32_t, 16u, BTL::CRBTreeLess< size_t >, size_t, float, char > buffer( tree );
+		BTL::CBufferRBTree< BTL::size32_t, 16u, BTL::CRBTreeLess< size_t >, size_t, float, char > buffer( tree );
 
 		bOk &= buffer.Count() == 3u && buffer.Validate() && buffer.Get< 2 >( buffer.Find( 8u ) ) == 'c';
 
@@ -335,6 +336,19 @@ namespace
 void Case05_RBTree( TestsOutput_t &sOut )
 {
 	bool bAllOk = true;
+
+	{
+		SetTree_t tree;
+
+		const auto iFirst = tree.Insert( 42u );
+		const auto iDuplicate = tree.Insert( 42u );
+		bool bOk = iFirst != tree.NilIndex() && iDuplicate == tree.NilIndex();
+		bOk &= SetTree_t::COLUMN_COUNT == 1u;
+		bOk &= tree.Key( iFirst ) == 42u && tree.Contains( 42u ) && tree.Validate();
+
+		LogTreeCheck( sOut, "set alias", bOk );
+		bAllOk = bAllOk && bOk;
+	}
 
 	{
 		// Single-value map Key()/Get< 1 >() accessors (key = column 0, value = column 1).

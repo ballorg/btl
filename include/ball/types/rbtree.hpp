@@ -246,7 +246,7 @@ protected:
 	// instead of qualifying through Nodes(). Count() is not pulled in: it would collide 
 	// with the occupied-node Count() below, so storage row count is reached through 
 	// TreeCount() / Tree_t::Count(). Member templates taking explicit type args 
-	// (Get<>, Packed_BaseBy<>) still need the this->template form, not a using.
+	// (Get<>, Packed_BaseBy<>) still need the Base_t::template form, not a using.
 	using Tree_t::Packed_BaseBy;
 	using Tree_t::AddToTail;
 
@@ -497,19 +497,22 @@ protected:
 	{
 		Index_t iNode = RootIndex();
 		Index_t iCandidate = NIL_INDEX;
+		const auto *pKeys = PayloadColumn< 0 >();
+		const LeftColumn_t *pLeft = LeftColumn();
+		const RightColumn_t *pRight = RightColumn();
 
 		while ( !IsNil( iNode ) )
 		{
-			const Key_t &nodeKey = Key( iNode );
+			const Key_t &nodeKey = ReflectAccess( pKeys[ iNode ] );
 
 			if ( Less( nodeKey, key ) )
 			{
-				iNode = RightOf( iNode );
+				iNode = pRight[ iNode ];
 			}
 			else
 			{
 				iCandidate = iNode;
-				iNode = LeftOf( iNode );
+				iNode = pLeft[ iNode ];
 			}
 		}
 
@@ -521,19 +524,22 @@ protected:
 	{
 		Index_t iNode = RootIndex();
 		Index_t iCandidate = NIL_INDEX;
+		const auto *pKeys = PayloadColumn< 0 >();
+		const LeftColumn_t *pLeft = LeftColumn();
+		const RightColumn_t *pRight = RightColumn();
 
 		while ( !IsNil( iNode ) )
 		{
-			const Key_t &nodeKey = Key( iNode );
+			const Key_t &nodeKey = ReflectAccess( pKeys[ iNode ] );
 
 			if ( Less( key, nodeKey ) )
 			{
 				iCandidate = iNode;
-				iNode = LeftOf( iNode );
+				iNode = pLeft[ iNode ];
 			}
 			else
 			{
-				iNode = RightOf( iNode );
+				iNode = pRight[ iNode ];
 			}
 		}
 
@@ -544,20 +550,25 @@ protected:
 	constexpr Index_t FindIndex( const Key_t &key ) const noexcept
 	{
 		Index_t iNode = RootIndex();
+		Index_t iCandidate = NIL_INDEX;
+		const auto *pKeys = PayloadColumn< 0 >();
+		const LeftColumn_t *pLeft = LeftColumn();
+		const RightColumn_t *pRight = RightColumn();
 
 		while ( !IsNil( iNode ) )
 		{
-			const Key_t &nodeKey = Key( iNode );
+			const Key_t &nodeKey = ReflectAccess( pKeys[ iNode ] );
 
-			if ( Less( key, nodeKey ) )
-				iNode = LeftOf( iNode );
-			else if ( Less( nodeKey, key ) )
-				iNode = RightOf( iNode );
+			if ( Less( nodeKey, key ) )
+				iNode = pRight[ iNode ];
 			else
-				return iNode;
+			{
+				iCandidate = iNode;
+				iNode = pLeft[ iNode ];
+			}
 		}
 
-		return NIL_INDEX;
+		return !IsNil( iCandidate ) && !Less( key, ReflectAccess( pKeys[ iCandidate ] ) ) ? iCandidate : NIL_INDEX;
 	}
 
 	///-----------------------------------------------------------------------------
@@ -680,6 +691,7 @@ protected:
 	constexpr void RotateLeft( Index_t x )
 	{
 		const Index_t y = RightOf( x );
+		const Index_t iMiddle = LeftOf( y );
 
 		BALL_ASSERT_MESSAGE( !IsNil( x ), "Non-sentinel pivot" );
 		BALL_ASSERT_MESSAGE( IsValidIndex( x ), "In-range pivot index" );
@@ -690,10 +702,10 @@ protected:
 		BALL_ASSERT_MESSAGE( IsOccupied( y ), "Occupied right child" );
 
 		// Move y's left subtree to x's right: all keys stay between x and y.
-		SetRight( x, LeftOf( y ) );
+		SetRight( x, iMiddle );
 
-		if ( !IsNil( LeftOf( y ) ) )
-			SetParent( LeftOf( y ), x );
+		if ( !IsNil( iMiddle ) )
+			SetParent( iMiddle, x );
 
 		const Index_t iParent = ParentOf( x );
 
@@ -728,6 +740,7 @@ protected:
 	constexpr void RotateRight( Index_t x )
 	{
 		const Index_t y = LeftOf( x );
+		const Index_t iMiddle = RightOf( y );
 
 		BALL_ASSERT_MESSAGE( !IsNil( x ), "Non-sentinel pivot" );
 		BALL_ASSERT_MESSAGE( IsValidIndex( x ), "In-range pivot index" );
@@ -738,10 +751,10 @@ protected:
 		BALL_ASSERT_MESSAGE( IsOccupied( y ), "Occupied left child" );
 
 		// Move y's right subtree to x's left: all keys stay between y and x.
-		SetLeft( x, RightOf( y ) );
+		SetLeft( x, iMiddle );
 
-		if ( !IsNil( RightOf( y ) ) )
-			SetParent( RightOf( y ), x );
+		if ( !IsNil( iMiddle ) )
+			SetParent( iMiddle, x );
 
 		const Index_t iParent = ParentOf( x );
 
@@ -916,6 +929,8 @@ protected:
 			if ( x == LeftOf( iParent ) )
 			{
 				Index_t w = RightOf( iParent );
+				Index_t wLeft = LeftOf( w );
+				Index_t wRight = RightOf( w );
 
 				if ( ColorOf( w ) == Color_t::RED )
 				{
@@ -925,9 +940,11 @@ protected:
 					SetColor( iParent, Color_t::RED );
 					RotateLeft( iParent );
 					w = RightOf( iParent );
+					wLeft = LeftOf( w );
+					wRight = RightOf( w );
 				}
 
-				if ( ColorOf( LeftOf( w ) ) == Color_t::BLACK && ColorOf( RightOf( w ) ) == Color_t::BLACK )
+				if ( ColorOf( wLeft ) == Color_t::BLACK && ColorOf( wRight ) == Color_t::BLACK )
 				{
 					// Case 2: black sibling with two black children. 
 					// Recolor sibling red and move the black deficit up to parent.
@@ -936,14 +953,15 @@ protected:
 				}
 				else
 				{
-					if ( ColorOf( RightOf( w ) ) == Color_t::BLACK )
+					if ( ColorOf( wRight ) == Color_t::BLACK )
 					{
 						// Case 3: black sibling whose outer child is black but inner 
 						// child is red. Rotate sibling first to obtain case 4
-						SetColor( LeftOf( w ), Color_t::BLACK );
+						SetColor( wLeft, Color_t::BLACK );
 						SetColor( w, Color_t::RED );
 						RotateRight( w );
 						w = RightOf( iParent );
+						wRight = RightOf( w );
 					}
 
 					// Case 4: black sibling with red outer child. One rotation around parent 
@@ -951,7 +969,7 @@ protected:
 					// instead of climbing to the root just to stop the loop.
 					SetColor( w, ColorOf( iParent ) );
 					SetColor( iParent, Color_t::BLACK );
-					SetColor( RightOf( w ), Color_t::BLACK );
+					SetColor( wRight, Color_t::BLACK );
 					RotateLeft( iParent );
 
 					break;
@@ -960,6 +978,8 @@ protected:
 			else
 			{
 				Index_t w = LeftOf( iParent );
+				Index_t wLeft = LeftOf( w );
+				Index_t wRight = RightOf( w );
 
 				if ( ColorOf( w ) == Color_t::RED )
 				{
@@ -968,9 +988,11 @@ protected:
 					SetColor( iParent, Color_t::RED );
 					RotateRight( iParent );
 					w = LeftOf( iParent );
+					wLeft = LeftOf( w );
+					wRight = RightOf( w );
 				}
 
-				if ( ColorOf( RightOf( w ) ) == Color_t::BLACK && ColorOf( LeftOf( w ) ) == Color_t::BLACK )
+				if ( ColorOf( wRight ) == Color_t::BLACK && ColorOf( wLeft ) == Color_t::BLACK )
 				{
 					// Mirror case 2: black sibling with two black children
 					SetColor( w, Color_t::RED );
@@ -978,20 +1000,21 @@ protected:
 				}
 				else
 				{
-					if ( ColorOf( LeftOf( w ) ) == Color_t::BLACK )
+					if ( ColorOf( wLeft ) == Color_t::BLACK )
 					{
 						// Mirror case 3: convert inner-red to outer-red
-						SetColor( RightOf( w ), Color_t::BLACK );
+						SetColor( wRight, Color_t::BLACK );
 						SetColor( w, Color_t::RED );
 						RotateLeft( w );
 						w = LeftOf( iParent );
+						wLeft = LeftOf( w );
 					}
 
 					// Mirror case 4: rotate around parent, absorb the deficit, then end the 
 					// fix-up by breaking instead of climbing to the root.
 					SetColor( w, ColorOf( iParent ) );
 					SetColor( iParent, Color_t::BLACK );
-					SetColor( LeftOf( w ), Color_t::BLACK );
+					SetColor( wLeft, Color_t::BLACK );
 					RotateRight( iParent );
 
 					break;
@@ -1012,15 +1035,14 @@ protected:
 	/// 
 	/// @complexity O(1): a fixed number of link rewrites.
 	///-----------------------------------------------------------------------------
-	constexpr void Transplant( Index_t u, Index_t v )
+	constexpr void Transplant( Index_t u, Index_t v, Index_t iParent )
 	{
 		BALL_ASSERT_MESSAGE( !IsNil( u ), "Non-sentinel source node" );
 		BALL_ASSERT_MESSAGE( IsValidIndex( u ), "In-range source node index" );
 		BALL_ASSERT_MESSAGE( IsOccupied( u ), "Occupied source node" );
 		BALL_ASSERT_MESSAGE( IsNilOrValid( v ), "Sentinel or in-range replacement node index" );
 		BALL_ASSERT_MESSAGE( IsNilOrOccupied( v ), "Replacement must be sentinel or occupied" );
-
-		const Index_t iParent = ParentOf( u );
+		BALL_ASSERT_MESSAGE( iParent == ParentOf( u ), "Cached source parent must match the tree" );
 
 		// When u was the root, the SetParent below makes v root (parent == NIL); 
 		// otherwise relink v under u's former parent on the correct side.
@@ -1047,8 +1069,14 @@ protected:
 		BALL_ASSERT_MESSAGE( IsValidIndex( iNode ), "In-range subtree root index" );
 		BALL_ASSERT_MESSAGE( IsOccupied( iNode ), "Occupied subtree root" );
 
-		while ( !IsNil( LeftOf( iNode ) ) )
-			iNode = LeftOf( iNode );
+		const LeftColumn_t *pLeft = LeftColumn();
+		Index_t iLeft = pLeft[ iNode ];
+
+		while ( !IsNil( iLeft ) )
+		{
+			iNode = iLeft;
+			iLeft = pLeft[ iNode ];
+		}
 
 		return iNode;
 	}
@@ -1064,8 +1092,14 @@ protected:
 		BALL_ASSERT_MESSAGE( IsValidIndex( iNode ), "In-range subtree root index" );
 		BALL_ASSERT_MESSAGE( IsOccupied( iNode ), "Occupied subtree root" );
 
-		while ( !IsNil( RightOf( iNode ) ) )
-			iNode = RightOf( iNode );
+		const RightColumn_t *pRight = RightColumn();
+		Index_t iRight = pRight[ iNode ];
+
+		while ( !IsNil( iRight ) )
+		{
+			iNode = iRight;
+			iRight = pRight[ iNode ];
+		}
 
 		return iNode;
 	}
@@ -1537,27 +1571,33 @@ public:
 
 		Index_t iParent = NIL_INDEX;
 		Index_t iNode = RootIndex();
+		Index_t iCandidate = NIL_INDEX;
 		bool bLinkLeft = false;
+		const auto *pKeys = Base_t::template PayloadColumn< 0 >();
+		const auto *pLeft = LeftColumn();
+		const auto *pRight = Base_t::RightColumn();
 
 		while ( !IsNil( iNode ) )
 		{
 			iParent = iNode;
 
-			const Key_t &nodeKey = Key( iNode );
+			const Key_t &nodeKey = ReflectAccess( pKeys[ iNode ] );
 
-			if ( Less( key, nodeKey ) )
-			{
-				bLinkLeft = true;
-				iNode = LeftOf( iNode );
-			}
-			else if ( Less( nodeKey, key ) )
+			if ( Less( nodeKey, key ) )
 			{
 				bLinkLeft = false;
-				iNode = RightOf( iNode );
+				iNode = pRight[ iNode ];
 			}
 			else
-				return NIL_INDEX;
+			{
+				iCandidate = iNode;
+				bLinkLeft = true;
+				iNode = pLeft[ iNode ];
+			}
 		}
+
+		if ( !IsNil( iCandidate ) && !Less( key, ReflectAccess( pKeys[ iCandidate ] ) ) )
+			return NIL_INDEX;
 
 		// New nodes start red to preserve the black-height of all leaf paths
 		const Index_t z = AddNode( iParent, Move( key ), Move( values )... );
@@ -1633,6 +1673,7 @@ public:
 	constexpr void RotateLeft( Index_t x )
 	{
 		const Index_t y = RightOf( x );
+		const Index_t iMiddle = LeftOf( y );
 
 		BALL_ASSERT_MESSAGE( !IsNil( x ), "Non-sentinel pivot" );
 		BALL_ASSERT_MESSAGE( IsOccupied( x ), "Occupied pivot" );
@@ -1641,10 +1682,10 @@ public:
 		BALL_ASSERT_MESSAGE( IsOccupied( y ), "Occupied right child" );
 
 		// Detach the middle subtree and move it under x before promoting y.
-		SetRight( x, LeftOf( y ) );
+		SetRight( x, iMiddle );
 
-		if ( !IsNil( LeftOf( y ) ) )
-			SetParent( LeftOf( y ), x );
+		if ( !IsNil( iMiddle ) )
+			SetParent( iMiddle, x );
 
 		const Index_t iParent = ParentOf( x );
 
@@ -1678,6 +1719,7 @@ public:
 	constexpr void RotateRight( Index_t x )
 	{
 		const Index_t y = LeftOf( x );
+		const Index_t iMiddle = RightOf( y );
 
 		BALL_ASSERT_MESSAGE( !IsNil( x ), "Non-sentinel pivot" );
 		BALL_ASSERT_MESSAGE( IsOccupied( x ), "Occupied pivot" );
@@ -1686,10 +1728,10 @@ public:
 		BALL_ASSERT_MESSAGE( IsOccupied( y ), "Occupied left child" );
 
 		// Detach the middle subtree and move it under x before promoting y.
-		SetLeft( x, RightOf( y ) );
+		SetLeft( x, iMiddle );
 
-		if ( !IsNil( RightOf( y ) ) )
-			SetParent( RightOf( y ), x );
+		if ( !IsNil( iMiddle ) )
+			SetParent( iMiddle, x );
 
 		const Index_t iParent = ParentOf( x );
 
@@ -1727,9 +1769,10 @@ public:
 		BALL_ASSERT_MESSAGE( IsOccupied( z ), "Occupied node" );
 
 		// Insert starts red, so fix-up only needs to remove a red-red edge.
-		while ( ColorOf( ParentOf( z ) ) == Color_t::RED )
+		Index_t iParent = ParentOf( z );
+
+		while ( ColorOf( iParent ) == Color_t::RED )
 		{
-			const Index_t iParent = ParentOf( z );
 			const Index_t iGrandParent = ParentOf( iParent );
 
 			BALL_ASSERT_MESSAGE( !IsNil( iParent ), "Red-parent case requires a non-sentinel parent" );
@@ -1746,20 +1789,25 @@ public:
 					SetColor( y, Color_t::BLACK );
 					SetColor( iGrandParent, Color_t::RED );
 					z = iGrandParent;
+					iParent = ParentOf( z );
 				}
 				else
 				{
+					Index_t iPromoted = iParent;
+
 					if ( z == RightOf( iParent ) )
 					{
 						// Case 2: rotate parent to expose the outer case.
+						iPromoted = z;
 						z = iParent;
 						RotateLeft( z );
 					}
 
 					// Case 3: rotate grandparent and swap colors to terminate locally.
-					SetColor( ParentOf( z ), Color_t::BLACK );
-					SetColor( ParentOf( ParentOf( z ) ), Color_t::RED );
-					RotateRight( ParentOf( ParentOf( z ) ) );
+					SetColor( iPromoted, Color_t::BLACK );
+					SetColor( iGrandParent, Color_t::RED );
+					RotateRight( iGrandParent );
+					break;
 				}
 			}
 			else
@@ -1773,20 +1821,25 @@ public:
 					SetColor( y, Color_t::BLACK );
 					SetColor( iGrandParent, Color_t::RED );
 					z = iGrandParent;
+					iParent = ParentOf( z );
 				}
 				else
 				{
+					Index_t iPromoted = iParent;
+
 					if ( z == LeftOf( iParent ) )
 					{
 						// Mirror case 2.
+						iPromoted = z;
 						z = iParent;
 						RotateRight( z );
 					}
 
 					// Mirror case 3.
-					SetColor( ParentOf( z ), Color_t::BLACK );
-					SetColor( ParentOf( ParentOf( z ) ), Color_t::RED );
-					RotateLeft( ParentOf( ParentOf( z ) ) );
+					SetColor( iPromoted, Color_t::BLACK );
+					SetColor( iGrandParent, Color_t::RED );
+					RotateLeft( iGrandParent );
+					break;
 				}
 			}
 		}
@@ -1819,30 +1872,35 @@ public:
 		Color_t yOriginalColor = ColorOf( y );
 		Index_t x = NIL_INDEX;
 		Index_t xParent = NIL_INDEX;
+		const Index_t zLeft = LeftOf( z );
+		const Index_t zRight = RightOf( z );
+		const Index_t zParent = ParentOf( z );
 
-		if ( IsNil( LeftOf( z ) ) )
+		if ( IsNil( zLeft ) )
 		{
 			// Zero or one child on the right: splice z out directly
-			x = RightOf( z );
-			xParent = ParentOf( z );
-			Transplant( z, RightOf( z ) );
+			x = zRight;
+			xParent = zParent;
+			Transplant( z, zRight, zParent );
 		}
-		else if ( IsNil( RightOf( z ) ) )
+		else if ( IsNil( zRight ) )
 		{
 			// Zero or one child on the left: splice z out directly
-			x = LeftOf( z );
-			xParent = ParentOf( z );
-			Transplant( z, LeftOf( z ) );
+			x = zLeft;
+			xParent = zParent;
+			Transplant( z, zLeft, zParent );
 		}
 		else
 		{
 			// Two children: swap the structural position with the inorder 
 			// successor, so the physically removed node has at most one child
-			y = Minimum( RightOf( z ) );
+			y = Minimum( zRight );
 			yOriginalColor = ColorOf( y );
-			x = RightOf( y );
+			const Index_t yRight = RightOf( y );
+			const Index_t yParent = ParentOf( y );
+			x = yRight;
 
-			if ( ParentOf( y ) == z )
+			if ( yParent == z )
 			{
 				// Successor is z's direct child, so x now hangs under y
 				xParent = y;
@@ -1853,16 +1911,16 @@ public:
 			else
 			{
 				// First detach successor from its old position
-				xParent = ParentOf( y );
-				Transplant( y, RightOf( y ) );
-				SetRight( y, RightOf( z ) );
-				SetParent( RightOf( y ), y );
+				xParent = yParent;
+				Transplant( y, yRight, yParent );
+				SetRight( y, zRight );
+				SetParent( zRight, y );
 			}
 
 			// Then move successor into z's former position
-			Transplant( z, y );
-			SetLeft( y, LeftOf( z ) );
-			SetParent( LeftOf( y ), y );
+			Transplant( z, y, zParent );
+			SetLeft( y, zLeft );
+			SetParent( zLeft, y );
 			SetColor( y, ColorOf( z ) );
 		}
 
@@ -1872,11 +1930,6 @@ public:
 		if ( yOriginalColor == Color_t::BLACK )
 			EraseFixup( x, xParent );
 
-		// The root cell tracked every transplant/rotation above, so the post-splice root 
-		// is an O(1) read -- no climb from an anchor node. When the last node was removed 
-		// the stale self-root normalizes to a harmless no-op before the row is dropped.
-		NormalizeAfterMutation( RootIndex() );
-
 		// Physically drop z by compacting the last node into its slot so storage stays 
 		// dense. Returns the slot the relocated node came from (or NIL) so the caller can 
 		// remap any index it still holds onto the moved node's new home.
@@ -1884,7 +1937,7 @@ public:
 	}
 };
 
-template < typename I, I N, typename K, typename C, typename... Ts > class CBufferMultiRBTree;
+template < typename I, I N, typename K, typename C, typename... Ts > class CBufferRBTree;
 
 ///-----------------------------------------------------------------------------
 /// @brief Heap-backed multi-column red-black tree: ordering key column @p K plus 
@@ -1910,15 +1963,15 @@ public:
 
 	/// @complexity O(m + n log n): cross-capacity copy/move conversions rebuild the tree via 
 	/// CopyFrom/MoveFrom.
-	template < I N > constexpr CRBTree( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { CopyFrom( other ); }
-	template < I N > constexpr CRBTree &operator=( const CBufferMultiRBTree< I, N, C, K, Ts... > &other ) { return CopyFrom( other ); }
-	template < I N > constexpr CRBTree( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	template < I N > constexpr CRBTree &operator=( CBufferMultiRBTree< I, N, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
+	template < I N > constexpr CRBTree( const CBufferRBTree< I, N, C, K, Ts... > &other ) { CopyFrom( other ); }
+	template < I N > constexpr CRBTree &operator=( const CBufferRBTree< I, N, C, K, Ts... > &other ) { return CopyFrom( other ); }
+	template < I N > constexpr CRBTree( CBufferRBTree< I, N, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
+	template < I N > constexpr CRBTree &operator=( CBufferRBTree< I, N, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
 /// @brief Fixed-capacity (inline buffer) counterpart of `CRBTree`.
 template < typename I, I N, typename C = CRBTreeLess<>, typename K = I, typename... Ts >
-class CBufferMultiRBTree : public CRBTreeImpl< I, N, size8_t, C, K, Ts... >
+class CBufferRBTree : public CRBTreeImpl< I, N, size8_t, C, K, Ts... >
 {
 public:
 	using Base_t = CRBTreeImpl< I, N, size8_t, C, K, Ts... >;
@@ -1926,40 +1979,27 @@ public:
 	using Base_t::CopyFrom; using Base_t::MoveFrom;
 
 	/// @complexity O(m + n log n): cross-form copy/move conversions rebuild via CopyFrom/MoveFrom.
-	constexpr CBufferMultiRBTree( const CRBTree< I, C, K, Ts... > &other ) { CopyFrom( other ); }
-	constexpr CBufferMultiRBTree &operator=( const CRBTree< I, C, K, Ts... > &other ) { return CopyFrom( other ); }
-	constexpr CBufferMultiRBTree( CRBTree< I, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	constexpr CBufferMultiRBTree &operator=( CRBTree< I, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
+	constexpr CBufferRBTree( const CRBTree< I, C, K, Ts... > &other ) { CopyFrom( other ); }
+	constexpr CBufferRBTree &operator=( const CRBTree< I, C, K, Ts... > &other ) { return CopyFrom( other ); }
+	constexpr CBufferRBTree( CRBTree< I, C, K, Ts... > &&other ) { MoveFrom( Move( other ) ); }
+	constexpr CBufferRBTree &operator=( CRBTree< I, C, K, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
 ///-----------------------------------------------------------------------------
 /// Convenience spellings with the comparator fixed to `CRBTreeLess< K >` (use the 
 /// classes directly for a custom comparator).
 /// 
-/// Single-value map: key @p K + value @p V.
-template < typename I = size32_t, typename K = I, typename V = K > using RBTree_t = CRBTree< I, CRBTreeLess< K >, K, V >;
-template < typename K, typename V = K > using RBTree8_t = CRBTree< size8_t, CRBTreeLess< K >, K, V >;
-template < typename K, typename V = K > using RBTree16_t = CRBTree< size16_t, CRBTreeLess< K >, K, V >;
-template < typename K, typename V = K > using RBTree32_t = CRBTree< size32_t, CRBTreeLess< K >, K, V >;
-template < typename K, typename V = K > using RBTree64_t = CRBTree< size64_t, CRBTreeLess< K >, K, V >;
+/// Key @p K plus value columns @p Ts (no @p Ts is a set).
+template < typename I = size32_t, typename K = I, typename... Ts > using RBTree_t = CRBTree< I, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using RBTree8_t = CRBTree< size8_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using RBTree16_t = CRBTree< size16_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using RBTree32_t = CRBTree< size32_t, CRBTreeLess< K >, K, Ts... >;
+template < typename K, typename... Ts > using RBTree64_t = CRBTree< size64_t, CRBTreeLess< K >, K, Ts... >;
 
-template < size_t N, typename K = size_t, typename V = K > using BufferRBTree_t = CBufferMultiRBTree< size_t, N, CRBTreeLess< K >, K, V >;
-template < size8_t N, typename K = size8_t, typename V = K > using BufferRBTree8_t = CBufferMultiRBTree< size8_t, N, CRBTreeLess< K >, K, V >;
-template < size16_t N, typename K = size16_t, typename V = K > using BufferRBTree16_t = CBufferMultiRBTree< size16_t, N, CRBTreeLess< K >, K, V >;
-template < size32_t N, typename K = size32_t, typename V = K > using BufferRBTree32_t = CBufferMultiRBTree< size32_t, N, CRBTreeLess< K >, K, V >;
-template < size64_t N, typename K = size64_t, typename V = K > using BufferRBTree64_t = CBufferMultiRBTree< size64_t, N, CRBTreeLess< K >, K, V >;
-
-/// Multi-column: key @p K + value columns @p Ts (no @p Ts is a set).
-template < typename K, typename... Ts > using MultiRBTree_t = CRBTree< size32_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree8_t = CRBTree< size8_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree16_t = CRBTree< size16_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree32_t = CRBTree< size32_t, CRBTreeLess< K >, K, Ts... >;
-template < typename K, typename... Ts > using MultiRBTree64_t = CRBTree< size64_t, CRBTreeLess< K >, K, Ts... >;
-
-template < size_t N, typename K = size_t, typename... Ts > using BufferMultiRBTree_t = CBufferMultiRBTree< size_t, N, CRBTreeLess< K >, K, Ts... >;
-template < size8_t N, typename K = size8_t, typename... Ts > using BufferMultiRBTree8_t = CBufferMultiRBTree< size8_t, N, CRBTreeLess< K >, K, Ts... >;
-template < size16_t N, typename K = size16_t, typename... Ts > using BufferMultiRBTree16_t = CBufferMultiRBTree< size16_t, N, CRBTreeLess< K >, K, Ts... >;
-template < size32_t N, typename K = size32_t, typename... Ts > using BufferMultiRBTree32_t = CBufferMultiRBTree< size32_t, N, CRBTreeLess< K >, K, Ts... >;
-template < size64_t N, typename K = size64_t, typename... Ts > using BufferMultiRBTree64_t = CBufferMultiRBTree< size64_t, N, CRBTreeLess< K >, K, Ts... >;
+template < size_t N, typename K = size_t, typename... Ts > using BufferRBTree_t = CBufferRBTree< size_t, N, CRBTreeLess< K >, K, Ts... >;
+template < size8_t N, typename K = size8_t, typename... Ts > using BufferRBTree8_t = CBufferRBTree< size8_t, N, CRBTreeLess< K >, K, Ts... >;
+template < size16_t N, typename K = size16_t, typename... Ts > using BufferRBTree16_t = CBufferRBTree< size16_t, N, CRBTreeLess< K >, K, Ts... >;
+template < size32_t N, typename K = size32_t, typename... Ts > using BufferRBTree32_t = CBufferRBTree< size32_t, N, CRBTreeLess< K >, K, Ts... >;
+template < size64_t N, typename K = size64_t, typename... Ts > using BufferRBTree64_t = CBufferRBTree< size64_t, N, CRBTreeLess< K >, K, Ts... >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_RBTREE_HPP_ )

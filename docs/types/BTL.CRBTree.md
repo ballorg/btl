@@ -8,10 +8,10 @@ Family members:
 
 - `CRBTreeBase< I, N, TI, C, K, Ts... >` — protected core (links, rotations, fix-ups, validation).
 - `CRBTreeImpl< … >` — public facade (`Insert`, `Find`, `Remove`, bounds, iteration, cross-capacity copy/move).
-- `CRBTree< I, C, K, Ts... >` (heap) / `CBufferMultiRBTree< I, N, C, K, Ts... >` (inline) — capacity wrappers.
-- `CRBTree< I, C, K, Ts... >` provides `Key()` and indexed or typed column access through `Get`; the `RBTree*_t` aliases select the one-value form.
+- `CRBTree< I, C, K, Ts... >` (heap) / `CBufferRBTree< I, N, C, K, Ts... >` (inline) — capacity wrappers.
+- `CRBTree< I, C, K, Ts... >` provides `Key()` and indexed or typed column access through `Get`; the variadic `RBTree*_t` aliases cover sets, single-value maps, and multi-column maps.
 - `ERBTreeColor` — 1-bit color enum (packed column); `CRBTreeLess< T >` — default strict-weak-order comparator (transparent for `T = void`).
-- **Aliases:** `RBTree_t`/`RBTree8_t`…`RBTree64_t`, `BufferRBTree*_t`, `MultiRBTree*_t`, `BufferMultiRBTree*_t`.
+- **Aliases:** `RBTree_t`/`RBTree8_t`…`RBTree64_t` and `BufferRBTree*_t`; omitting value columns produces a set.
 
 ## Declaration
 
@@ -42,6 +42,8 @@ Structural conventions:
 ## Storage Model
 
 Node rows follow the [multi-column CVector storage model](BTL.CVector.md): inline column buffers up to the common inline capacity, then one shared heap block for all columns, with capacity derived as `BitCeil( count )`. Insert always appends at the tail (storage stays dense because erase compacts), so growth is amortized; erase shrinks the row count by one and may migrate or reallocate across a capacity boundary.
+
+Hot search and insertion descents resolve the key/left/right column bases once, then use one comparator call per visited level plus a final equivalence check. Rotations and insert/erase fix-ups retain frequently reused indices in local variables. These are algorithm-local optimizations only: the tree has no additional root, boundary, or traversal data members; the root remains encoded in the existing parent column.
 
 ## Ownership and Lifetime
 
@@ -77,14 +79,19 @@ Node storage is owned by the `CBufferVector` base (shared heap block or inline b
 ## Usage
 
 ```cpp
+BTL::RBTree32_t< int > set;                 // key-only set
+set.Insert( 42 );
+
 BTL::RBTree32_t< int, float > map;          // key int, value float
 auto i = map.Insert( 42, 1.5f );            // node index or NIL_INDEX if duplicate
 if ( map.Contains( 42 ) )
     map.Get< 1 >( map.Find( 42 ) ) = 2.5f;
 BALL_RBTREE_FOREACH( map, it )              // ascending key order
     Use( map.Key( it ), map.Get< 1 >( it ) );
+
+BTL::RBTree32_t< int, float, char > columns; // key + two SoA value columns
 ```
 
 ## Notes
 
-The balancing logic follows the textbook (CLRS) insert/erase fix-up model, with `NIL_INDEX` standing in for the shared NIL sentinel; the in-source comments document each case. Copy and move between capacity flavors are structural rebuilds, never pointer steals.
+The balancing logic follows the textbook (CLRS) insert/erase fix-up model, with `NIL_INDEX` standing in for the shared NIL sentinel; the in-source comments document each case. Copy and move between capacity flavors are structural rebuilds, never pointer steals. The Release benchmark in `case11_mapbenchmark.cpp` compares equivalent `size_t` key/value workloads over shuffled keys and reports the median of seven trials while alternating the `RBTree_t`/`std::map` execution order.
