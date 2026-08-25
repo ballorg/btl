@@ -9,6 +9,68 @@
 #	include "c/bits.h"
 #	include "meta/fixed.hpp"
 
+/// @brief Portable bit-width implementation shared by constant-evaluation paths.
+/// @return The number of bits needed to represent `x - 1`; zero for `x <= 1`.
+template < typename I >
+constexpr I BitWidth_Unified( I x ) noexcept
+{
+	constexpr I NUM_BITS = MFixed< I >::BITS;
+
+	if ( x <= 1 )
+		return 0;
+
+	x = static_cast< I >( x - 1 );
+	I nWidth = 0;
+
+	if constexpr ( NUM_BITS > 32 )
+	{
+		if ( x >> 32 )
+		{
+			x >>= 32;
+			nWidth += 32;
+		}
+	}
+
+	if constexpr ( NUM_BITS > 16 )
+	{
+		if ( x >> 16 )
+		{
+			x >>= 16;
+			nWidth += 16;
+		}
+	}
+
+	if constexpr ( NUM_BITS > 8 )
+	{
+		if ( x >> 8 )
+		{
+			x >>= 8;
+			nWidth += 8;
+		}
+	}
+
+	if ( x >> 4 )
+	{
+		x >>= 4;
+		nWidth += 4;
+	}
+
+	if ( x >> 2 )
+	{
+		x >>= 2;
+		nWidth += 2;
+	}
+
+	return static_cast< I >( nWidth + ( x >> 1 ) + 1 );
+}
+
+/// @brief Compile-time wrapper around @ref BitWidth_Unified.
+template < typename I >
+consteval I BitWidth_Const( I x ) noexcept
+{
+	return BitWidth_Unified( x );
+}
+
 /// @brief Computes the bit width helper used for power-of-two construction.
 /// @tparam I Unsigned integral type described by MFixed<I>.
 /// @param x Input value.

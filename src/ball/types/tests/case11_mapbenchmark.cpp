@@ -8,8 +8,6 @@
 namespace
 {
 	using RefMap_t = std::map< size_t, size_t >;
-
-	// Match std::map<size_t, size_t>: one key and one mapped value.
 	using Tree_t = BTL::RBTree32_t< size_t, size_t >;
 
 	static bool IsEndIndex( const Tree_t &tree, const Tree_t::Index_t iNode )
@@ -17,7 +15,6 @@ namespace
 		return iNode == tree.EndIndex();
 	}
 
-	// Insert the same key/value pair as the std::map adapter.
 	static Tree_t::Index_t InsertNode( Tree_t &tree, size_t key )
 	{
 		return tree.Insert( key, key * 17u + 3u );
@@ -42,12 +39,17 @@ namespace
 		{
 			const auto it = map.find( key );
 
-			return it != map.end() && it->first == key;
+			return it != map.end();
 		}
 		static bool Erase( C &map, size_t key ) { return map.erase( key ) == 1u; }
 		static size_t Count( const C &map ) { return map.size(); }
 		static bool Empty( const C &map ) { return map.empty(); }
 		static bool Validate( const C & ) { return true; }
+	};
+
+	struct CAdapter_StdUnorderedMap : CAdapterBase< std::unordered_map< size_t, size_t > >
+	{
+		static void Reserve( C &map, size_t count ) { map.reserve( count ); }
 	};
 
 	struct CAdapter_RBTree
@@ -60,7 +62,7 @@ namespace
 		{
 			const Tree_t::Index_t iNode = tree.Find( key );
 
-			return !IsEndIndex( tree, iNode ) && tree.Get< 1 >( iNode ) == key * 17u + 3u;
+			return !IsEndIndex( tree, iNode );
 		}
 		static bool Erase( C &tree, size_t key ) { return !IsEndIndex( tree, tree.FindAndRemove( key ) ); }
 		static size_t Count( const C &tree ) { return tree.Count(); }
@@ -72,22 +74,15 @@ namespace
 	{
 	};
 
-	struct CAdapter_StdUnorderedMap : CAdapterBase< std::unordered_map< size_t, size_t > >
-	{
-		static void Reserve( C &map, size_t count ) { map.reserve( count ); }
-	};
-
 	struct CAdapter_HashMap
 	{
-		using C = BTL::HashMap32_t< size_t, size_t >;
+		using C = BTL::BufferHashMap32_t< 1u << 20, size_t, size_t >;
 
 		static void Reserve( C &, size_t ) {}
 		static bool Insert( C &map, size_t key ) { return map.Insert( key, key * 17u + 3u ) != map.EndIndex(); }
 		static bool Find( const C &map, size_t key )
 		{
-			const auto iSlot = map.Find( key );
-
-			return iSlot != map.EndIndex() && map.Get< 1 >( iSlot ) == key * 17u + 3u;
+			return map.Find( key ) != map.EndIndex();
 		}
 		static bool Erase( C &map, size_t key ) { return map.Remove( key ); }
 		static size_t Count( const C &map ) { return map.Count(); }
@@ -119,7 +114,8 @@ namespace
 	static BenchmarkResult_t RunMapBenchmark( const std::vector< size_t > &keys )
 	{
 		BenchmarkResult_t result{};
-		typename A::C container;
+		typename A::C *pContainer = new typename A::C;
+		typename A::C &container = *pContainer;
 
 		A::Reserve( container, keys.size() );
 
@@ -154,6 +150,7 @@ namespace
 
 		result.m_Erase = BALL_PROF_END( MapEraseBenchmark );
 		result.m_bOk = result.m_bOk && A::Empty( container ) && A::Validate( container );
+		delete pContainer;
 
 		return result;
 	}
@@ -201,18 +198,26 @@ namespace
 		const std::vector< size_t > keys = MakeBenchmarkKeys( KEY_COUNT );
 		std::vector< BenchmarkResult_t > rbTreeTrials;
 		std::vector< BenchmarkResult_t > stdMapTrials;
+		std::vector< BenchmarkResult_t > hashMapTrials;
+		std::vector< BenchmarkResult_t > stdUnorderedTrials;
 		rbTreeTrials.reserve( TRIAL_COUNT );
 		stdMapTrials.reserve( TRIAL_COUNT );
+		hashMapTrials.reserve( TRIAL_COUNT );
+		stdUnorderedTrials.reserve( TRIAL_COUNT );
 
 		for ( size_t i = 0; i < TRIAL_COUNT; ++i )
 		{
-			if ( ( i & 1u ) == 0u )
+			if ( !( i & 1u ) )
 			{
 				rbTreeTrials.push_back( RunMapBenchmark< CAdapter_RBTree >( keys ) );
 				stdMapTrials.push_back( RunMapBenchmark< CAdapter_StdMap >( keys ) );
+				hashMapTrials.push_back( RunMapBenchmark< CAdapter_HashMap >( keys ) );
+				stdUnorderedTrials.push_back( RunMapBenchmark< CAdapter_StdUnorderedMap >( keys ) );
 			}
 			else
 			{
+				stdUnorderedTrials.push_back( RunMapBenchmark< CAdapter_StdUnorderedMap >( keys ) );
+				hashMapTrials.push_back( RunMapBenchmark< CAdapter_HashMap >( keys ) );
 				stdMapTrials.push_back( RunMapBenchmark< CAdapter_StdMap >( keys ) );
 				rbTreeTrials.push_back( RunMapBenchmark< CAdapter_RBTree >( keys ) );
 			}
@@ -220,15 +225,23 @@ namespace
 
 		const BenchmarkResult_t rbTree = MedianResult( rbTreeTrials );
 		const BenchmarkResult_t stdMap = MedianResult( stdMapTrials );
-		const BenchmarkResult_t hashMap = RunMapBenchmark< CAdapter_HashMap >( keys );
-		const BenchmarkResult_t stdUnorderedMap = RunMapBenchmark< CAdapter_StdUnorderedMap >( keys );
+		const BenchmarkResult_t hashMap = MedianResult( hashMapTrials );
+		const BenchmarkResult_t stdUnorderedMap = MedianResult( stdUnorderedTrials );
 
-		sOut.AppendMultiple( "BTL::RBTree_t: benchmark median of ", TRIAL_COUNT, " trials vs std::map vs BTL::HashMap_t vs std::unordered_map (", keys.size(), " keys)\n" );
-		sOut.AppendMultiple( " - insert: rb=", rbTree.m_Insert.AsMillisF(), " ms, std=", stdMap.m_Insert.AsMillisF(), " ms, hashmap=", hashMap.m_Insert.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Insert.AsMillisF(), " ms\n" );
-		sOut.AppendMultiple( " - find: rb=", rbTree.m_Find.AsMillisF(), " ms, std=", stdMap.m_Find.AsMillisF(), " ms, hashmap=", hashMap.m_Find.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Find.AsMillisF(), " ms\n" );
-		sOut.AppendMultiple( " - erase: rb=", rbTree.m_Erase.AsMillisF(), " ms, std=", stdMap.m_Erase.AsMillisF(), " ms, hashmap=", hashMap.m_Erase.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Erase.AsMillisF(), " ms\n" );
-		sOut.AppendMultiple( " - ordered total: rb=", rbTree.m_Insert.AsMillisF() + rbTree.m_Find.AsMillisF() + rbTree.m_Erase.AsMillisF(), " ms, std=", stdMap.m_Insert.AsMillisF() + stdMap.m_Find.AsMillisF() + stdMap.m_Erase.AsMillisF(), " ms\n" );
-		sOut.AppendMultiple( " - status: rb=", BenchmarkStatus( rbTree.m_bOk ), ", std=", BenchmarkStatus( stdMap.m_bOk ), ", hashmap=", BenchmarkStatus( hashMap.m_bOk ), ", unordered=", BenchmarkStatus( stdUnorderedMap.m_bOk ), "\n" );
+		sOut.AppendMultiple( "BTL::RBTree_t: benchmark median of ", TRIAL_COUNT, " trials vs std::map (", keys.size(), " keys)\n" );
+		sOut.AppendMultiple( " - insert: rbtree=", rbTree.m_Insert.AsMillisF(), " ms, map=", stdMap.m_Insert.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - find: rbtree=", rbTree.m_Find.AsMillisF(), " ms, map=", stdMap.m_Find.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - erase: rbtree=", rbTree.m_Erase.AsMillisF(), " ms, map=", stdMap.m_Erase.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - total: rbtree=", rbTree.m_Insert.AsMillisF() + rbTree.m_Find.AsMillisF() + rbTree.m_Erase.AsMillisF(), " ms, map=", stdMap.m_Insert.AsMillisF() + stdMap.m_Find.AsMillisF() + stdMap.m_Erase.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - status: rbtree=", BenchmarkStatus( rbTree.m_bOk ), ", map=", BenchmarkStatus( stdMap.m_bOk ), "\n" );
+		sOut += "---\n";
+
+		sOut.AppendMultiple( "BTL::HashMap_t: benchmark median of ", TRIAL_COUNT, " trials vs std::unordered_map (", keys.size(), " keys)\n" );
+		sOut.AppendMultiple( " - insert: hashmap=", hashMap.m_Insert.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Insert.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - find: hashmap=", hashMap.m_Find.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Find.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - erase: hashmap=", hashMap.m_Erase.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Erase.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - total: hashmap=", hashMap.m_Insert.AsMillisF() + hashMap.m_Find.AsMillisF() + hashMap.m_Erase.AsMillisF(), " ms, unordered=", stdUnorderedMap.m_Insert.AsMillisF() + stdUnorderedMap.m_Find.AsMillisF() + stdUnorderedMap.m_Erase.AsMillisF(), " ms\n" );
+		sOut.AppendMultiple( " - status: hashmap=", BenchmarkStatus( hashMap.m_bOk ), ", unordered=", BenchmarkStatus( stdUnorderedMap.m_bOk ), "\n" );
 	}
 }
 

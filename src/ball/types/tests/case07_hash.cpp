@@ -39,53 +39,57 @@ namespace
 		return true;
 	}
 
-	// ---- Compile-time properties (each gated by a static_assert) --------------
+	// ---- Compile-time properties (each gated by BALL_STATIC_ASSERT) -----------
 	// Reaching Case07_Hash at run time already proves everything in this block.
 
 	// The generic top-N-bits derivation reproduces the canonical golden-ratio
 	// multipliers and keeps them odd at every width.
 	template < typename T > constexpr T MULTIPLIER = BTL::MFibonacci< T >::MULTIPLIER;
 
-	static_assert( MULTIPLIER< BTL::uint8_t >  == 0x9Fu, "8-bit A_N" );
-	static_assert( MULTIPLIER< BTL::uint16_t > == 0x9E37u, "16-bit A_N" );
-	static_assert( MULTIPLIER< BTL::uint32_t > == 0x9E3779B9u, "32-bit A_N" );
-	static_assert( MULTIPLIER< BTL::uint64_t > == 0x9E3779B97F4A7C15ull, "64-bit A_N" );
-	static_assert( BTL::MFibonacci< bool >::BITS == 1u, "1-bit width" );
-	static_assert( BTL::MFibonacci< bool >::MULTIPLIER, "1-bit A_N" );
-	static_assert( BTL::MFibonacci< BTL::uint8_t >::ReferenceMultiplier() == 0x9Fu, "consteval multiplier path" );
-	static_assert( BTL::MFibonacci< BTL::uint64_t >::ReferenceOffset() == BTL::MFibonacci< BTL::uint64_t >::OFFSET_BASIS, "consteval offset path" );
-	static_assert( ( MULTIPLIER< BTL::uint8_t > & MULTIPLIER< BTL::uint16_t > & MULTIPLIER< BTL::uint32_t > & MULTIPLIER< BTL::uint64_t > & 1u ) != 0, "A_N must be odd" );
+	BALL_STATIC_ASSERT( MULTIPLIER< BTL::uint8_t >  == 0x9Fu, "The 8-bit golden-ratio multiplier must match the canonical value" );
+	BALL_STATIC_ASSERT( MULTIPLIER< BTL::uint16_t > == 0x9E37u, "The 16-bit golden-ratio multiplier must match the canonical value" );
+	BALL_STATIC_ASSERT( MULTIPLIER< BTL::uint32_t > == 0x9E3779B9u, "The 32-bit golden-ratio multiplier must match the canonical value" );
+	BALL_STATIC_ASSERT( MULTIPLIER< BTL::uint64_t > == 0x9E3779B97F4A7C15ull, "The 64-bit golden-ratio multiplier must match the canonical value" );
+	BALL_STATIC_ASSERT( BTL::MFibonacci< bool >::BITS == 1u, "The bool Fibonacci word must be one bit wide" );
+	BALL_STATIC_ASSERT( BTL::MFibonacci< bool >::MULTIPLIER, "The one-bit golden-ratio multiplier must be non-zero" );
+	BALL_STATIC_ASSERT( BTL::MFibonacci< BTL::uint8_t >::ReferenceMultiplier() == 0x9Fu, "The consteval multiplier path must produce the canonical value" );
+	BALL_STATIC_ASSERT( BTL::MFibonacci< BTL::uint64_t >::ReferenceOffset() == BTL::MFibonacci< BTL::uint64_t >::OFFSET_BASIS, "The consteval offset path must match OFFSET_BASIS" );
+	BALL_STATIC_ASSERT( ( MULTIPLIER< BTL::uint8_t > & MULTIPLIER< BTL::uint16_t > & MULTIPLIER< BTL::uint32_t > & MULTIPLIER< BTL::uint64_t > & 1u ) != 0, "Every golden-ratio multiplier must be odd" );
 
 	// Fibonacci numbers resolve on demand (base cases and larger indices).
-	static_assert( sizeof( BTL::fib_t ) * 8u == 64u, "fib_t must be the 64-bit Fibonacci word" );
-	static_assert( BTL::Fibonacci_Number( 0 )  == 0ull, "F(0)" );
-	static_assert( BTL::Fibonacci_Number( 1 )  == 1ull, "F(1)" );
-	static_assert( BTL::Fibonacci_Number( 10 ) == 55ull, "F(10)" );
-	static_assert( BTL::Fibonacci_Number( 50 ) == 12586269025ull, "F(50)" );
-	static_assert( BTL::Fibonacci_Number( BTL::uint8_t( 10 ) ) == 55ull, "8-bit Fibonacci index" );
-	static_assert( BTL::Fibonacci_Number( BTL::uint64_t( 50 ) ) == 12586269025ull, "64-bit Fibonacci index" );
-	static_assert( BTL::Fibonacci_NumberConst( 50 ) == BTL::Fibonacci_Number( 50 ), "consteval Fibonacci path" );
-	static_assert( BTL::Fibonacci_NumberConst( BTL::uint16_t( 10 ) ) == 55ull, "templated consteval Fibonacci path" );
+	BALL_STATIC_ASSERT( sizeof( BTL::fib_t ) * 8u == 64u, "fib_t must be the 64-bit Fibonacci word" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_Number( 0 )  == 0ull, "Fibonacci number F(0) must equal 0" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_Number( 1 )  == 1ull, "Fibonacci number F(1) must equal 1" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_Number( 10 ) == 55ull, "Fibonacci number F(10) must equal 55" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_Number( 50 ) == 12586269025ull, "Fibonacci number F(50) must match the reference value" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_Number( BTL::uint8_t( 10 ) ) == 55ull, "Fibonacci_Number must accept an 8-bit index" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_Number( BTL::uint64_t( 50 ) ) == 12586269025ull, "Fibonacci_Number must accept a 64-bit index" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_NumberConst( 50 ) == BTL::Fibonacci_Number( 50 ), "The consteval Fibonacci path must match the constexpr path" );
+	BALL_STATIC_ASSERT( BTL::Fibonacci_NumberConst( BTL::uint16_t( 10 ) ) == 55ull, "The templated consteval Fibonacci path must accept a 16-bit index" );
 
 	using Hash90_t = BTL::CFibonacciHash< size_t, 90 >;
-	static_assert( Hash90_t::FOLD_SEED == BTL::Fibonacci_NumberConst( 90 ), "Fibonacci fold seed must be parameterized" );
+	BALL_STATIC_ASSERT( Hash90_t::FOLD_SEED == BTL::Fibonacci_NumberConst( 90 ), "The Fibonacci fold seed must follow the hash-policy index" );
 
 	// The compile-time hash is a genuine constant expression -- usable both as a
-	// static_assert operand and as a non-type template argument.
+	// compile-time assertion operand and as a non-type template argument.
 	constexpr BTL::StringView_t s_ctView( "compile-time" );
 	constexpr BTL::uint32_t s_ctHash = BTL::Hash32_t::Make( s_ctView );
 	constexpr BTL::StringView_t s_runtimeReferenceView( "fibonacci-hashing" );
 	constexpr BTL::uint32_t s_runtimeReferenceHash = BTL::Hash32_t::Make( s_runtimeReferenceView );
+	constexpr BTL::uint32_t s_ctSingleBucketRequest = 1;
+	constexpr BTL::uint32_t s_ctSixtyFourBucketRequest = 63;
 
 	template < BTL::uint32_t V >
 	struct MNonTypeProbe { static constexpr BTL::uint32_t VALUE = V; };
 
-	static_assert( MNonTypeProbe< s_ctHash >::VALUE == BTL::Hash32_t::Make( s_ctView ), "hash is not a constant expression" );
-	static_assert( BTL::Hash32_t::Make( 42 ) == 42, "integer hash is not a constant expression" );
-	static_assert( BTL::Hash32_t::Make( s_ctView ) == s_ctHash, "view-compatible hash is not a constant expression" );
-	static_assert( BTL::Hash32_t::Index( s_ctHash, 6 ) < 64, "Index is not a constant expression" );
-	static_assert( BTL::Hash32_t::IndexForCapacity( s_ctHash, 1 ) == 0, "single-bucket index must be zero" );
-	static_assert( BTL::Hash32_t::IndexForCapacity( s_ctHash, 64 ) == BTL::Hash32_t::Index( s_ctHash, 6 ), "IndexForCapacity is not a constant expression" );
+	BALL_STATIC_ASSERT( MNonTypeProbe< s_ctHash >::VALUE == BTL::Hash32_t::Make( s_ctView ), "A compile-time hash must be usable as a non-type template argument" );
+	BALL_STATIC_ASSERT( BTL::Hash32_t::Make( 42 ) == 42, "Integer hashing must be a constant expression" );
+	BALL_STATIC_ASSERT( BTL::Hash32_t::Make( s_ctView ) == s_ctHash, "String-view hashing must be a constant expression" );
+	BALL_STATIC_ASSERT( BTL::Hash32_t::Index( s_ctHash, 6 ) < 64, "Index must produce a constant-expression bucket inside the requested range" );
+	BALL_STATIC_ASSERT( BTL::BitWidth_Unified( BTL::uint32_t( 64 ) ) == 6, "BitWidth_Unified must produce log2 for a power-of-two capacity" );
+	BALL_STATIC_ASSERT( BTL::BitWidth_Const( BTL::uint32_t( 65 ) ) == 7, "BitWidth_Const must round a non-power-of-two request to the next index width" );
+	BALL_STATIC_ASSERT( BTL::Hash32_t::IndexForCapacity< s_ctSingleBucketRequest >( s_ctHash ) == 0, "A single-bucket table must always select bucket zero" );
+	BALL_STATIC_ASSERT( BTL::Hash32_t::IndexForCapacity< s_ctSixtyFourBucketRequest >( s_ctHash ) == BTL::Hash32_t::Index( s_ctHash, 6 ), "IndexForCapacity must round a compile-time bucket request up to a power of two" );
 }
 
 void Case07_Hash( TestsOutput_t &sOut )
@@ -94,7 +98,8 @@ void Case07_Hash( TestsOutput_t &sOut )
 
 	sOut += "---\n";
 
-	// The static_asserts above gate compilation; surface each group as a line.
+	// The named BALL_STATIC_ASSERT checks above gate compilation; surface each
+	// human-readable group as a run-time test line as well.
 	LogHashCheck( sOut, "golden-ratio multipliers (canonical, odd)", true );
 	LogHashCheck( sOut, "Fibonacci numbers on demand", true );
 	LogHashCheck( sOut, "compile-time hashing (constant expression, seedable)", true );

@@ -177,9 +177,13 @@ void Case08_HashMap( TestsOutput_t &sOut )
 	{
 		BTL::BufferHashMap32_t< 16, size_t, size_t > buffered;
 		RefMap_t refBuffered;
-		bool bOk = true;
+		bool bOk = buffered.BucketCount() == 16 && buffered.IsEmpty();
+		const auto iFirst = buffered.Insert( 5u, ValueOf( 5u ) );
 
-		for ( size_t i = 0; i < 200; ++i )
+		bOk = bOk && iFirst != buffered.EndIndex() && buffered.BucketCount() == 16;
+		refBuffered[ 5u ] = ValueOf( 5u );
+
+		for ( size_t i = 1; i < 200; ++i )
 		{
 			const size_t nKey = i * 3u + 5u;
 
@@ -203,6 +207,21 @@ void Case08_HashMap( TestsOutput_t &sOut )
 
 		bAllOk = bAllOk && bOk;
 		LogMapCheck( sOut, "buffer map overflows to heap", bOk );
+	}
+
+	// --- Unified variadic aliases cover sets and multi-column maps -------------
+	{
+		BTL::HashMap32_t< size_t > set;
+		BTL::HashMap32_t< size_t, BTL::size16_t, BTL::size64_t > columns;
+
+		const auto iSet = set.Insert( 7u );
+		const auto iColumns = columns.Insert( 11u, BTL::size16_t( 13 ), BTL::size64_t( 17 ) );
+		const bool bOk = iSet != set.EndIndex() && set.Contains( 7u ) &&
+			iColumns != columns.EndIndex() && columns.Get< 1 >( iColumns ) == 13 &&
+			columns.Get< 2 >( iColumns ) == 17;
+
+		bAllOk = bAllOk && bOk;
+		LogMapCheck( sOut, "variadic aliases cover set and columns", bOk );
 	}
 
 	// --- Cross-capacity copy ---------------------------------------------------

@@ -61,7 +61,7 @@ public:
 	template< typename T > using IndexOf_t = MIndexOf< TI, T, Ts... >;
 	template< TI K > using TypeByIndex_t = typename MIndexType< TI, K, Ts... >::Type;
 
-	static constexpr size_t TYPE_COUNT = ::BTL::TYPE_COUNT< Ts... >;
+	static constexpr size_t TYPE_COUNT = ::BTL::TYPE_COUNT< Ts... >; //TODO: move to MTypeCount< Ts >::VALUE .
 
 	template < typename T > static constexpr int TYPE_INDEX = IndexOf_t< T >::VALUE;
 	template < typename T > static constexpr bool TYPE_IN_PACK = ( TYPE_INDEX< T > >= 0 );

@@ -171,20 +171,36 @@ public:
 	///-----------------------------------------------------------------------------
 	/// @brief Convenience form of @ref Index taking a power-of-two capacity.
 	///
-	/// @details This sits at the head of every hash-table probe, so the log2 of the
-	/// power-of-two capacity is one hardware popcount of `nCapacity - 1` at run time
-	/// (a shift-loop log2 would cost more than the rest of the lookup); constant
-	/// evaluation, where intrinsics are unavailable and speed is free, takes the
-	/// result-identical shift walk.
+	/// @details At run time the log2 of the power-of-two capacity is derived by
+	/// @ref BitWidth (a CLZ/bit-scan intrinsic). Constant evaluation uses the
+	/// portable fixed-shift binary search because MSVC's `_BitScanReverse*` intrinsics are not
+	/// constant expressions.
 	///
-	/// @complexity O(1): one popcount, one multiply and one shift.
+	/// @complexity O(1): one bit scan, one multiply and one shift.
 	///-----------------------------------------------------------------------------
 	template < typename TI = U >
 	static constexpr TI IndexForCapacity( U nHash, U nCapacity ) noexcept
 	{
 		BALL_ASSERT_MESSAGE( nCapacity && !( nCapacity & ( nCapacity - 1 ) ), "Fibonacci hashing requires a power-of-two capacity" );
 
-		const bits_t nIndexBits = IsConstantEvaluated() ? static_cast< bits_t >( Math_Log2_Floor< U >( nCapacity ) ) : static_cast< bits_t >( PopCount< U >( static_cast< U >( nCapacity - 1 ) ) );
+		const bits_t nIndexBits = IsConstantEvaluated() ? static_cast< bits_t >( BitWidth_Unified( nCapacity ) ) : static_cast< bits_t >( BitWidth( nCapacity ) );
+
+		return Index< TI >( nHash, nIndexBits );
+	}
+
+	/// @brief Compile-time-capacity form of @ref IndexForCapacity.
+	///
+	/// @details @p CAPACITY is normalized through @ref BitCeil_Const and therefore
+	/// may be any positive compile-time bucket request. The resulting power-of-two
+	/// capacity and its index width are both resolved during compilation; this form
+	/// avoids run-time bit scanning and remains portable to MSVC constant evaluation.
+	template < U CAPACITY, typename TI = U >
+	static consteval TI IndexForCapacity( U nHash ) noexcept
+	{
+		BALL_STATIC_ASSERT( CAPACITY > 0, "Compile-time hash-table capacity request must be positive" );
+
+		constexpr U nCapacity = BitCeil_Const( CAPACITY );
+		constexpr bits_t nIndexBits = static_cast< bits_t >( BitWidth_Const( nCapacity ) );
 
 		return Index< TI >( nHash, nIndexBits );
 	}

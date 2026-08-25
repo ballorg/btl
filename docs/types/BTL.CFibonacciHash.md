@@ -45,7 +45,8 @@ Stateless and trivially copyable; no lifetime concerns.
 
 - `Make( key )` — hashing: integers cast to the unsigned word (the multiply does the mixing); strings are accepted as `CStringView`, while compatible `S` storage ranges fold unit-by-unit through `Base()`/`Count()` with an FNV-1a-shaped `Append` (xor then multiply by `MULTIPLIER`), endianness- and signedness-independent.
 - `Index( word, indexBits )` — `(word * MULTIPLIER) >> (BITS - indexBits)`; returns zero directly when `indexBits == 0`, avoiding a shift by the full word width.
-- `IndexForCapacity( word, capacity )` — power-of-two convenience form; derives the shift from the capacity via hardware popcount at run time and a shift-walk log2 under constant evaluation.
+- `IndexForCapacity( word, capacity )` — power-of-two value form; derives the shift through `BitWidth` (CLZ/bit-scan) at run time and `BitWidth_Unified` during constant evaluation so the operation remains a constant expression on MSVC.
+- `IndexForCapacity< CAPACITY >( word )` — compile-time-capacity form; normalizes the positive bucket request with `BitCeil_Const` and resolves its index width through `BitWidth_Const` entirely during compilation.
 
 ## Notes
 

@@ -9,14 +9,22 @@
 #		define BALL_GNUC 1
 #	endif
 
+#	if defined( __clang__ )
+#		define BALL_CLANG 1
+#	endif
+
 #	if defined( __MINGW32__ ) || defined( __MINGW64__ )
 #		define BALL_MINGW 1
 #	elif defined( _MSC_VER )
 #		define BALL_MSVC 1
-#	elif defined( __clang__ )
-#		define BALL_CLANG 1
-#	elif defined( BALL_GNUC )
+#	elif defined( BALL_GNUC ) && !defined( BALL_CLANG )
 #		define BALL_GCC 1
+#	endif
+
+#	if defined( __arm__ ) || defined( __aarch64__ ) || defined( _M_ARM ) || defined( _M_ARM64 )
+#		define BALL_ARM 1
+#	elif defined( __i386__ ) || defined( __x86_64__ ) || defined( _M_IX86 ) || defined( _M_X64 ) || defined( _M_AMD64 )
+#		define BALL_X86 1
 #	endif
 
 #	if defined( __i386__ ) || defined( _M_IX86 )

@@ -8,10 +8,10 @@ Family members:
 
 - `CHashMapBase< I, N, TI, C, K, Ts... >` — protected core (probing, growth, rehash).
 - `CHashMapImpl< … >` — public facade (`Insert`, `Find`, `Remove`, iteration, copy/move).
-- `CHashMap< I, K, C, Ts... >` (heap) / `CBufferMultiHashMap< I, N, K, C, Ts... >` (inline) — capacity wrappers.
-- `CHashMap< I, K, C, Ts... >` provides `Key()` and indexed or typed column access through `Get`; the `HashMap*_t` aliases select the one-value form.
+- `CHashMap< I, K, C, Ts... >` (heap) / `CBufferHashMap< I, N, K, C, Ts... >` (inline) — capacity wrappers.
+- `CHashMap< I, K, C, Ts... >` provides `Key()` and indexed or typed column access through `Get`; the variadic `HashMap*_t` aliases cover sets, one-value maps, and multi-column maps with the default hash policy.
 - `EHashSlotState` — 1-bit `FREE`/`OCCUPIED` state enum (packed column).
-- **Aliases:** `HashMap_t`/`HashMap8_t`…`HashMap64_t`, `BufferHashMap*_t`, `MultiHashMap*_t`, `BufferMultiHashMap*_t`.
+- **Aliases:** variadic `HashMap_t`/`HashMap8_t`…`HashMap64_t` and `BufferHashMap*_t`.
 
 ## Declaration
 
@@ -26,17 +26,17 @@ Expected-O(1) unordered key lookup as a map, set (`Ts...` empty), or multi-colum
 
 ## Data Structure
 
-The SoA row count **is** the bucket count (always a power of two; `INITIAL_CAPACITY == 8`). Columns in order:
+The SoA row count **is** the bucket count (always a power of two of at least 8 once initialized). Columns in order:
 
 1. **Slot state** — `EHashSlotState`, bit-packed (1 bit/bucket); value-initialization yields `FREE`, so freshly grown tables start empty for free. Only two states exist because deletion keeps probe chains gap-free.
 2. **Key** — `HashKeyColumn_t< K >` (tagged [CReflect](BTL.CReflect.md)) so a key never aliases a same-typed value column.
 3. **Value columns `Ts...`** — stored as supplied.
 
-A key's home bucket is `Hasher()( key )` mapped through the Fibonacci multiply-shift onto the current capacity; collisions probe linearly with mask wrap-around. There is no separate count member: `Count()` popcounts the state bits one 64-bit word at a time. An empty map has bucket count 0; the first insert sizes the table to `INITIAL_CAPACITY`.
+A key's home bucket is `Hasher()( key )` mapped through the Fibonacci multiply-shift onto the current capacity; collisions probe linearly with mask wrap-around. For a `CBufferHashMap` still using its inline `N` buckets, the compiler receives the corresponding index width as a constant, avoiding a capacity-log2 calculation on every lookup; an overflowed buffer falls back to the run-time-capacity path. There is no separate count member: `Count()` popcounts the state bits one 64-bit word at a time. An empty heap map has bucket count 0 and its first insert creates the minimum eight buckets (one byte of packed states). A buffered map is constructed empty with its power-of-two `N >= 8` buckets already active.
 
 ## Storage Model
 
-Bucket columns follow the [multi-column CVector storage model](BTL.CVector.md): inline column buffers up to `N` rows (`CBufferMultiHashMap`), then one shared heap block. Resizing goes through `Rehash`: live rows are snapshotted into an always-heap-backed scratch multi-column `CVector` (`SetCountRaw` plus move-construction), so large inline maps do not duplicate `N` rows on the call stack. The moved-from old rows are then dropped (releasing overflow storage when present), the table is sized to the new power-of-two bucket count, and each row is re-probed into its new home. The packed state column is cleared as one byte range rather than one slot at a time. `GrowTable` doubles the bucket count; the table never shrinks on removal.
+Bucket columns follow the [multi-column CVector storage model](BTL.CVector.md): inline column buffers up to `N` rows (`CBufferHashMap`), then one shared heap block. A power-of-two `N >= 8` is the buffered form's reserve mechanism: construction activates those `N` inline rows without allocation, and the first insertion uses them directly without `ResetTable` or intermediate rehashes. Resizing goes through `Rehash` only when the active table really grows: live rows are snapshotted into an always-heap-backed scratch multi-column `CVector` (`SetCountRaw` plus move-construction), so a large `CBufferHashMap` does not duplicate its inline capacity on the stack. The table is then sized to the new power-of-two bucket count and each row is re-probed into its new home. The packed state column is cleared as one byte range rather than one slot at a time. `GrowTable` doubles the bucket count; the table never shrinks on removal.
 
 ## Ownership and Lifetime
 
@@ -51,7 +51,7 @@ Bucket storage is owned by the `CBufferVector` base. All buckets' payload cells 
 
 - Bucket count is 0 or a power of two ≥ 8, so wrap-around is a mask and the state column is a whole number of bytes.
 - Probe chains are contiguous: between any occupied slot and its home bucket there is no `FREE` slot along the probe path (maintained by backward-shift deletion).
-- Live count ≤ 4/5 · capacity is the growth target, enforced lazily.
+- Live count ≤ 3/4 · capacity is the growth target, enforced lazily.
 
 ## Invalidation Rules
 
@@ -59,8 +59,8 @@ Slot indices, iterators, and references are stable only until the next mutation:
 
 ## Operations
 
-- `Insert( key, values... )` — rejects duplicates (`NIL_INDEX`); its hot path performs probing and placement in one loop, keeping the packed-state and key-column bases hoisted through the operation. Growth is triggered lazily: only a probe reaching `PROBE_GROW_THRESHOLD` (13) — the local symptom of high load — pays for the exact popcount load check (`ShouldGrow`, target load 4/5); a completely full cycle grows unconditionally.
-- `Find` / `Contains` / `FindIterator` — probe until match or `FREE`.
+- `Insert( key, values... )` — rejects duplicates (`NIL_INDEX`); its hot path performs probing and placement in one loop, keeping the packed-state and key-column bases hoisted through the operation. Growth is triggered lazily without a size field: only a probe reaching `PROBE_GROW_THRESHOLD` (8) pays for the exact popcount load check (`ShouldGrow`, target load 3/4); a completely full cycle grows unconditionally.
+- `Find` / `Contains` / `FindIterator` — probe until match or `FREE`; while a buffered map remains at `N`, lookup selects its packed-state and key inline bases together and uses them directly, avoiding repeated inline/heap resolution in the probe path.
 - `Remove( key )` — backward-shift deletion (Knuth 6.4R): slides trailing cluster entries whose home bucket permits it back over the hole, keeping chains contiguous with no tombstones.
 - `Rehash( capacity )` — snapshots live rows into a raw-reserved scratch table (`SetCountRaw` + move-construct), resets the table to the new power-of-two size, and re-probes every row (run-time-only path; used by `GrowTable`, which doubles).
 - Iteration: `FirstIndex`/`NextIndex`/`EndIndex` scan occupied slots in bucket order; forward-only [CSlotIterator](BTL.CSlotIterator.md) `begin()/end()`; `BALL_HASHMAP_FOREACH` macro. `Clear()` marks every slot free without releasing storage.
@@ -70,8 +70,13 @@ Slot indices, iterators, and references are stable only until the next mutation:
 ## Usage
 
 ```cpp
+BTL::HashMap32_t< BTL::size32_t > set;
 BTL::HashMap32_t< BTL::size32_t, int > map;
+BTL::HashMap32_t< BTL::size32_t, int, float > columns;
+
+set.Insert( 3u );
 auto i = map.Insert( 7u, 100 );          // slot index or NIL_INDEX if present
+columns.Insert( 9u, 200, 0.5f );
 if ( map.Contains( 7u ) )
     map.Get< 1 >( map.Find( 7u ) ) += 1;
 BALL_HASHMAP_FOREACH( map, it )          // occupied slots, bucket order
@@ -80,4 +85,4 @@ BALL_HASHMAP_FOREACH( map, it )          // occupied slots, bucket order
 
 ## Notes
 
-Iteration order is bucket order, which is a function of hashing — not insertion or key order. For the inline `CBufferMultiHashMap`, choose `N` as a power of two ≥ 8 to actually stay inline.
+Iteration order is bucket order, which is a function of hashing — not insertion or key order. For the inline `CBufferHashMap`, choose `N` as a power of two ≥ 8 to actually stay inline. The convenience aliases fix the hash policy to `CFibonacciHash< I >`; instantiate `CHashMap` or `CBufferHashMap` directly when a custom policy is required.

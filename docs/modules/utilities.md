@@ -20,6 +20,7 @@ These helpers treat memory as raw storage: callers are responsible for matching 
 ## Bit operations — [bits.hpp](../../include/ball/types/bits.hpp)
 
 - `BitWidth( x )` — index of the highest set bit of `x - 1` plus one, via `_BitScanReverse(64)` / `__builtin_clz(ll)`; zero and one produce zero through a branchless nonzero scan mask.
+- `BitWidth_Unified` / `BitWidth_Const` — portable constexpr binary search over fixed shifts and its consteval wrapper; used where compiler bit-scan intrinsics are unavailable during constant evaluation. The implementation contains no loop.
 - `BitCeil( x )` — next power of two `>= x` computed as a direct shift by `BitWidth`; `if constexpr` removes unsupported-width handling from the runtime path, while zero and one map to one without a separate branch. This is the library's capacity function (capacity is always `BitCeil( count )`).
 - `BitCeil_Unified` / `BitCeil_Const` — portable/consteval bit-spreading variants (saturating).
 - `PopCount( x )` — hardware population count; requires an unsigned type. Used by the hash map to recover its live count from the packed state column.

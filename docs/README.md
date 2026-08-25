@@ -44,7 +44,7 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 
 ### Associative containers
 - [BTL::CRBTree](types/BTL.CRBTree.md) — SoA red-black tree family (`CRBTree`, `CBufferRBTree`)
-- [BTL::CHashMap](types/BTL.CHashMap.md) — SoA open-addressing hash map family (`CHashMap`, `CBufferMultiHashMap`)
+- [BTL::CHashMap](types/BTL.CHashMap.md) — SoA open-addressing hash map family (`CHashMap`, `CBufferHashMap`)
 - [BTL::CFibonacciHash](types/BTL.CFibonacciHash.md) — golden-ratio hashing policy (`MFibonacci`)
 - [BTL::CSlotIterator](types/BTL.CSlotIterator.md) — slot iterator shared by tree and hash map
 

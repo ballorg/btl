@@ -8,6 +8,7 @@
 #	include "bits.hpp"
 #	include "c/assert.h"
 #	include "c/nouniqueaddress.h"
+#	include "c/prefetch.h"
 #	include "elements.hpp"
 #	include "fixed.hpp"
 #	include "hash.hpp"
@@ -80,12 +81,15 @@ template < typename I, I N, typename TI, typename C, typename K, typename... Ts 
 class CHashMapBase : public C, public CBufferVector< I, N, EHashSlotState, HashKeyColumn_t< K >, Ts... >
 {
 public:
-	// The live table: `EHashSlotState` metadata column, the tagged key column, then
-	// the raw value columns; inline up to @p N rows then on the heap. The rehash
-	// scratch is the very same type -- it is filled row by row and re-probed, so its
-	// metadata column simply rides along unused.
+	BALL_STATIC_ASSERT( !N || ( N >= 8 && !( N & ( N - 1 ) ) ), "Buffered hash-table capacity must be a power of two >= 8" );
+
+	// The live table stores inline up to @p N rows and then overflows to the heap.
+	// Rehash scratch has the same columns but always uses CVector's heap-backed form,
+	// so a large inline capacity is never duplicated inside a rehash stack frame;
+	// its metadata column simply rides along unused.
 	using Base_t = CBufferVector< I, N, EHashSlotState, HashKeyColumn_t< K >, Ts... >;
 	using Storage_t = Base_t;
+	using ScratchStorage_t = CVector< I, EHashSlotState, HashKeyColumn_t< K >, Ts... >;
 	using State_t = EHashSlotState;
 	using Hasher_t = C;
 	using Key_t = K;
@@ -108,8 +112,6 @@ public:
 	static constexpr Index_t INVALID_INDEX = NIL_INDEX;
 	static constexpr Index_t FIRST_INDEX = 0;
 
-	/// @brief First table size a non-empty map allocates (a power of two).
-	static constexpr I INITIAL_CAPACITY = 8;
 	/// @brief Grow once the live load reaches NUM/DEN of capacity.
 	static constexpr I LOAD_FACTOR_NUM = 3;
 	static constexpr I LOAD_FACTOR_DEN = 4;
@@ -150,13 +152,7 @@ public:
 	///-----------------------------------------------------------------------------
 	constexpr Index_t Count() const noexcept
 	{
-		// Popcount word size: the state bits are consumed one ullong_t at a time.
 		constexpr size_t BATCH_SIZE = sizeof( ullong_t );
-
-		// SizeBy folds the packed bit width into bytes. A power-of-two bucket count
-		// means the state bits span 1, 2 or 4 whole bytes (capacities 8/16/32) or a
-		// whole number of 64-bit words with no partial tail -- so the last batch is a
-		// zero-padded word that covers every small table.
 		size_t nBytes = Nodes().template SizeBy< State_t >();
 
 		if ( !nBytes )
@@ -165,17 +161,13 @@ public:
 		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
 		ullong_t nLive = 0;
 
-		// do-while so the single batch of a small (< one word) table and each full
-		// word of a larger one run the same body -- no duplicated memcpy/popcount.
 		do
 		{
 			const size_t nBatch = nBytes < BATCH_SIZE ? nBytes : BATCH_SIZE;
-
 			ullong_t nWord = 0;
 
 			memcpy( &nWord, pStateBits, nBatch );
 			nLive += PopCount( nWord );
-
 			pStateBits += nBatch;
 			nBytes -= nBatch;
 		}
@@ -189,8 +181,6 @@ public:
 	template < TI TN > constexpr auto PayloadColumn() noexcept { return Get< PAYLOAD_COLUMN_OFFSET + TN >( Nodes() ); }
 	template < TI TN > constexpr auto PayloadColumn() const noexcept { return Get< PAYLOAD_COLUMN_OFFSET + TN >( Nodes() ); }
 
-	// The state column is a single packed bit per slot, so it is addressed through
-	// the indexed Get proxy -- there is no contiguous `State_t *` to index.
 	constexpr State_t State( Index_t i ) const noexcept { return Get< State_t >( Nodes(), i ); }
 	constexpr void SetState( Index_t i, State_t eState ) noexcept { Get< State_t >( Nodes(), i ) = eState; }
 	constexpr bool IsOccupied( Index_t i ) const noexcept { return State( i ) == State_t::OCCUPIED; }
@@ -202,13 +192,20 @@ public:
 	template < TI TN > constexpr Column_t< TN > &Column( Index_t i ) noexcept { return ReflectAccess( PayloadColumn< TN >()[ i ] ); }
 	template < TI TN > constexpr const Column_t< TN > &Column( Index_t i ) const noexcept { return ReflectAccess( PayloadColumn< TN >()[ i ] ); }
 
-	/// @complexity O(1) construction; O(capacity) destruction (storage base).
+	/// @complexity O(N) for a valid buffered table (constructs its inline bucket
+	/// rows without allocation); O(1) for the heap-backed form.
 	constexpr CHashMapBase() noexcept : CHashMapBase( Hasher_t() ) {}
 
 	constexpr explicit CHashMapBase( const Hasher_t &hasher ) noexcept :
 		Hasher_t( hasher ),
 		Storage_t()
 	{
+		// CBufferVector already owns storage for N rows. Make that storage the live
+		// bucket array once during construction, so the first Insert neither resets
+		// the table nor walks through intermediate capacities. SetCount clears the
+		// newly exposed packed state bits to FREE and performs no allocation for N.
+		if constexpr ( N )
+			Nodes().SetCount( N );
 	}
 
 	~CHashMapBase() noexcept = default;
@@ -218,13 +215,26 @@ protected:
 	// derives the multiply-shift width (log2) from it directly -- no cached
 	// capacity-bits member is kept.
 	/// @complexity O(1): hash the key, then one multiply-shift onto the table.
-	constexpr Index_t HomeBucket( const Key_t &key ) const noexcept
+	constexpr Index_t HomeBucket( const Key_t &key, Index_t nCapacity ) const noexcept
 	{
-		return Hasher_t::template IndexForCapacity< Index_t >( Hasher_t::Make( key ), BucketCount() );
-	}
+		const auto nHash = Hasher_t::Make( key );
 
-	// Bucket count is always a power of two, so wrap-around is a mask, not a modulo.
-	constexpr Index_t Mask() const noexcept { return static_cast< Index_t >( BucketCount() - 1 ); }
+		// The usual CBufferHashMap lookup stays inside its compile-time N buckets.
+		// Feed Index a constant width in that case: this removes capacity log2 from
+		// every Find without storing another field. After heap overflow, fall back to
+		// the run-time-capacity path.
+		if constexpr ( N )
+		{
+			if ( nCapacity == N )
+			{
+				constexpr bits_t INLINE_INDEX_BITS = static_cast< bits_t >( BitWidth_Const( N ) );
+
+				return Hasher_t::template Index< Index_t >( nHash, INLINE_INDEX_BITS );
+			}
+		}
+
+		return Hasher_t::template IndexForCapacity< Index_t >( nHash, nCapacity );
+	}
 
 	///-----------------------------------------------------------------------------
 	/// @brief Drops the table to @p nNewCapacity empty buckets (a power of two).
@@ -238,17 +248,36 @@ protected:
 	void ResetTable( Index_t nNewCapacity )
 	{
 		Nodes().SetCount( nNewCapacity );
-
-		for ( Index_t i = 0; i < nNewCapacity; ++i )
-			SetState( i, State_t::FREE );
+		memset( Nodes().template Packed_BaseBy< State_t >(), 0, Nodes().template SizeBy< State_t >() );
 	}
 
-	// Hot-path slot test over a hoisted state base: `State( i )`/`Key( i )` re-derive
-	// their column base (overflow resolution and offset math) on every call, which
-	// dwarfs the probe body itself -- the probe loops hoist both bases once instead.
 	static constexpr bool IsOccupiedBit( const uchar_t *pStateBits, Index_t i ) noexcept
 	{
-		return Storage_t::template Packed_GetDataBitBy< State_t >( pStateBits, Storage_t::template Packed_BitOffsetBy< State_t >( i ) );
+		return pStateBits[ i >> 3 ] & static_cast< uchar_t >( 1u << ( i & 7 ) );
+	}
+
+	template < typename TKeyColumn >
+	static constexpr Index_t FindInTable( const Key_t &key, Index_t nCapacity, Index_t iHome, const uchar_t *pStateBits, const TKeyColumn *pKeys ) noexcept
+	{
+		const Index_t nMask = static_cast< Index_t >( nCapacity - 1 );
+		Index_t i = iHome;
+
+		if ( !IsConstantEvaluated() )
+			BALL_PREFETCH_READ( &pKeys[ iHome ] );
+
+		for ( ;; )
+		{
+			if ( !IsOccupiedBit( pStateBits, i ) )
+				return NIL_INDEX;
+
+			if ( ReflectAccess( pKeys[ i ] ) == key )
+				return i;
+
+			i = static_cast< Index_t >( ( i + 1 ) & nMask );
+
+			if ( i == iHome )
+				return NIL_INDEX;
+		}
 	}
 
 	///-----------------------------------------------------------------------------
@@ -267,8 +296,9 @@ protected:
 	///-----------------------------------------------------------------------------
 	constexpr Index_t LocateForInsert( const Key_t &key, bool &bExists, Index_t &nProbeLength ) const noexcept
 	{
-		const Index_t nMask = Mask();
-		const Index_t iHome = HomeBucket( key );
+		const Index_t nCapacity = BucketCount();
+		const Index_t nMask = static_cast< Index_t >( nCapacity - 1 );
+		const Index_t iHome = HomeBucket( key, nCapacity );
 		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
 		const auto *pKeys = PayloadColumn< 0 >();
 		Index_t i = iHome;
@@ -310,28 +340,29 @@ protected:
 	///-----------------------------------------------------------------------------
 	constexpr Index_t FindSlot( const Key_t &key ) const noexcept
 	{
-		if ( !BucketCount() )
+		const Index_t nCapacity = BucketCount();
+
+		if ( !nCapacity )
 			return NIL_INDEX;
 
-		const Index_t nMask = Mask();
-		const Index_t iHome = HomeBucket( key );
+		if constexpr ( N )
+		{
+			if ( nCapacity == N )
+			{
+				constexpr bits_t INLINE_INDEX_BITS = static_cast< bits_t >( BitWidth_Const( N ) );
+				const Index_t iHome = Hasher_t::template Index< Index_t >( Hasher_t::Make( key ), INLINE_INDEX_BITS );
+				const uchar_t *pStateBits = Nodes().template Packed_FixedDataBy< State_t >();
+				const auto *pKeys = Nodes().template FixedDataBy< HashKeyColumn_t< K > >();
+
+				return FindInTable( key, nCapacity, iHome, pStateBits, pKeys );
+			}
+		}
+
+		const Index_t iHome = HomeBucket( key, nCapacity );
 		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
 		const auto *pKeys = PayloadColumn< 0 >();
-		Index_t i = iHome;
 
-		for ( ;; )
-		{
-			if ( !IsOccupiedBit( pStateBits, i ) )
-				return NIL_INDEX;
-
-			if ( ReflectAccess( pKeys[ i ] ) == key )
-				return i;
-
-			i = static_cast< Index_t >( ( i + 1 ) & nMask );
-
-			if ( i == iHome )
-				return NIL_INDEX;
-		}
+		return FindInTable( key, nCapacity, iHome, pStateBits, pKeys );
 	}
 
 	// Assign a freshly-supplied row into slot i column by column. The slots are
@@ -379,7 +410,10 @@ protected:
 	///-----------------------------------------------------------------------------
 	constexpr void EraseSlot( Index_t iRemove )
 	{
-		const Index_t nMask = Mask();
+		const Index_t nCapacity = BucketCount();
+		const Index_t nMask = static_cast< Index_t >( nCapacity - 1 );
+		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
+		const auto *pKeys = PayloadColumn< 0 >();
 		Index_t iHole = iRemove;
 
 		for ( ;; )
@@ -390,14 +424,14 @@ protected:
 			{
 				i = static_cast< Index_t >( ( i + 1 ) & nMask );
 
-				if ( State( i ) == State_t::FREE )
+				if ( !IsOccupiedBit( pStateBits, i ) )
 				{
 					SetState( iHole, State_t::FREE );
 
 					return;
 				}
 
-				const Index_t iCurHome = HomeBucket( Key( i ) );
+				const Index_t iCurHome = HomeBucket( ReflectAccess( pKeys[ i ] ), nCapacity );
 
 				// Move the entry at i into the hole iff the hole lies on its probe
 				// path, i.e. its home is NOT cyclically within the open range (iHole, i].
@@ -419,7 +453,7 @@ protected:
 	// straight into the matching column. The scratch's metadata column stays raw and
 	// unread (EHashSlotState is trivially destructible, so it needs no construction).
 	template < size_t... Is >
-	void CollectRow( Storage_t &temp, Index_t w, Index_t i, MIndexSequence< size_t, Is... > )
+	void CollectRow( ScratchStorage_t &temp, Index_t w, Index_t i, MIndexSequence< size_t, Is... > )
 	{
 		( ConstructElement( &Get< PAYLOAD_COLUMN_OFFSET + static_cast< TI >( Is ) >( temp )[ w ], Move( PayloadColumn< static_cast< TI >( Is ) >()[ i ] ) ), ... );
 	}
@@ -428,7 +462,7 @@ protected:
 	// ReflectAccess unwraps the tagged key and passes raw values through unchanged;
 	// payload columns sit past the shared metadata column at PAYLOAD_COLUMN_OFFSET.
 	template < size_t... Is >
-	void ReinsertRow( Storage_t &temp, Index_t r, MIndexSequence< size_t, Is... > )
+	void ReinsertRow( ScratchStorage_t &temp, Index_t r, MIndexSequence< size_t, Is... > )
 	{
 		bool bExists = false;
 		Index_t nProbeLength = 0; // Unused: the fresh table is under the target load by construction.
@@ -454,15 +488,16 @@ protected:
 	{
 		const Index_t nRows = Count();
 
-		Storage_t temp;
+		ScratchStorage_t temp;
 
 		temp.SetCountRaw( nRows );
 
 		const Index_t nBuckets = BucketCount();
+		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
 
 		for ( Index_t i = 0, w = 0; i < nBuckets; ++i )
 		{
-			if ( State( i ) == State_t::OCCUPIED )
+			if ( IsOccupiedBit( pStateBits, i ) )
 				CollectRow( temp, w++, i, ColumnSequence_t() );
 		}
 
@@ -605,14 +640,21 @@ public:
 	///-----------------------------------------------------------------------------
 	/// @brief Empties the table without releasing the bucket storage.
 	///
-	/// @complexity O(capacity): one state write per bucket.
+	/// @complexity O(capacity / 8) at run time; O(capacity) during constant evaluation.
 	///-----------------------------------------------------------------------------
 	constexpr void Clear()
 	{
 		const Index_t nBuckets = BucketCount();
 
-		for ( Index_t i = 0; i < nBuckets; ++i )
-			SetState( i, State_t::FREE );
+		if ( IsConstantEvaluated() )
+		{
+			for ( Index_t i = 0; i < nBuckets; ++i )
+				SetState( i, State_t::FREE );
+		}
+		else if ( nBuckets )
+		{
+			memset( Nodes().template Packed_BaseBy< State_t >(), 0, Nodes().template SizeBy< State_t >() );
+		}
 	}
 
 	///-----------------------------------------------------------------------------
@@ -633,7 +675,9 @@ public:
 	constexpr Index_t Insert( K key, Ts... values )
 	{
 		if ( !BucketCount() )
-			ResetTable( Base_t::INITIAL_CAPACITY );
+			// Eight one-bit states occupy exactly one byte: this is the smallest
+			// table supported by Count's whole-byte packed-state invariant.
+			ResetTable( static_cast< Index_t >( sizeof( uchar_t ) * 8u ) );
 
 		for ( ;; )
 		{
@@ -749,7 +793,7 @@ public:
 	constexpr CHashMapImpl &operator=( CHashMapImpl &&other ) { return MoveFrom( Move( other ) ); }
 };
 
-template < typename I, I N, typename K, typename C, typename... Ts > class CBufferMultiHashMap;
+template < typename I, I N, typename K, typename C, typename... Ts > class CBufferHashMap;
 
 ///-----------------------------------------------------------------------------
 /// @brief Heap-backed multi-column hash table: key column @p K plus value columns
@@ -770,62 +814,42 @@ public:
 	constexpr const Key_t &Key( Index_t i ) const { return Base_t::template Get< 0 >( i ); }
 
 	/// @complexity O(m + n): cross-form copy/move conversions rebuild the table.
-	template < I N > constexpr CHashMap( const CBufferMultiHashMap< I, N, K, C, Ts... > &other ) { CopyFrom( other ); }
-	template < I N > constexpr CHashMap &operator=( const CBufferMultiHashMap< I, N, K, C, Ts... > &other ) { return CopyFrom( other ); }
-	template < I N > constexpr CHashMap( CBufferMultiHashMap< I, N, K, C, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	template < I N > constexpr CHashMap &operator=( CBufferMultiHashMap< I, N, K, C, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
+	template < I N > constexpr CHashMap( const CBufferHashMap< I, N, K, C, Ts... > &other ) { CopyFrom( other ); }
+	template < I N > constexpr CHashMap &operator=( const CBufferHashMap< I, N, K, C, Ts... > &other ) { return CopyFrom( other ); }
+	template < I N > constexpr CHashMap( CBufferHashMap< I, N, K, C, Ts... > &&other ) { MoveFrom( Move( other ) ); }
+	template < I N > constexpr CHashMap &operator=( CBufferHashMap< I, N, K, C, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
 /// @brief Fixed-capacity (inline buffer) counterpart of `CHashMap`. @p N is
-/// the inline bucket capacity and should be a power of two >= `INITIAL_CAPACITY`
-/// to stay off the heap.
+/// the inline bucket capacity and must be a power of two >= 8.
 template < typename I, I N, typename K = I, typename C = CFibonacciHash< I >, typename... Ts >
-class CBufferMultiHashMap : public CHashMapImpl< I, N, size8_t, C, K, Ts... >
+class CBufferHashMap : public CHashMapImpl< I, N, size8_t, C, K, Ts... >
 {
 public:
 	using Base_t = CHashMapImpl< I, N, size8_t, C, K, Ts... >;
 	using Base_t::Base_t;
 	using Base_t::CopyFrom; using Base_t::MoveFrom;
 
-	constexpr CBufferMultiHashMap( const CHashMap< I, K, C, Ts... > &other ) { CopyFrom( other ); }
-	constexpr CBufferMultiHashMap &operator=( const CHashMap< I, K, C, Ts... > &other ) { return CopyFrom( other ); }
-	constexpr CBufferMultiHashMap( CHashMap< I, K, C, Ts... > &&other ) { MoveFrom( Move( other ) ); }
-	constexpr CBufferMultiHashMap &operator=( CHashMap< I, K, C, Ts... > &&other ) { return  MoveFrom( Move( other ) ); }
+	constexpr CBufferHashMap( const CHashMap< I, K, C, Ts... > &other ) { CopyFrom( other ); }
+	constexpr CBufferHashMap &operator=( const CHashMap< I, K, C, Ts... > &other ) { return CopyFrom( other ); }
+	constexpr CBufferHashMap( CHashMap< I, K, C, Ts... > &&other ) { MoveFrom( Move( other ) ); }
+	constexpr CBufferHashMap &operator=( CHashMap< I, K, C, Ts... > &&other ) { return MoveFrom( Move( other ) ); }
 };
 
-/// Convenience spellings that fix the index width and hash policy.
-/// The hash word matches the index width, which bounds the bucket count. A custom
-/// policy can be supplied when a different hashing strategy is required.
+/// Convenience spellings with the hash policy fixed to `CFibonacciHash< I >`
+/// (use the classes directly for a custom policy).
 ///
-/// Single-value map: key @p K + value @p V.
-template < typename I = size32_t, typename K = I, typename V = K, typename C = CFibonacciHash< I > > using HashMap_t = CHashMap< I, K, C, V >;
-template < typename K, typename V = K, typename C = CFibonacciHash< size8_t > > using HashMap8_t = CHashMap< size8_t, K, C, V >;
-template < typename K, typename V = K, typename C = CFibonacciHash< size16_t > > using HashMap16_t = CHashMap< size16_t, K, C, V >;
-template < typename K, typename V = K, typename C = CFibonacciHash< size32_t > > using HashMap32_t = CHashMap< size32_t, K, C, V >;
-template < typename K, typename V = K, typename C = CFibonacciHash< size64_t > > using HashMap64_t = CHashMap< size64_t, K, C, V >;
+/// Key @p K plus value columns @p Ts (no @p Ts is a hash set).
+template < typename I = size32_t, typename K = I, typename... Ts > using HashMap_t = CHashMap< I, K, CFibonacciHash< I >, Ts... >;
+template < typename K, typename... Ts > using HashMap8_t = CHashMap< size8_t, K, CFibonacciHash< size8_t >, Ts... >;
+template < typename K, typename... Ts > using HashMap16_t = CHashMap< size16_t, K, CFibonacciHash< size16_t >, Ts... >;
+template < typename K, typename... Ts > using HashMap32_t = CHashMap< size32_t, K, CFibonacciHash< size32_t >, Ts... >;
+template < typename K, typename... Ts > using HashMap64_t = CHashMap< size64_t, K, CFibonacciHash< size64_t >, Ts... >;
 
-template < size_t N, typename K = size_t, typename V = K, typename C = CFibonacciHash< size_t > > using BufferHashMap_t = CBufferMultiHashMap< size_t, N, K, C, V >;
-template < size8_t N, typename K = size8_t, typename V = K, typename C = CFibonacciHash< size8_t > > using BufferHashMap8_t = CBufferMultiHashMap< size8_t, N, K, C, V >;
-template < size16_t N, typename K = size16_t, typename V = K, typename C = CFibonacciHash< size16_t > > using BufferHashMap16_t = CBufferMultiHashMap< size16_t, N, K, C, V >;
-template < size32_t N, typename K = size32_t, typename V = K, typename C = CFibonacciHash< size32_t > > using BufferHashMap32_t = CBufferMultiHashMap< size32_t, N, K, C, V >;
-template < size64_t N, typename K = size64_t, typename V = K, typename C = CFibonacciHash< size64_t > > using BufferHashMap64_t = CBufferMultiHashMap< size64_t, N, K, C, V >;
-
-/// Multi-column: key @p K + value columns @p Ts (no @p Ts is a hash set). @p C is
-/// the hash policy (default `CFibonacciHash< index >`, so the hash word matches the
-/// index width). Since the variadic @p Ts must stay last, @p C sits right after
-/// @p K: a set or a custom-policy set spell naturally (`MultiHashMap_t< K >`,
-/// `MultiHashMap_t< K, C >`), but value columns need the policy stated before them
-/// (`MultiHashMap_t< K, C, V0, V1 >`).
-template < typename K, typename C = CFibonacciHash< size32_t >, typename... Ts > using MultiHashMap_t = CHashMap< size32_t, K, C, Ts... >;
-template < typename K, typename C = CFibonacciHash< size8_t >, typename... Ts > using MultiHashMap8_t = CHashMap< size8_t, K, C, Ts... >;
-template < typename K, typename C = CFibonacciHash< size16_t >, typename... Ts > using MultiHashMap16_t = CHashMap< size16_t, K, C, Ts... >;
-template < typename K, typename C = CFibonacciHash< size32_t >, typename... Ts > using MultiHashMap32_t = CHashMap< size32_t, K, C, Ts... >;
-template < typename K, typename C = CFibonacciHash< size64_t >, typename... Ts > using MultiHashMap64_t = CHashMap< size64_t, K, C, Ts... >;
-
-template < size_t N, typename K = size_t, typename C = CFibonacciHash< size_t >, typename... Ts > using BufferMultiHashMap_t = CBufferMultiHashMap< size_t, N, K, C, Ts... >;
-template < size8_t N, typename K = size8_t, typename C = CFibonacciHash< size8_t >, typename... Ts > using BufferMultiHashMap8_t = CBufferMultiHashMap< size8_t, N, K, C, Ts... >;
-template < size16_t N, typename K = size16_t, typename C = CFibonacciHash< size16_t >, typename... Ts > using BufferMultiHashMap16_t = CBufferMultiHashMap< size16_t, N, K, C, Ts... >;
-template < size32_t N, typename K = size32_t, typename C = CFibonacciHash< size32_t >, typename... Ts > using BufferMultiHashMap32_t = CBufferMultiHashMap< size32_t, N, K, C, Ts... >;
-template < size64_t N, typename K = size64_t, typename C = CFibonacciHash< size64_t >, typename... Ts > using BufferMultiHashMap64_t = CBufferMultiHashMap< size64_t, N, K, C, Ts... >;
+template < size_t N, typename K = size_t, typename... Ts > using BufferHashMap_t = CBufferHashMap< size_t, N, K, CFibonacciHash< size_t >, Ts... >;
+template < size8_t N, typename K = size8_t, typename... Ts > using BufferHashMap8_t = CBufferHashMap< size8_t, N, K, CFibonacciHash< size8_t >, Ts... >;
+template < size16_t N, typename K = size16_t, typename... Ts > using BufferHashMap16_t = CBufferHashMap< size16_t, N, K, CFibonacciHash< size16_t >, Ts... >;
+template < size32_t N, typename K = size32_t, typename... Ts > using BufferHashMap32_t = CBufferHashMap< size32_t, N, K, CFibonacciHash< size32_t >, Ts... >;
+template < size64_t N, typename K = size64_t, typename... Ts > using BufferHashMap64_t = CBufferHashMap< size64_t, N, K, CFibonacciHash< size64_t >, Ts... >;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_HASHMAP_HPP_ )
