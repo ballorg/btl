@@ -19,6 +19,44 @@ option(BALL_ENABLE_ASSERT OFF)
 option(BALL_ENABLE_MODULES ON)
 option(BALL_ENABLE_TESTS OFF)
 
+if(BALL_ENABLE_TESTS)
+	set(BALL_ENABLE_MODULES ON CACHE BOOL "Build Ball C++20 modules" FORCE)
+	set(BALL_TEST_ENABLE_MODULES ON CACHE BOOL "Build Ball tests through C++20 modules" FORCE)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+	AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14
+	AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15
+)
+	if(BALL_ENABLE_MODULES)
+		message(WARNING "GCC 14 cannot reliably consume Ball's C++20 module BMIs; falling back to header mode")
+		set(BALL_ENABLE_MODULES OFF CACHE BOOL "Build Ball C++20 modules" FORCE)
+	endif()
+
+	if(BALL_ENABLE_TESTS)
+		message(WARNING "The current Ball test suite requires C++20 modules and is disabled for GCC 14")
+		set(BALL_ENABLE_TESTS OFF CACHE BOOL "Build Ball tests" FORCE)
+		set(BALL_TEST_ENABLE_MODULES OFF CACHE BOOL "Build Ball tests through C++20 modules" FORCE)
+	endif()
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	if(BALL_ENABLE_MODULES)
+		message(WARNING "AppleClang does not provide CMake dependency scanning for C++20 modules; falling back to header mode")
+		set(BALL_ENABLE_MODULES OFF CACHE BOOL "Build Ball C++20 modules" FORCE)
+	endif()
+
+	if(BALL_ENABLE_TESTS)
+		message(WARNING "The current Ball test suite requires C++20 modules and is disabled for AppleClang")
+		set(BALL_ENABLE_TESTS OFF CACHE BOOL "Build Ball tests" FORCE)
+		set(BALL_TEST_ENABLE_MODULES OFF CACHE BOOL "Build Ball tests through C++20 modules" FORCE)
+	endif()
+endif()
+
+if(BALL_ENABLE_MODULES AND CMAKE_VERSION VERSION_LESS 3.28)
+	message(FATAL_ERROR "BALL_ENABLE_MODULES requires CMake 3.28 or newer")
+endif()
+
 set(PROJECT_OUTPUT_NAME "ball-types")
 
 set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -30,6 +68,7 @@ set(SOURCES
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
+add_library(Ball::BTL ALIAS ${PROJECT_NAME})
 
 if(BALL_ENABLE_ASSERT)
 	target_compile_definitions(${PROJECT_NAME} PUBLIC BALL_ENABLE_ASSERT=1)
@@ -69,10 +108,29 @@ if(BALL_ENABLE_MODULES)
 		FILES
 			${INCLUDE_DIR}/ball/new.cppm
 			${INCLUDE_DIR}/ball/time.cppm
-			${INCLUDE_DIR}/ball/types/base/arch.cppm
-			${INCLUDE_DIR}/ball/types/base/characters.cppm
-			${INCLUDE_DIR}/ball/types/base/fixed.cppm
-			${INCLUDE_DIR}/ball/types/base.cppm
+			${INCLUDE_DIR}/ball/types/core.cppm
+			${INCLUDE_DIR}/ball/types/bits.cppm
+			${INCLUDE_DIR}/ball/types/elements.cppm
+			${INCLUDE_DIR}/ball/types/fixed.cppm
+			${INCLUDE_DIR}/ball/types/math.cppm
+			${INCLUDE_DIR}/ball/types/number.cppm
+			${INCLUDE_DIR}/ball/types/pair.cppm
+			${INCLUDE_DIR}/ball/types/prefetch.cppm
+			${INCLUDE_DIR}/ball/types/allocator.cppm
+			${INCLUDE_DIR}/ball/types/array.cppm
+			${INCLUDE_DIR}/ball/types/elementspack.cppm
+			${INCLUDE_DIR}/ball/types/vectoriterator.cppm
+			${INCLUDE_DIR}/ball/types/slotiterator.cppm
+			${INCLUDE_DIR}/ball/types/reflect.cppm
+			${INCLUDE_DIR}/ball/types/viewbase.cppm
+			${INCLUDE_DIR}/ball/types/view.cppm
+			${INCLUDE_DIR}/ball/types/stringview.cppm
+			${INCLUDE_DIR}/ball/types/hash.cppm
+			${INCLUDE_DIR}/ball/types/vector.cppm
+			${INCLUDE_DIR}/ball/types/string.cppm
+			${INCLUDE_DIR}/ball/types/rbtree.cppm
+			${INCLUDE_DIR}/ball/types/hashmap.cppm
+			${INCLUDE_DIR}/ball/types/delegate.cppm
 			${INCLUDE_DIR}/ball/types.cppm
 	)
 endif()

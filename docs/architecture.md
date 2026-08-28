@@ -25,9 +25,11 @@ Ball is organized as a strict layering of headers under [include/ball/](../inclu
 
 ## Namespace and module composition
 
-Public headers do not open a namespace themselves. The umbrella header [include/ball/types.hpp](../include/ball/types.hpp) includes every component **inside** `BALL_EXPORT namespace BTL { ... }`, so all types documented here are `BTL::` types when consumed through `<ball/types.hpp>` (or `import Ball.Types;`). Only `c/macros.h` and `memory.h` are included before the namespace so `size_t` and the CRT imports stay global.
+Public headers do not open a namespace themselves. The umbrella header [include/ball/types.hpp](../include/ball/types.hpp) includes every component **inside** `BALL_EXPORT namespace BTL { ... }`, so all types documented here are `BTL::` types when consumed through `<ball/types.hpp>` (or `import Ball.Types;`). Only `new.hpp` and `memory.h` are included before the namespace, keeping placement `new`, `size_t`, and the CRT imports global.
 
-With `BALL_ENABLE_MODULES`, the `.cppm` interface units (`ball/types.cppm`, `ball/time.cppm`, `ball/new.cppm`, and the `ball/types/base/*.cppm` partitions) wrap the same headers as C++20 modules `Ball.Types` and `Ball.Time`; `BALL_EXPORT` expands to `export` in that build.
+With `BALL_ENABLE_MODULES`, [Ball.New](../include/ball/new.cppm) exports the global placement allocation functions from [new.hpp](../include/ball/new.hpp). [Ball.Types](../include/ball/types.cppm) re-exports `Ball.New` and the internal partitions under [include/ball/types/](../include/ball/types/). `Core` owns the base and complete meta layer; every other component has its own partition, including `Allocator`, `Array`, `Bits`, `Elements`, `ElementsPack`, `Fixed`, `Hash`, `Math`, `Number`, `Pair`, `Prefetch`, `Reflect`, `SlotIterator`, `StringView`, `VectorIterator`, `ViewBase`, `View`, `Vector`, `String`, `RBTree`, `HashMap`, and `Delegate`. Each component partition imports `Ball.New`, imports its partition dependencies, and directly includes only its owning `.hpp`, so a declaration is attached to exactly one module. The macro-only [module.h](../include/ball/types/module.h) centralizes the shared module-mode export configuration used by those component interfaces. These partitions are implementation details and cannot be imported directly by ordinary consumers; consumers import `Ball.Types`. [Ball.Time](../include/ball/time.cppm) independently exports the timing layer.
+
+Placement `new` remains in the global namespace, but module consumers obtain it from `Ball.New` directly or through `Ball.Types`. Header-mode consumers continue to use [new.hpp](../include/ball/new.hpp). C runtime declarations remain in the global module fragment of `Core`.
 
 ## The storage stack
 

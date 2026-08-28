@@ -1,10 +1,12 @@
-#ifdef BALL_ENABLE_MODULES
+module;
+
+#include "tests.hpp"
+
+module Ball.Types;
+
 import Ball.New;
-import Ball.Types;
-#else // !defined( BALL_ENABLE_MODULES )
-#	include <ball/new.hpp>
-#	include <ball/types.hpp>
-#endif // defined( BALL_ENABLE_MODULES )
+import :Core;
+import :String;
 
 // Macros section.
 #define BALL_STATIC_ASSERT_SIZEOF_BITS( type, bits ) BALL_STATIC_ASSERT_SIZEOF( type, bits / 8 )

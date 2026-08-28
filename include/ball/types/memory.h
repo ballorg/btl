@@ -3,9 +3,7 @@
 
 #	include "c/macros.h"
 
-#	define BALL_SIZE_DEFINE_GLOBAL 1
-#		include "base/arch/size.h"
-#	undef BALL_SIZE_DEFINE_GLOBAL
+#	include "base/arch/size.h"
 
 #	if defined( BALL_MSVC )
 BALL_DLL_IMPORT_RESTRICT_C void * __cdecl malloc( size_t nSize ) BALL_CRT_NOEXCEPT;

@@ -26,7 +26,7 @@ struct MIsReflectable< O, Void_t<
 };
 
 template < typename O >
-static constexpr bool IS_REFLECTABLE = MIsReflectable< O >::VALUE;
+inline constexpr bool IS_REFLECTABLE = MIsReflectable< O >::VALUE;
 
 #if __cplusplus >= 202002L
 template < typename O > concept Reflectable_t = IS_REFLECTABLE< O >;

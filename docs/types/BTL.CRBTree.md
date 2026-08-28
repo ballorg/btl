@@ -18,7 +18,7 @@ Family members:
 - **Namespace:** `BTL`
 - **Module:** [associative](../modules/associative.md)
 - **Kind:** class templates; `CRBTreeBase` derives from the comparator `C` (empty base) and from `CBufferVector< I, N, ERBTreeColor, RBTreeLeftColumn_t< I >, RBTreeRightColumn_t< I >, RBTreeParentColumn_t< I >, RBTreeKeyColumn_t< K >, Ts... >`
-- **Declared in:** [include/ball/types/rbtree.hpp](../../include/ball/types/rbtree.hpp)
+- **Declared in:** [include/ball/types/rbtree.hpp](../../include/ball/types/rbtree.hpp); iteration macros in [include/ball/types/rbtree.h](../../include/ball/types/rbtree.h)
 
 ## Purpose
 

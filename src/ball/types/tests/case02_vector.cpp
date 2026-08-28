@@ -1,5 +1,30 @@
-#include "common.hpp"
+module;
+
 #include <ball/types/c/assert/static.h>
+#include <ball/time/macros.h>
+
+#include <algorithm>
+#include <vector>
+
+module Ball.Types;
+
+import Ball.New;
+import Ball.Time;
+import :Core;
+import :Elements;
+import :ElementsPack;
+import :Fixed;
+import :Math;
+import :Pair;
+import :String;
+import :Tests.Case02;
+import :Vector;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
+
+using TestPair_t = BTL::Pair_t< size_t, size_t >;
+
+#include "vector_case.hpp"
 
 struct CAdapter_Vector
 {
@@ -20,8 +45,8 @@ struct CAdapter_Vector
 
 namespace
 {
-	using Pack_t = BTL::CElementsPack< size_t, 2, uint8_t, int, long >;
-	using Packed_Pack_t = BTL::CElementsPack< size_t, 2, uint8_t, BTL::FixedUnsiged3_t >;
+	using Pack_t = BTL::CElementsPack< size_t, 2, BTL::uint8_t, int, long >;
+	using Packed_Pack_t = BTL::CElementsPack< size_t, 2, BTL::uint8_t, BTL::FixedUnsiged3_t >;
 
 	constexpr bool TestElementsPackValues()
 	{
@@ -63,8 +88,8 @@ namespace
 		*it = BTL::FixedUnsiged3_t( 6 );
 
 		const auto &constValues = values;
-		return static_cast< uint8_t >( *constValues.begin() ) == 6
-			&& static_cast< uint8_t >( constValues.begin()[ 1 ] ) == 5
+		return static_cast< BTL::uint8_t >( *constValues.begin() ) == 6
+			&& static_cast< BTL::uint8_t >( constValues.begin()[ 1 ] ) == 5
 			&& values.end() - values.begin() == values.Count();
 	}
 

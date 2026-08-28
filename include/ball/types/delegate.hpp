@@ -3,23 +3,25 @@
 
 #	pragma once
 
-#	include "c/assert.h"
-#	include "c/nodiscrad.h"
-#	include "meta/decay.hpp"
-#	include "meta/enableif.hpp"
-#	include "meta/get.hpp"
-#	include "meta/isconst.hpp"
-#	include "meta/ispointer.hpp"
-#	include "meta/issame.hpp"
-#	include "meta/memberfunction.hpp"
-#	include "meta/pack.hpp"
-#	include "meta/removecv.hpp"
-#	include "meta/removereference.hpp"
-#	include "meta/return.hpp"
-#	include "meta/sequence.hpp"
-#	include "meta/variant.hpp"
-#	include "meta/xvalue.hpp"
-#	include "vector.hpp"
+#	if !defined( BALL_ENABLE_MODULE )
+#		include "c/assert.h"
+#		include "c/nodiscrad.h"
+#		include "meta/decay.hpp"
+#		include "meta/enableif.hpp"
+#		include "meta/get.hpp"
+#		include "meta/isconst.hpp"
+#		include "meta/ispointer.hpp"
+#		include "meta/issame.hpp"
+#		include "meta/memberfunction.hpp"
+#		include "meta/pack.hpp"
+#		include "meta/removecv.hpp"
+#		include "meta/removereference.hpp"
+#		include "meta/return.hpp"
+#		include "meta/sequence.hpp"
+#		include "meta/variant.hpp"
+#		include "meta/xvalue.hpp"
+#		include "vector.hpp"
+#	endif
 
 #	ifndef DELEGATE_INLINE_ALLOCATION_SIZE
 #		define DELEGATE_INLINE_ALLOCATION_SIZE 64
@@ -94,8 +96,8 @@ public:
 	CStaticDelegate &operator=( CStaticDelegate && ) noexcept = default;
 
 	R Execute( Ts... args ) const override { return ExecuteBy( Sequence_t< TPayload... >(), args... ); }
-	void CopyConstruct( void *pDestination ) const override { new ( pDestination ) CStaticDelegate( *this ); }
-	void MoveConstruct( void *pDestination ) override { new ( pDestination ) CStaticDelegate( Move( *this ) ); }
+	void CopyConstruct( void *pDestination ) const override { new ( sizeof( CStaticDelegate ), pDestination ) CStaticDelegate( *this ); }
+	void MoveConstruct( void *pDestination ) override { new ( sizeof( CStaticDelegate ), pDestination ) CStaticDelegate( Move( *this ) ); }
 	void Destroy() noexcept override { this->~CStaticDelegate(); }
 
 protected:
@@ -140,8 +142,8 @@ public:
 	}
 
 	constexpr const void *GetOwner() const noexcept override { return m_pObject; }
-	void CopyConstruct( void *pDestination ) const override { new ( pDestination ) CObjectDelegate( *this ); }
-	void MoveConstruct( void *pDestination ) override { new ( pDestination ) CObjectDelegate( Move( *this ) ); }
+	void CopyConstruct( void *pDestination ) const override { new ( sizeof( CObjectDelegate ), pDestination ) CObjectDelegate( *this ); }
+	void MoveConstruct( void *pDestination ) override { new ( sizeof( CObjectDelegate ), pDestination ) CObjectDelegate( Move( *this ) ); }
 	void Destroy() noexcept override { this->~CObjectDelegate(); }
 
 protected:
@@ -180,8 +182,8 @@ public:
 	CLambdaDelegate &operator=( CLambdaDelegate && ) noexcept = default;
 
 	R Execute( Ts... args ) const override { return ExecuteBy( Sequence_t< TPayload... >(), args... ); }
-	void CopyConstruct( void *pDestination ) const override { new ( pDestination ) CLambdaDelegate( *this ); }
-	void MoveConstruct( void *pDestination ) override { new ( pDestination ) CLambdaDelegate( Move( *this ) ); }
+	void CopyConstruct( void *pDestination ) const override { new ( sizeof( CLambdaDelegate ), pDestination ) CLambdaDelegate( *this ); }
+	void MoveConstruct( void *pDestination ) override { new ( sizeof( CLambdaDelegate ), pDestination ) CLambdaDelegate( Move( *this ) ); }
 	void Destroy() noexcept override { this->~CLambdaDelegate(); }
 
 protected:
@@ -442,7 +444,7 @@ private:
 	{
 		Release();
 
-		new ( Allocate( sizeof( TDelegate ) ) ) TDelegate( Forward< TArgs >( args )... );
+		new ( sizeof( TDelegate ), Allocate( sizeof( TDelegate ) ) ) TDelegate( Forward< TArgs >( args )... );
 	}
 };
 

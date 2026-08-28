@@ -1,7 +1,23 @@
-#include "common.hpp"
+module;
+
+#include <ball/types/rbtree.h>
+#include <ball/types/reflect.h>
 
 #include <map>
 #include <vector>
+
+module Ball.Types;
+
+import Ball.New;
+import :Core;
+import :Pair;
+import :RBTree;
+import :Reflect;
+import :String;
+import :StringView;
+import :Tests.Case05;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
 namespace
 {

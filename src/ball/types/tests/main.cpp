@@ -1,4 +1,25 @@
-#include "common.hpp"
+module;
+
+#include <ball/time/macros.h>
+#include <stdio.h>
+
+module Ball.Types;
+
+import Ball.New;
+import Ball.Time;
+import :String;
+import :Tests.Case01;
+import :Tests.Case02;
+import :Tests.Case03;
+import :Tests.Case04;
+import :Tests.Case05;
+import :Tests.Case06;
+import :Tests.Case07;
+import :Tests.Case08;
+import :Tests.Case10;
+import :Tests.Case11;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
 int main()
 {
@@ -13,11 +34,11 @@ int main()
 	auto nsCase02 = BALL_PROF_END( Case02 );
 
 	BALL_PROF_BEGIN( Case03 );
-	Case03_MultiVector( str );
+	Case03_VectorSoA( str );
 	auto nsCase03 = BALL_PROF_END( Case03 );
 
 	BALL_PROF_BEGIN( Case04 );
-	Case04_MultiVector_Fixed( str );
+	Case04_VectorSoA_Fixed( str );
 	auto nsCase04 = BALL_PROF_END( Case04 );
 
 	BALL_PROF_BEGIN( Case05 );

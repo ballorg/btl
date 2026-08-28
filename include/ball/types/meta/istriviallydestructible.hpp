@@ -14,7 +14,7 @@
 // Determine whether T's destructor is trivial (no-op cleanup).
 template < typename T > struct MIsTriviallyDestructible { static constexpr bool VALUE = BALL_META_IS_TRIVIALLY_DESTRUCTIBLE( T ); };
 
-template < typename T > static constexpr bool IS_TRIVIALLY_DESTRUCTIBLE = MIsTriviallyDestructible< T >::VALUE;
+template < typename T > inline constexpr bool IS_TRIVIALLY_DESTRUCTIBLE = MIsTriviallyDestructible< T >::VALUE;
 
 #	undef BALL_META_IS_TRIVIALLY_DESTRUCTIBLE
 

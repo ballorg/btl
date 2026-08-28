@@ -9,7 +9,7 @@ A lightweight nanosecond time value with unit conversions — the result type of
 - **Namespace:** `BTL`
 - **Module:** [time](../modules/time.md)
 - **Kind:** class `CTimeNS`
-- **Declared in:** [include/ball/time.hpp](../../include/ball/time.hpp) (module `Ball.Time`)
+- **Declared in:** [include/ball/time.hpp](../../include/ball/time.hpp) (module `Ball.Time`); profiling macros are separated into [include/ball/time/macros.h](../../include/ball/time/macros.h) for module consumers
 
 ## Data Structure
 

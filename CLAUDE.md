@@ -21,5 +21,5 @@ For changed types, update the affected documentation sections in the same change
 
 ## Project notes
 
-- The project name is written `Ball` (never `ball`, `BALL`, or `Ball Library`); the C++ namespace is `BTL` and the C++20 modules are `Ball.Types` / `Ball.Time`.
+- The project name is written `Ball` (never `ball`, `BALL`, or `Ball Library`); the C++ namespace is `BTL` and the public C++20 modules are `Ball.Types` / `Ball.Time`.
 - Ball is freestanding C++20 (no std headers in library code), assertion-based (no exceptions), tab-indented with spaces inside parentheses.

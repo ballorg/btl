@@ -1,8 +1,8 @@
 # Ball Documentation
 
-Ball is a freestanding C++20 container and utility library. It provides growable and fixed-capacity containers (vectors, structure-of-arrays multi-vectors, a red-black tree, an open-addressing hash map), strings and string views, delegates, a compile-time reflection facility, and the metaprogramming/base-type layers those components are built on.
+Ball is a freestanding C++20 container and utility library. It provides growable and fixed-capacity containers (vectors, structure-of-arrays vectors, a red-black tree, an open-addressing hash map), strings and string views, delegates, a compile-time reflection facility, and the metaprogramming/base-type layers those components are built on.
 
-Ball deliberately avoids the C++ standard library: it declares the few CRT functions it needs itself, ships its own type traits, placement `new`, and assertions, and keeps every container `constexpr`-friendly where feasible. All components live in the `BTL` namespace (the umbrella header [include/ball/types.hpp](../include/ball/types.hpp) includes every public header inside `namespace BTL`). When `BALL_ENABLE_MODULES` is on, the same code is exported as the C++20 module `Ball.Types` (plus `Ball.Time`) via the `.cppm` interface units.
+Ball deliberately avoids the C++ standard library: it declares the few CRT functions it needs itself, ships its own type traits, placement `new`, and assertions, and keeps every container `constexpr`-friendly where feasible. All components live in the `BTL` namespace. The umbrella header [include/ball/types.hpp](../include/ball/types.hpp) directly includes every public type header without selector macros; code that needs a narrower header-mode dependency set includes the required component headers directly. When `BALL_ENABLE_MODULES` is on, the same code is exported through the public C++20 modules `Ball.New`, `Ball.Types`, and `Ball.Time`; `Ball.Types` re-exports `Ball.New` plus one internal partition per type component, backed by a shared `Core` partition for base and meta declarations.
 
 ## Design themes
 
@@ -21,6 +21,7 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 
 | Module | Contents |
 | --- | --- |
+| [placement new](modules/new.md) | `Ball.New`: freestanding placement `new` and its matching placement `delete` |
 | [base](modules/base.md) | C-compatible base layer: architecture/fixed-width integer aliases, character types, platform macros, assertions, CRT imports |
 | [meta](modules/meta.md) | Metaprogramming toolkit: type traits, packs, sequences, fixed-width metadata, Fibonacci-hash constants, type info |
 | [utilities](modules/utilities.md) | Free-function helpers: element construction/copy/shift, bit operations, integer math, digit writing, `Move`/`Forward`/`Swap`, `Pair_t` |
@@ -66,6 +67,8 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 - [BTL::Pair_t](types/BTL.Pair_t.md) — key/value pair
 - [BTL::CTimeNS](types/BTL.CTimeNS.md) — nanosecond time value
 
-## Build
+## Build and integration
 
-The root [CMakeLists.txt](../CMakeLists.txt) builds a static library `ball` (output name `ball-types`, C 17 / C++ 20) from three C/C++ sources (`memory.c`, `time.c`, `c/assert.cpp`); everything else is header-only. Options: `BALL_ENABLE_ASSERT` (runtime asserts), `BALL_ENABLE_MODULES` (C++20 module file set), `BALL_ENABLE_TESTS` (CTest executable defined in [cmake/ball/types/tests.cmake](../cmake/ball/types/tests.cmake); test cases live in [src/ball/types/tests/](../src/ball/types/tests/)).
+The root [CMakeLists.txt](../CMakeLists.txt) builds a static library `ball` (alias `Ball::BTL`, output name `ball-types`, C 17 / C++ 20) from three C/C++ sources (`memory.c`, `time.c`, `c/assert.cpp`); everything else is header-only. Options: `BALL_ENABLE_ASSERT` (runtime asserts), `BALL_ENABLE_MODULES` (public `Ball.New`, `Ball.Types`, and `Ball.Time` module file set plus the internal `Ball.Types` partitions), `BALL_ENABLE_TESTS` (CTest executables defined in [cmake/ball/types/tests.cmake](../cmake/ball/types/tests.cmake) and [cmake/ball/types/base/tests.cmake](../cmake/ball/types/base/tests.cmake)). Enabling tests forces `BALL_ENABLE_MODULES` and `BALL_TEST_ENABLE_MODULES` on. Every container case has a `Ball.Types:Tests.CaseNN` partition interface and one or more `Ball.Types` implementation units; [src/ball/types/tests/main.cpp](../src/ball/types/tests/main.cpp) imports every case partition directly. Each test imports only the component partitions it uses (`:Vector`, `:String`, `:HashMap`, and so on), plus `Ball.New` and `Ball.Time` where required; there is no umbrella `import Ball.Types;` or header-mode test branch. Module and test builds require CMake 3.28 or newer.
+
+GCC 14 and AppleClang fall back to the supported header-only library build. GCC 14 cannot reliably consume Ball's partition BMIs, while AppleClang does not provide the dependency scanning required by CMake for C++20 modules. Upstream Clang and MSVC continue to build the public modules and the module-based test suite.

@@ -6,6 +6,6 @@
 // Determine whether a T lvalue can be assigned from a const lvalue of T.
 template < typename T > struct MIsCopyAssignable { static constexpr bool VALUE = __is_assignable( T &, const T & ); };
 
-template < typename T > static constexpr bool IS_COPY_ASSIGNABLE = MIsCopyAssignable< T >::VALUE;
+template < typename T > inline constexpr bool IS_COPY_ASSIGNABLE = MIsCopyAssignable< T >::VALUE;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_META_ISCOPYASSIGNABLE_HPP_ )

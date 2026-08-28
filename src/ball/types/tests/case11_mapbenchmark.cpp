@@ -1,9 +1,24 @@
-#include "common.hpp"
+module;
+
+#include <ball/time/macros.h>
 
 #include <algorithm>
 #include <map>
 #include <unordered_map>
 #include <vector>
+
+module Ball.Types;
+
+import Ball.New;
+import Ball.Time;
+import :Core;
+import :HashMap;
+import :RBTree;
+import :String;
+import :StringView;
+import :Tests.Case11;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
 namespace
 {
@@ -76,7 +91,7 @@ namespace
 
 	struct CAdapter_HashMap
 	{
-		using C = BTL::BufferHashMap32_t< 1u << 20, size_t, size_t >;
+		using C = BTL::HashMap32_t< size_t, size_t >;
 
 		static void Reserve( C &, size_t ) {}
 		static bool Insert( C &map, size_t key ) { return map.Insert( key, key * 17u + 3u ) != map.EndIndex(); }

@@ -6,10 +6,10 @@
 #	include "xvalue.hpp"
 
 template < class V, typename T >
-static constexpr bool IS_PACKED_STORAGE_BY = V::template TYPE_HAS_PACKED_BITS< T >;
+inline constexpr bool IS_PACKED_STORAGE_BY = V::template TYPE_HAS_PACKED_BITS< T >;
 
 template < class V, typename T >
-static constexpr size_t STORAGE_ALIGNMENT_BY = V::template STORAGE_ALIGNMENT< T >;
+inline constexpr size_t STORAGE_ALIGNMENT_BY = V::template STORAGE_ALIGNMENT< T >;
 
 template < auto K, typename TPACK >
 constexpr decltype( auto ) Get( TPACK &pack ) noexcept

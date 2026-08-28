@@ -3,26 +3,28 @@
 
 #	pragma once
 
-#	include "base/arch.h"
-#	include "base/fixed.h"
-#	include "c/assert/static.h"
-#	include "c/assert.h"
-#	include "meta/enableif.hpp"
-#	include "meta/first.hpp"
-#	include "meta/indexof.hpp"
-#	include "meta/indextype.hpp"
-#	include "meta/isintegral.hpp"
-#	include "meta/issame.hpp"
-#	include "meta/select.hpp"
-#	include "meta/sequence.hpp"
-#	include "meta/typecount.hpp"
-#	include "meta/xvalue.hpp"
-#	include "elements.hpp"
-#	include "elementspack.hpp"
-#	include "fixed.hpp"
-#	include "math.hpp"
-#	include "number.hpp"
-#	include "prefetch.hpp"
+#	if !defined( BALL_ENABLE_MODULE )
+#		include "base/arch.h"
+#		include "base/fixed.h"
+#		include "c/assert/static.h"
+#		include "c/assert.h"
+#		include "meta/enableif.hpp"
+#		include "meta/first.hpp"
+#		include "meta/indexof.hpp"
+#		include "meta/indextype.hpp"
+#		include "meta/isintegral.hpp"
+#		include "meta/issame.hpp"
+#		include "meta/select.hpp"
+#		include "meta/sequence.hpp"
+#		include "meta/typecount.hpp"
+#		include "meta/xvalue.hpp"
+#		include "elements.hpp"
+#		include "elementspack.hpp"
+#		include "fixed.hpp"
+#		include "math.hpp"
+#		include "number.hpp"
+#		include "prefetch.hpp"
+#	endif
 
 #	ifndef BALL_FIND_BATCH_COUNT
 #		define BALL_FIND_BATCH_COUNT 4

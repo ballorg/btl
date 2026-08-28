@@ -99,7 +99,7 @@ The AI agent may introduce additional subdirectories when the repository becomes
 The repository-level `AGENTS.md` and `CLAUDE.md` files must reference this specification:
 
 ```markdown
-[`docs/DATA_STRUCTURES.md`](docs/DATA_STRUCTURES.md)
+[`docs/DATA_STRUCTURES.md`](DATA_STRUCTURES.md)
 ```
 
 Both files must state that documentation maintenance is mandatory.
@@ -760,7 +760,7 @@ For example, `CVector` must not automatically be documented as behaving identica
 ## Ball Documentation
 
 The authoritative documentation workflow is defined in
-[`docs/DATA_STRUCTURES.md`](docs/DATA_STRUCTURES.md).
+[`docs/DATA_STRUCTURES.md`](DATA_STRUCTURES.md).
 
 When adding, modifying, renaming, moving, or removing a relevant C++ type,
 update the corresponding documentation under `docs/` in the same change.
@@ -788,7 +788,7 @@ outdated.
 
 ## Ball Documentation Maintenance
 
-Read [`docs/DATA_STRUCTURES.md`](docs/DATA_STRUCTURES.md) before changing
+Read [`docs/DATA_STRUCTURES.md`](DATA_STRUCTURES.md) before changing
 Ball data structures.
 
 Documentation under `docs/` must be populated and maintained automatically

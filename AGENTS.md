@@ -1,6 +1,6 @@
 # Agent Instructions — Ball
 
-Ball is a freestanding C++20 container/utility library (namespace `BTL`, optional C++20 modules `Ball.Types` / `Ball.Time`). Headers live under `include/ball/`, the few compiled sources under `src/ball/`, tests under `src/ball/types/tests/`.
+Ball is a freestanding C++20 container/utility library (namespace `BTL`, optional public C++20 modules `Ball.Types` / `Ball.Time`). Headers and module interfaces live under `include/ball/`, the few compiled sources under `src/ball/`, tests under `src/ball/types/tests/`.
 
 ## Ball Documentation
 
@@ -30,4 +30,4 @@ A code change is incomplete while its Ball documentation is missing or outdated.
 
 ## Build and tests
 
-CMake ≥ 3.20; options `BALL_ENABLE_ASSERT`, `BALL_ENABLE_MODULES`, `BALL_ENABLE_TESTS`. Tests are one CTest executable (`ball-tests`) assembled from the `caseNN_*` translation units listed in [cmake/ball/types/tests.cmake](cmake/ball/types/tests.cmake); new test cases must be added there and declared in [src/ball/types/tests/common.hpp](src/ball/types/tests/common.hpp).
+CMake ≥ 3.20 for header mode and ≥ 3.28 for modules; options `BALL_ENABLE_ASSERT`, `BALL_ENABLE_MODULES`, `BALL_ENABLE_TESTS`. Enabling tests forces module mode and `BALL_TEST_ENABLE_MODULES=ON`. Container tests are assembled into `ball-tests` from the `Ball.Types:Tests.CaseNN` partition interfaces and `Ball.Types` implementation units listed in [cmake/ball/types/tests.cmake](cmake/ball/types/tests.cmake); [src/ball/types/tests/main.cpp](src/ball/types/tests/main.cpp) imports every case partition. New container cases must be added to the CMake module file set and imported by `main.cpp`.

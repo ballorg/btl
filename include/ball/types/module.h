@@ -1,0 +1,8 @@
+#ifndef _INCLUDE_BALL_TYPES_MODULE_H_
+#	define _INCLUDE_BALL_TYPES_MODULE_H_
+
+#	define BALL_ENABLE_MODULE
+#	undef BALL_EXPORT
+#	define BALL_EXPORT export
+
+#endif // !defined( _INCLUDE_BALL_TYPES_MODULE_H_ )

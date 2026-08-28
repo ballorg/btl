@@ -1,7 +1,24 @@
-#include "common.hpp"
+module;
+
+#include <ball/types/c/assert/static.h>
+#include <ball/time/macros.h>
 
 #include <string>
 #include <vector>
+
+module Ball.Types;
+
+import Ball.New;
+import Ball.Time;
+import :Bits;
+import :Core;
+import :Hash;
+import :Math;
+import :String;
+import :StringView;
+import :Tests.Case07;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
 namespace
 {

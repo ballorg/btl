@@ -21,7 +21,7 @@ Plain aggregate semantics; members are direct subobjects.
 
 ## Type Relationships
 
-Used as the element type in the container test cases ([tests/common.hpp](../../src/ball/types/tests/common.hpp)).
+Used as the element type in the vector test cases ([tests/vector_case.hpp](../../src/ball/types/tests/vector_case.hpp)).
 
 ## Operations
 

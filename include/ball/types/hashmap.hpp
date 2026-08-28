@@ -3,35 +3,26 @@
 
 #	pragma once
 
-#	include "base/arch.h"
-#	include "base/fixed.h"
-#	include "bits.hpp"
-#	include "c/assert.h"
-#	include "c/nouniqueaddress.h"
-#	include "elements.hpp"
-#	include "fixed.hpp"
-#	include "hash.hpp"
-#	include "meta/fixed.hpp"
-#	include "meta/get.hpp"
-#	include "meta/indexsequence.hpp"
-#	include "meta/indextype.hpp"
-#	include "meta/xvalue.hpp"
-#	include "vector.hpp"
-#	include "reflect.hpp"
-#	include "slotiterator.hpp"
+#	if !defined( BALL_ENABLE_MODULE )
+#		include "hashmap.h"
 
-///-----------------------------------------------------------------------------
-/// @brief Iterates @p map over its occupied slots in storage order, binding each
-/// slot index to @p it.
-///
-/// @details Storage order is bucket order, permuted by hashing -- not key order.
-/// @p it holds the slot `Index_t`; read columns with `Get< TN >( it )` (or
-/// `Key`/`Value` on `CHashMap`). Safe on an empty map (the body never runs).
-///
-/// @complexity O(capacity) for the whole loop: one O(1) step per bucket.
-///-----------------------------------------------------------------------------
-#	define BALL_HASHMAP_FOREACH( map, it ) \
-		for ( auto it = ( map ).FirstIndex(); it != ( map ).EndIndex(); it = ( map ).NextIndex( it ) )
+#		include "base/arch.h"
+#		include "base/fixed.h"
+#		include "bits.hpp"
+#		include "c/assert.h"
+#		include "c/nouniqueaddress.h"
+#		include "elements.hpp"
+#		include "fixed.hpp"
+#		include "hash.hpp"
+#		include "meta/fixed.hpp"
+#		include "meta/get.hpp"
+#		include "meta/indexsequence.hpp"
+#		include "meta/indextype.hpp"
+#		include "meta/xvalue.hpp"
+#		include "vector.hpp"
+#		include "reflect.hpp"
+#		include "slotiterator.hpp"
+#	endif
 
 ///-----------------------------------------------------------------------------
 /// @brief Per-slot occupancy state of an open-addressing hash table.

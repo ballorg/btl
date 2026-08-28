@@ -1,6 +1,28 @@
-#include "common.hpp"
+module;
+
+
+module Ball.Types;
+
+import Ball.New;
+import :Core;
+import :Delegate;
+import :String;
+import :StringView;
+import :Tests.Case10;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
 static constexpr BTL::StringView_t s_svDelegateName = "BTL::Delegate_t", s_svMulticastDelegateName = "BTL::MulticastDelegate_t";
+
+static void LogDelegateCheck( TestsOutput_t &sOut, BTL::StringView_t svContainerName, BTL::StringView_t svLabel, bool bOk )
+{
+	sOut.AppendMultiple( svContainerName, ": ", svLabel, ": " );
+
+	if ( bOk )
+		sOut += "ok\n";
+	else
+		sOut += "mismatch\n";
+}
 
 struct DelegateTestObject_t
 {

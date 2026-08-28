@@ -1,4 +1,20 @@
-#include "common.hpp"
+module;
+
+#include <stddef.h>
+
+#include <ball/types/reflect.h>
+
+module Ball.Types;
+
+import Ball.New;
+import :Core;
+import :Reflect;
+import :String;
+import :StringView;
+import :Tests.Case06;
+import :Vector;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
 namespace
 {

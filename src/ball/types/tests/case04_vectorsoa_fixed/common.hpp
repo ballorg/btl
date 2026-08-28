@@ -1,10 +1,10 @@
-#ifndef _SRC_BALL_TYPES_TESTS_CASE04_MULTIVECTOR_FIXED_COMMON_HPP_
-#	define _SRC_BALL_TYPES_TESTS_CASE04_MULTIVECTOR_FIXED_COMMON_HPP_
+#ifndef _SRC_BALL_TYPES_TESTS_CASE04_VECTORSOA_FIXED_COMMON_HPP_
+#	define _SRC_BALL_TYPES_TESTS_CASE04_VECTORSOA_FIXED_COMMON_HPP_
 
-#include "../common.hpp"
+#include <vector>
 
 template < typename F, BTL::bits_t BITS >
-bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
+bool RunFixedVectorSoACase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 {
 	using T = typename F::Type;
 	using Traits_t = BTL::MFixedMetadata< F >;
@@ -149,8 +149,8 @@ bool RunFixedMultiVectorCase( TestsOutput_t &sOut, BTL::StringView_t svFamily )
 	return bOk;
 }
 
-void Case04_MultiVector_Fixed_Signed( TestsOutput_t &sOut, size_t &nTotal, size_t &nFailed );
-void Case04_MultiVector_Fixed_Uncertain( TestsOutput_t &sOut, size_t &nTotal, size_t &nFailed );
-void Case04_MultiVector_Fixed_Unsiged( TestsOutput_t &sOut, size_t &nTotal, size_t &nFailed );
+void Case04_VectorSoA_Fixed_Signed( TestsOutput_t &sOut, size_t &nTotal, size_t &nFailed );
+void Case04_VectorSoA_Fixed_Uncertain( TestsOutput_t &sOut, size_t &nTotal, size_t &nFailed );
+void Case04_VectorSoA_Fixed_Unsiged( TestsOutput_t &sOut, size_t &nTotal, size_t &nFailed );
 
-#endif // !defined( _SRC_BALL_TYPES_TESTS_CASE04_MULTIVECTOR_FIXED_COMMON_HPP_ )
+#endif // !defined( _SRC_BALL_TYPES_TESTS_CASE04_VECTORSOA_FIXED_COMMON_HPP_ )

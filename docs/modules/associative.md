@@ -4,6 +4,8 @@
 
 Key-addressed containers built as structure-of-arrays over [CBufferVector](../types/BTL.CVector.md): a red-black tree (ordered, unique keys) and an open-addressing hash map (unordered, unique keys). Both follow the same composition pattern — a policy empty base (comparator / hash policy), metadata columns in front of the payload columns (key + values), a protected `Base/Impl` split, and thin public wrappers in heap-backed and inline-buffer flavors.
 
+In module builds the tree and hash-map declarations are owned independently by `Ball.Types:RBTree` and `Ball.Types:HashMap`; their hashing and iterator support likewise live in `Hash` and `SlotIterator`. The public `Ball.Types` module re-exports every partition.
+
 ## Responsibilities
 
 - Ordered map/set/multi-column map: O(log n) insert/find/erase, in-order iteration ([CRBTree family](../types/BTL.CRBTree.md)).
@@ -20,7 +22,7 @@ Key-addressed containers built as structure-of-arrays over [CBufferVector](../ty
 | Hash policy | `CFibonacciHash< U, INDEX >` | `Hash_t`, `Hash8_t` … `Hash64_t` |
 | Comparator | `CRBTreeLess< T >` (and transparent `CRBTreeLess< void >`) | — |
 
-Iteration macros: `BALL_RBTREE_FOREACH(_REVERSE)` (key order), `BALL_RBTREE_FOREACH_UNORDERED(_REVERSE)` (dense slot order; the reverse form tolerates removing the current node), `BALL_HASHMAP_FOREACH` (occupied-slot storage order).
+Iteration macros: `BALL_RBTREE_FOREACH(_REVERSE)` (key order) and `BALL_RBTREE_FOREACH_UNORDERED(_REVERSE)` (dense slot order; the reverse form tolerates removing the current node) live in [rbtree.h](../../include/ball/types/rbtree.h); `BALL_HASHMAP_FOREACH` (occupied-slot storage order) lives in [hashmap.h](../../include/ball/types/hashmap.h). Include these macro-only headers explicitly when consuming `Ball.Types` as a module.
 
 ## Dependencies
 

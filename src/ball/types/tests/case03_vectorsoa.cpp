@@ -1,8 +1,26 @@
-#include "common.hpp"
+module;
 
-void Case03_MultiVector( TestsOutput_t &sOut )
+#include <stddef.h>
+
+#include <vector>
+
+module Ball.Types;
+
+import Ball.New;
+import :Core;
+import :Pair;
+import :String;
+import :StringView;
+import :Tests.Case03;
+import :Vector;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
+
+using TestPair_t = BTL::Pair_t< size_t, size_t >;
+
+void Case03_VectorSoA( TestsOutput_t &sOut )
 {
-	using C = BTL::Vector_t< size_t, uint32_t >;
+	using C = BTL::Vector_t< size_t, BTL::uint32_t >;
 
 	C vec;
 	std::vector< TestPair_t > ref;
@@ -23,7 +41,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 					break;
 				}
 
-				if ( vec.template Get< uint32_t >( i ) != static_cast< uint32_t >( ref[ i ].Second() ) )
+				if ( vec.template Get< BTL::uint32_t >( i ) != static_cast< BTL::uint32_t >( ref[ i ].Second() ) )
 				{
 					bOk = false;
 					break;
@@ -44,7 +62,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 		for ( size_t i = 0; i < nCount; ++i )
 		{
 			const size_t nFirst = nStart + i;
-			const uint32_t nSecond = static_cast< uint32_t >( nFirst * 3 + 1 );
+			const BTL::uint32_t nSecond = static_cast< BTL::uint32_t >( nFirst * 3 + 1 );
 
 			vec.AddToTail( nFirst, nSecond );
 			ref.push_back( { nFirst, nSecond } );
@@ -90,19 +108,19 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 
 	if ( !ref.empty() )
 	{
-		vec.template Get< uint32_t >( 0 ) += uint32_t( 1 );
+		vec.template Get< BTL::uint32_t >( 0 ) += BTL::uint32_t( 1 );
 		ref[ 0 ].Second() += 1;
 		auto it = vec.begin();
 		*it += size_t( 1 );
 		ref[ 0 ].First() += 1;
 		const C &constVec = vec;
 		const bool bIteratorOk = *constVec.begin() == ref[ 0 ].First()
-			&& *constVec.template begin< uint32_t >() == static_cast< uint32_t >( ref[ 0 ].Second() )
-			&& constVec.template end< uint32_t >() - constVec.template begin< uint32_t >() == vec.Count()
+			&& *constVec.template begin< BTL::uint32_t >() == static_cast< BTL::uint32_t >( ref[ 0 ].Second() )
+			&& constVec.template end< BTL::uint32_t >() - constVec.template begin< BTL::uint32_t >() == vec.Count()
 			&& vec.end() - vec.begin() == vec.Count();
 
-		const bool bFrontOk = vec.template Front< size_t >() == ref.front().First() && vec.template Front< uint32_t >() == static_cast< uint32_t >( ref.front().Second() );
-		const bool bBackOk = vec.template Back< size_t >() == ref.back().First() && vec.template Back< uint32_t >() == static_cast< uint32_t >( ref.back().Second() );
+		const bool bFrontOk = vec.template Front< size_t >() == ref.front().First() && vec.template Front< BTL::uint32_t >() == static_cast< BTL::uint32_t >( ref.front().Second() );
+		const bool bBackOk = vec.template Back< size_t >() == ref.back().First() && vec.template Back< BTL::uint32_t >() == static_cast< BTL::uint32_t >( ref.back().Second() );
 
 		sOut.AppendMultiple( "BTL::Vector_t: typed access: " );
 
@@ -112,11 +130,11 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 			sOut += "mismatch\n";
 	}
 
-	auto funcFindRow = [ & ]( size_t nFirst, uint32_t nSecond ) -> size_t
+	auto funcFindRow = [ & ]( size_t nFirst, BTL::uint32_t nSecond ) -> size_t
 	{
 		for ( size_t i = 0; i < vec.Count(); ++i )
 		{
-			if ( vec.template Get< size_t >( i ) == nFirst && vec.template Get< uint32_t >( i ) == nSecond )
+			if ( vec.template Get< size_t >( i ) == nFirst && vec.template Get< BTL::uint32_t >( i ) == nSecond )
 			{
 				return i;
 			}
@@ -129,7 +147,7 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	{
 		const size_t iProbe = ref.size() / 2;
 		const size_t nProbeFirst = ref[ iProbe ].First();
-		const uint32_t nProbeSecond = static_cast< uint32_t >( ref[ iProbe ].Second() );
+		const BTL::uint32_t nProbeSecond = static_cast< BTL::uint32_t >( ref[ iProbe ].Second() );
 
 		const size_t iFindRow = vec.Find( nProbeFirst, nProbeSecond );
 		const size_t iRefFindRow = funcFindRow( nProbeFirst, nProbeSecond );
@@ -192,12 +210,12 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 		else
 			sOut.AppendMultiple( "mismatch (Cfirst=", iFindFirstCol, ", Clast=", iRFindFirstCol, ", Rfirst=", iRefFindFirstCol, ", Rlast=", iRefRFindFirstCol, ")\n" );
 
-		const size_t iFindSecondCol = vec.template FindBy< uint32_t >( nProbeSecond );
+		const size_t iFindSecondCol = vec.template FindBy< BTL::uint32_t >( nProbeSecond );
 		size_t iRefFindSecondCol = C::INVALID_INDEX;
 
 		for ( size_t i = 0; i < ref.size(); ++i )
 		{
-			if ( static_cast< uint32_t >( ref[ i ].Second() ) == nProbeSecond )
+			if ( static_cast< BTL::uint32_t >( ref[ i ].Second() ) == nProbeSecond )
 			{
 				iRefFindSecondCol = i;
 				break;
@@ -213,10 +231,10 @@ void Case03_MultiVector( TestsOutput_t &sOut )
 	}
 
 	const size_t nMissingFirst = ~size_t( 0 );
-	const uint32_t nMissingSecond = ~uint32_t( 0 );
+	const BTL::uint32_t nMissingSecond = ~BTL::uint32_t( 0 );
 	const size_t iMissing = vec.Find( nMissingFirst, nMissingSecond );
 	const size_t iMissingByFirst = vec.template FindBy< size_t >( nMissingFirst );
-	const size_t iMissingBySecond = vec.template FindBy< uint32_t >( nMissingSecond );
+	const size_t iMissingBySecond = vec.template FindBy< BTL::uint32_t >( nMissingSecond );
 
 	sOut.AppendMultiple( "BTL::Vector_t: " );
 

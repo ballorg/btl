@@ -18,7 +18,7 @@ Family members:
 - **Namespace:** `BTL`
 - **Module:** [associative](../modules/associative.md)
 - **Kind:** class templates; `CHashMapBase` derives from the hash policy `C` (default [CFibonacciHash](BTL.CFibonacciHash.md), empty base) and from `CBufferVector< I, N, EHashSlotState, HashKeyColumn_t< K >, Ts... >`
-- **Declared in:** [include/ball/types/hashmap.hpp](../../include/ball/types/hashmap.hpp)
+- **Declared in:** [include/ball/types/hashmap.hpp](../../include/ball/types/hashmap.hpp); iteration macro in [include/ball/types/hashmap.h](../../include/ball/types/hashmap.h)
 
 ## Purpose
 

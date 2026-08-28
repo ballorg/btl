@@ -25,6 +25,6 @@ struct MConditional< false, T, F >
 };
 
 template < bool B, typename T, typename F >
-using Conditional_t = typename MConditional<B, T, F>::Type;
+using Conditional_t = typename MConditional< B, T, F >::Type;
 
 #endif // !defined( _INCLUDE_BALL_META_CONDITIONAL_HPP_ )

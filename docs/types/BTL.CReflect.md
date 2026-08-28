@@ -9,7 +9,7 @@ A value-like wrapper with two jobs: (1) the storage cell of reflected fields dec
 - **Namespace:** `BTL`
 - **Module:** [reflection](../modules/reflection.md)
 - **Kind:** class template `CReflect< typename T, typename F = MReflectNone >` (`F` is the metadata/tag base); free functions `ReflectAccess`, `ReflectAssign`, `ReflectSerialize`, `ReflectDeserialize`; macros `BALL_REFLECT_TAGGED(_TEMPLATE)`, `BALL_REFLECT_BEGIN/END`, `BALL_REFLECT_FIELD` (alias `BALL_REFLECT`), `BALL_REFLECT_BASE`, `BALL_REFLECT_TYPE`, `BALL_REFLECT_FIELD_SPEC`
-- **Declared in:** [include/ball/types/reflect.hpp](../../include/ball/types/reflect.hpp); descriptor machinery under [include/ball/types/meta/](../../include/ball/types/meta/) (`reflectfield.hpp`, `reflectdescriptor.hpp`, `reflecttraits.hpp`, `reflectforeach.hpp`)
+- **Declared in:** [include/ball/types/reflect.hpp](../../include/ball/types/reflect.hpp); macros in [include/ball/types/reflect.h](../../include/ball/types/reflect.h); descriptor machinery under [include/ball/types/meta/](../../include/ball/types/meta/) (`reflectfield.hpp`, `reflectdescriptor.hpp`, `reflecttraits.hpp`, `reflectforeach.hpp`)
 
 ## Purpose
 

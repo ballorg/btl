@@ -4,6 +4,8 @@
 
 Character-sequence types built on the container stack: a non-owning [CStringView](../types/BTL.CStringView.md) (a `CView` of characters with string semantics) and an owning [CString](../types/BTL.CString.md) (a `CStringImpl` layer over the vector stack that adds text formatting and trimming). Both are templated on the index type `I` and character type `T`, with alias families for `char_t`, `wchar_t`, `char8_t`, `char16_t`, `char32_t` crossed with index widths 8/16/32/64 (`String32_t`, `UTF8StringView_t`, `WBufferString_t< N >`, …).
 
+In module builds `CStringView` and the owning `CString` family belong to the independent `Ball.Types:StringView` and `Ball.Types:String` partitions; the public `Ball.Types` module re-exports both.
+
 ## Responsibilities
 
 - Length-delimited, non-owning string ranges with C-string interop (`String()` always returns a valid, possibly empty, zero-terminated pointer for views constructed from C strings).

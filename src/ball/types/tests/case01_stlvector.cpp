@@ -1,4 +1,23 @@
-#include "common.hpp"
+module;
+
+#include <ball/time/macros.h>
+
+#include <algorithm>
+#include <vector>
+
+module Ball.Types;
+
+import Ball.New;
+import Ball.Time;
+import :Pair;
+import :String;
+import :Tests.Case01;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
+
+using TestPair_t = BTL::Pair_t< size_t, size_t >;
+
+#include "vector_case.hpp"
 
 struct CAdapter_StdVector
 {

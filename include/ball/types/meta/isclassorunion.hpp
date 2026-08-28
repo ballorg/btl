@@ -9,6 +9,6 @@
 // Determine whether T is a class or a union type.
 template < typename T > struct MIsClassOrUnion { static constexpr bool VALUE = MIsClass< T >::VALUE || MIsUnion< T >::VALUE; };
 
-template < typename T > static constexpr bool IS_CLASS_OR_UNION = MIsClassOrUnion< T >::VALUE;
+template < typename T > inline constexpr bool IS_CLASS_OR_UNION = MIsClassOrUnion< T >::VALUE;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_META_ISCLASSORUNION_HPP_ )

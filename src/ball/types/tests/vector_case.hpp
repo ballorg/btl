@@ -1,21 +1,8 @@
-#ifndef _SRC_BALL_TYPES_TESTS_COMMON_HPP_
-#	define _SRC_BALL_TYPES_TESTS_COMMON_HPP_
+#ifndef _SRC_BALL_TYPES_TESTS_VECTOR_CASE_HPP_
+#	define _SRC_BALL_TYPES_TESTS_VECTOR_CASE_HPP_
 
-#	ifdef BALL_ENABLE_MODULES
-import Ball.Time;
-import Ball.Types;
-#	else
-#		include <ball/time.hpp>
-#		include <ball/types.hpp>
-#	endif
-
-#	include <algorithm>
-#	include <stdint.h>
-#	include <stdio.h>
-#	include <vector>
-
-using TestsOutput_t = BTL::BufferString_t< 4096 >;
-using TestPair_t = BTL::Pair_t< size_t, size_t >;
+#include <algorithm>
+#include <vector>
 
 template < class A >
 bool CheckContainerMatches( const typename A::C &container, const std::vector< TestPair_t > &expected, TestsOutput_t &sOut )
@@ -200,25 +187,4 @@ void RunVectorCase( TestsOutput_t &sOut, const BTL::StringView_t &svCaseLabel )
 	sOut += "---\n";
 }
 
-inline void LogDelegateCheck( TestsOutput_t &sOut, BTL::StringView_t svContainerName, BTL::StringView_t svLabel, bool bOk )
-{
-	sOut.AppendMultiple( svContainerName, ": ", svLabel, ": " );
-
-	if ( bOk )
-		sOut += "ok\n";
-	else
-		sOut += "mismatch\n";
-}
-
-void Case01_STLVector( TestsOutput_t &sOut );
-void Case02_Vector( TestsOutput_t &sOut );
-void Case03_MultiVector( TestsOutput_t &sOut );
-void Case04_MultiVector_Fixed( TestsOutput_t &sOut );
-void Case05_RBTree( TestsOutput_t &sOut );
-void Case06_Reflection( TestsOutput_t &sOut );
-void Case07_Hash( TestsOutput_t &sOut );
-void Case08_HashMap( TestsOutput_t &sOut );
-void Case10_Delegate( TestsOutput_t &sOut );
-void Case11_MapBenchmark( TestsOutput_t &sOut );
-
-#endif // !defined( _SRC_BALL_TYPES_TESTS_COMMON_HPP_ )
+#endif // !defined( _SRC_BALL_TYPES_TESTS_VECTOR_CASE_HPP_ )

@@ -3,11 +3,13 @@
 
 #	pragma once
 
-#	include "base/arch.h"
-#	include "base/fixed.h"
-#	include "c/assert.h"
-#	include "c/bits.h"
-#	include "meta/fixed.hpp"
+#	if !defined( BALL_ENABLE_MODULE )
+#		include "base/arch.h"
+#		include "base/fixed.h"
+#		include "c/assert.h"
+#		include "c/bits.h"
+#		include "meta/fixed.hpp"
+#	endif
 
 /// @brief Portable bit-width implementation shared by constant-evaluation paths.
 /// @return The number of bits needed to represent `x - 1`; zero for `x <= 1`.
@@ -145,7 +147,7 @@ constexpr I BitWidth( I x )
 ///
 /// @return ceil_pow2(x), clamped to the type's highest power of two.
 template < typename I >
-static constexpr I BitCeil_Unified( I x ) noexcept
+constexpr I BitCeil_Unified( I x ) noexcept
 {
 	constexpr I NUM_BITS = MFixed< I >::BITS;
 

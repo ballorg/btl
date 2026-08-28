@@ -1,7 +1,7 @@
 #ifndef _INCLUDE_BALL_NEW_HPP_
 #	define _INCLUDE_BALL_NEW_HPP_
 
-#	include "types/base/arch.h"
+#	include "types/base/arch/size.h"
 #	include "types/c/macros.h"
 
 BALL_EXPORT inline void *operator new( size_t, size_t, [[ maybe_unused ]] void *p ) noexcept { return p; }

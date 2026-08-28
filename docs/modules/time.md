@@ -2,7 +2,7 @@
 
 ## Overview
 
-A small, standalone timing component: [include/ball/time.hpp](../../include/ball/time.hpp) (C++ wrapper, module `Ball.Time` via [time.cppm](../../include/ball/time.cppm)) over the C interface [include/ball/time.h](../../include/ball/time.h) implemented in [src/ball/types/time.c](../../src/ball/types/time.c). It is independent of `Ball.Types` (it includes only the base arch aliases).
+A small, standalone timing component: [include/ball/time.hpp](../../include/ball/time.hpp) (C++ wrapper, module `Ball.Time` via [time.cppm](../../include/ball/time.cppm)) over the C interface [include/ball/time.h](../../include/ball/time.h) implemented in [src/ball/types/time.c](../../src/ball/types/time.c). It is independent of `Ball.Types` (it includes only the base arch aliases). The profiling macros live in [include/ball/time/macros.h](../../include/ball/time/macros.h), because macros are not exported by C++20 module imports.
 
 ## Responsibilities
 
@@ -24,4 +24,4 @@ A small, standalone timing component: [include/ball/time.hpp](../../include/ball
 
 ## Relationships
 
-The test harness ([tests/main.cpp](../../src/ball/types/tests/main.cpp), [tests/common.hpp](../../src/ball/types/tests/common.hpp)) uses the profiling macros to time every test case.
+The test harness ([tests/main.cpp](../../src/ball/types/tests/main.cpp)) uses the profiling macros to time every imported test-case module.

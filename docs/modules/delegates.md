@@ -4,6 +4,8 @@
 
 Type-erased callable binding in the style of Unreal's delegates, in [delegate.hpp](../../include/ball/types/delegate.hpp): a single-cast [CDelegate](../types/BTL.CDelegate.md) that stores one bound callable (free function, member function, or lambda, each with optional pre-bound payload arguments) inside inline storage, and a [CMulticastDelegate](../types/BTL.CMulticastDelegate.md) that broadcasts to a list of `void`-returning delegates addressed by stable handles.
 
+In module builds these declarations are owned by the internal `Ball.Types:Delegate` partition, which imports `Vector` and the shared `Core`; the public `Ball.Types` module re-exports it.
+
 ## Responsibilities
 
 - Bind and invoke callables without templates at the call site: `Execute`, `ExecuteIfBound`, `IsBound`, `IsBoundTo( object )`.

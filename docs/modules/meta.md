@@ -10,7 +10,7 @@ Ball's replacement for `<type_traits>` and friends, under [include/ball/types/me
 
 `MIsSame`/`IS_SAME`, `IS_INTEGRAL`, `IS_CONST`, `IS_POINTER`, `IS_STANDARD_LAYOUT`, class/union/trivial/copyable/constructible/assignable probes (aggregated by `MTypeInfo`), `RemoveCV_t`, `RemoveReference_t`, `Decay_t`, `Conditional_t`, `EnableIf_t`, `MSelect` (type selector by boolean), `MSigned`/`MUnsigned` (signedness partners), `MFirst`, `MIndexOf` (index of a type in a pack, -1 if absent), `MIndexType` (type at index), `Void_t`.
 
-`TYPE_COUNT< Ts... >` ([typecount.hpp](../../include/ball/types/meta/typecount.hpp)) exposes `sizeof...( Ts )` as a reusable global variable template. `CViewBase` stores the corresponding count locally and owning layers expose that value through inheritance.
+`TYPE_COUNT< Ts... >` ([typecount.hpp](../../include/ball/types/meta/typecount.hpp)) exposes `sizeof...( Ts )` as a reusable inline variable template. The namespace-scope trait shorthands (`IS_INTEGRAL`, `IS_CLASS`, constructibility/assignability probes, and related values) are inline as well, giving them external linkage required for export from `Ball.Types` without changing their compile-time semantics. `CViewBase` stores the corresponding count locally and owning layers expose that value through inheritance.
 
 Vector composition uses two small detection traits kept beside the other meta helpers: `MVectorViewTypes` ([vectorviewtypes.hpp](../../include/ball/types/meta/vectorviewtypes.hpp)) selects either `B::View_t`/`B::ConstView_t` or the default `CView` pair, while `MVectorAllocatorType` ([vectorallocatortype.hpp](../../include/ball/types/meta/vectorallocatortype.hpp)) unwraps an allocator adapter's `Base_t` when present.
 
@@ -19,7 +19,7 @@ Vector composition uses two small detection traits kept beside the other meta he
 - `MPack< TI, Ts... >` ([pack.hpp](../../include/ball/types/meta/pack.hpp)) — a recursive compile-time value pack storing one value per `Ts`, accessed by type or index through `BaseBy`; `MPointerPack` is the pointer flavor. Used by delegates for stored payloads.
 - `MSequence`/`MMakeSequence` ([sequence.hpp](../../include/ball/types/meta/sequence.hpp)) and `MIndexSequence`/`MakeIndexSequence_t` ([indexsequence.hpp](../../include/ball/types/meta/indexsequence.hpp)) — index-sequence machinery for fold expansion.
 - `MTuple`/`TupleCat_t` ([tuple.hpp](../../include/ball/types/meta/tuple.hpp)) — a minimal type list used by the reflection descriptors.
-- `Get< K >( pack )` / `Get< T >( pack )` ([get.hpp](../../include/ball/types/meta/get.hpp)) — uniform free-function access to anything exposing `BaseBy` (packs, views, multivectors). The vector-specific type, access, search, storage, shift, initialization, and packed-operation shorthands are separated into [get/vector.hpp](../../include/ball/types/meta/get/vector.hpp) and included by `get.hpp`.
+- `Get< K >( pack )` / `Get< T >( pack )` ([get.hpp](../../include/ball/types/meta/get.hpp)) — uniform free-function access to anything exposing `BaseBy` (packs, views, vector SoA storage). The vector-specific type, access, search, storage, shift, initialization, and packed-operation shorthands are separated into [get/vector.hpp](../../include/ball/types/meta/get/vector.hpp) and included by `get.hpp`.
 
 ### Value utilities
 
@@ -31,7 +31,7 @@ Vector composition uses two small detection traits kept beside the other meta he
 
 ### Integer metadata
 
-- `MFixed< T >`, `FixedTag_t`, `MFixedBase`, and `MFixedMetadata< T >` ([fixed.hpp](../../include/ball/types/meta/fixed.hpp)) — base-independent width, normalization, packed-storage, signedness, min/max, and all-bits `INVALID` metadata. `include/ball/types/fixed.hpp` adds the wrappers backed by Ball's base integer aliases.
+- `MFixed< T >`, `FixedTag_t`, `MFixedBase`, and `MFixedMetadata< T >` ([fixed.hpp](../../include/ball/types/meta/fixed.hpp)) — base-independent width, normalization, packed-storage, signedness, min/max, and all-bits `INVALID` metadata. The enum-specialization macros live separately in the macro-only [fixed.h](../../include/ball/types/meta/fixed.h), so module partitions and consumers can obtain them without redeclaring the traits. `include/ball/types/fixed.hpp` adds the wrappers backed by Ball's base integer aliases.
 - `MFibonacci< U >` ([fibonacci.hpp](../../include/ball/types/meta/fibonacci.hpp)) — the golden-ratio multiplier and FNV-style fold seed for any unsigned width 1..64; see [BTL::CFibonacciHash](../types/BTL.CFibonacciHash.md).
 - `IS_MEMMOVE_SAFE< T >` ([ismemmovesafe.hpp](../../include/ball/types/meta/ismemmovesafe.hpp)) — variable-template form of `MIsMemmoveSafe`; `MTypeInfo< T >` ([typeinfo.hpp](../../include/ball/types/meta/typeinfo.hpp)) mirrors it through its `IS_MEMMOVE_SAFE` member, which drives the containers' choice between byte-relocation and move-construct/destroy relocation.
 

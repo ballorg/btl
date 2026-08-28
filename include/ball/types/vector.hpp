@@ -3,27 +3,29 @@
 
 #	pragma once
 
-#	include "base/arch.h"
-#	include "c/assert.h"
-#	include "fixed.hpp"
-#	include "meta/fixed.hpp"
-#	include "meta/first.hpp"
-#	include "meta/get.hpp"
-#	include "meta/indexsequence.hpp"
-#	include "meta/isintegral.hpp"
-#	include "meta/conditional.hpp"
-#	include "meta/typeinfo.hpp"
-#	include "meta/vectorallocatortype.hpp"
-#	include "meta/vectorviewtypes.hpp"
-#	include "meta/xvalue.hpp"
-#	include "allocator.hpp"
-#	include "bits.hpp"
-#	include "elements.hpp"
-#	include "memory.h"
-#	include "math.hpp"
-#	include "view.hpp"
-#	include "viewbase.hpp"
-#	include "vectoriterator.hpp"
+#	if !defined( BALL_ENABLE_MODULE )
+#		include "base/arch.h"
+#		include "c/assert.h"
+#		include "fixed.hpp"
+#		include "meta/fixed.hpp"
+#		include "meta/first.hpp"
+#		include "meta/get.hpp"
+#		include "meta/indexsequence.hpp"
+#		include "meta/isintegral.hpp"
+#		include "meta/conditional.hpp"
+#		include "meta/typeinfo.hpp"
+#		include "meta/vectorallocatortype.hpp"
+#		include "meta/vectorviewtypes.hpp"
+#		include "meta/xvalue.hpp"
+#		include "allocator.hpp"
+#		include "bits.hpp"
+#		include "elements.hpp"
+#		include "memory.h"
+#		include "math.hpp"
+#		include "view.hpp"
+#		include "viewbase.hpp"
+#		include "vectoriterator.hpp"
+#	endif
 
 template < class A, class B, typename I, I N, typename TI, typename... Ts >
 class CVectorBase : public A, public B
@@ -40,8 +42,8 @@ public:
 	using FirstColumn_t = typename MFirst< Ts... >::Type;
 	using ViewTypes_t = MVectorViewTypes< Base_t, I, N, FirstColumn_t >;
 	using Base_t::TYPE_COUNT;
-	using View_t = Conditional_t< TYPE_COUNT == 1, typename ViewTypes_t::View_t, Base_t >;
-	using ConstView_t = Conditional_t< TYPE_COUNT == 1, typename ViewTypes_t::ConstView_t, typename Base_t::Const_t >;
+	using View_t = Conditional_t< Base_t::TYPE_COUNT == 1, typename ViewTypes_t::View_t, Base_t >;
+	using ConstView_t = Conditional_t< Base_t::TYPE_COUNT == 1, typename ViewTypes_t::ConstView_t, typename Base_t::Const_t >;
 	template < I GN > using GrowableView_t = CView< I, typename MFirst< Ts... >::Type, GN >;
 	template < I GN > using ConstGrowableView_t = CView< I, const typename MFirst< Ts... >::Type, GN >;
 
@@ -439,7 +441,7 @@ protected:
 
 		uint8_t *pNewData = reinterpret_cast< uint8_t * >( BaseAllocator_t::Alloc( BlockSize( nNewCapacity ), BlockAlignment() ) );
 
-		BALL_ASSERT_MESSAGE( pNewData != nullptr, "Failed to allocate multivector storage" );
+		BALL_ASSERT_MESSAGE( pNewData != nullptr, "Failed to allocate vector SoA storage" );
 		( CopyToDataBy< Ts >( pNewData, nNewCapacity, nCopyCount ), ... );
 
 		if ( bWasOverflow )
@@ -1263,8 +1265,8 @@ public:
 	using Fixed_t = MFixed< Index_t >;
 	using Unsigned_t = typename Fixed_t::Unsigned_t;
 	using Base_t::TYPE_COUNT;
-	using View_t = Conditional_t< TYPE_COUNT == 1, CView< I, T, Base_t::FIXED_COUNT >, typename Base_t::View_t >;
-	using ConstView_t = Conditional_t< TYPE_COUNT == 1, CView< I, const T, Base_t::FIXED_COUNT >, typename Base_t::ConstView_t >;
+	using View_t = Conditional_t< Base_t::TYPE_COUNT == 1, CView< I, T, Base_t::FIXED_COUNT >, typename Base_t::View_t >;
+	using ConstView_t = Conditional_t< Base_t::TYPE_COUNT == 1, CView< I, const T, Base_t::FIXED_COUNT >, typename Base_t::ConstView_t >;
 	template < I GN > using GrowableView_t = CView< I, T, GN >;
 	template < I GN > using ConstGrowableView_t = CView< I, const T, GN >;
 

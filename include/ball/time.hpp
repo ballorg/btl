@@ -1,23 +1,11 @@
 #ifndef _INCLUDE_BALL_TIME_HPP_
 #	define _INCLUDE_BALL_TIME_HPP_
 
-#	define BALL_SIZE_DEFINE_GLOBAL 1
 #	include "types/base/arch/size.h"
-#	undef BALL_SIZE_DEFINE_GLOBAL
+#	include "types/c/macros.h"
+#	include "time/macros.h"
 
-// Simple profiling helpers:
-//   - BALL_PROF_BEGIN( tag ): capture start CPU time of current thread
-//   - BALL_PROF_END( tag ):   create CTimeNS with elapsed CPU time since BEGIN
-// Usage (supply a unique tag per measurement):
-//   BALL_PROF_BEGIN( Case01 );
-//   ... work ...
-//   auto elapsed = BALL_PROF_END( Case01 ); // CTimeNS holding elapsed nanoseconds
-#	define BALL_PROF_CAT_IMPL( x, y ) x##y
-#	define BALL_PROF_CAT( x, y ) BALL_PROF_CAT_IMPL( x, y )
-#	define BALL_PROF_BEGIN( tag ) const BTL::timens_t BALL_PROF_CAT( __ballProfBeginNS_, tag ) = BTL::GetTimeNS()
-#	define BALL_PROF_END( tag ) BTL::CTimeNS( BTL::GetTimeNS() - BALL_PROF_CAT( __ballProfBeginNS_, tag ) )
-
-namespace BTL
+BALL_EXPORT namespace BTL
 {
 #	include "types/base/arch.h"
 #	include "time.h"

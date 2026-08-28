@@ -1,6 +1,21 @@
-#include "common.hpp"
+module;
+
+#include <ball/types/hashmap.h>
+#include <ball/time/macros.h>
 
 #include <unordered_map>
+
+module Ball.Types;
+
+import Ball.New;
+import Ball.Time;
+import :Core;
+import :HashMap;
+import :String;
+import :StringView;
+import :Tests.Case08;
+
+using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
 namespace
 {

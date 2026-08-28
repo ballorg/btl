@@ -26,6 +26,6 @@ template <> struct MIsIntegral< long long >             { static constexpr bool 
 template <> struct MIsIntegral< unsigned long long >    { static constexpr bool VALUE = true; };
 
 template < typename T >
-static constexpr bool IS_INTEGRAL = MIsIntegral< RemoveCV_t< T > >::VALUE;
+inline constexpr bool IS_INTEGRAL = MIsIntegral< RemoveCV_t< T > >::VALUE;
 
 #endif // !defined( _INCLUDE_BALL_TYPES_META_ISINTEGRAL_HPP_ )

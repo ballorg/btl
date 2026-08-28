@@ -52,7 +52,7 @@ Owns its elements and its shared heap allocation through the allocator policy in
 ## Invariants
 
 - Capacity is exactly `BitCeil( Count() )`; elements `[0, Count())` are constructed, storage beyond is raw (or zeroed, for packed storage).
-- `TYPE_COUNT` is declared once by `CViewBase` as the compile-time SoA column count and exposed by the owning layers through `using Base_t::TYPE_COUNT`.
+- `TYPE_COUNT` is declared once by `CViewBase` as the compile-time SoA column count and exposed by the owning layers through `using Base_t::TYPE_COUNT`; dependent view-selection aliases qualify it as `Base_t::TYPE_COUNT` so it remains a constant expression across C++ module partitions on MSVC.
 - Not thread-safe; concurrent access requires external synchronization.
 
 ## Invalidation Rules

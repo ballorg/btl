@@ -10,8 +10,6 @@ typedef float float_t;
 typedef double double_t;
 typedef long double ldouble_t;
 
-#	define BALL_SIZE_IMPORT_OR_DEFINE_LOCAL 1
 #	include "size.h"
-#	undef BALL_SIZE_IMPORT_OR_DEFINE_LOCAL
 
 #endif // !defined( _INCLUDE_BALL_TYPES_BASE_ARCH_UNCERTAIN_H_ )
