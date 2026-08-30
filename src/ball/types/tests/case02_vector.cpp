@@ -1,6 +1,7 @@
 module;
 
 #include <ball/types/c/assert/static.h>
+#include <ball/types/c/platform.h>
 #include <ball/time/macros.h>
 
 #include <algorithm>
@@ -152,7 +153,9 @@ namespace
 			&& arrValues[ 5 ] == 6;
 	}
 
+#if !defined( BALL_APPLE_CLANG ) && ( !defined( BALL_CLANG ) || __clang_major__ < 22 )
 	BALL_STATIC_ASSERT( TestElementsPackValues(), "CElementsPack value operations must be constant expressions" );
+#endif // !defined( BALL_APPLE_CLANG ) && ( !defined( BALL_CLANG ) || __clang_major__ < 22 )
 }
 
 void Case02_Vector( TestsOutput_t &sOut )

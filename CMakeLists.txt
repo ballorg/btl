@@ -40,19 +40,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
 	endif()
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-	if(BALL_ENABLE_MODULES)
-		message(WARNING "AppleClang does not provide CMake dependency scanning for C++20 modules; falling back to header mode")
-		set(BALL_ENABLE_MODULES OFF CACHE BOOL "Build Ball C++20 modules" FORCE)
-	endif()
-
-	if(BALL_ENABLE_TESTS)
-		message(WARNING "The current Ball test suite requires C++20 modules and is disabled for AppleClang")
-		set(BALL_ENABLE_TESTS OFF CACHE BOOL "Build Ball tests" FORCE)
-		set(BALL_TEST_ENABLE_MODULES OFF CACHE BOOL "Build Ball tests through C++20 modules" FORCE)
-	endif()
-endif()
-
 if(BALL_ENABLE_MODULES AND CMAKE_VERSION VERSION_LESS 3.28)
 	message(FATAL_ERROR "BALL_ENABLE_MODULES requires CMake 3.28 or newer")
 endif()

@@ -10,6 +10,7 @@
 # IDE files
 /.idea
 /.PVS-Studio
+/CMakeUserPresets.json
 
 # AI agents & MCP servers
 .claude*

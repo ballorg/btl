@@ -13,6 +13,10 @@
 #		define BALL_CLANG 1
 #	endif
 
+#	if defined( __apple_build_version__ )
+#		define BALL_APPLE_CLANG 1
+#	endif
+
 #	if defined( __MINGW32__ ) || defined( __MINGW64__ )
 #		define BALL_MINGW 1
 #	elif defined( _MSC_VER )

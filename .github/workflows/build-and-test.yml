@@ -81,12 +81,17 @@ jobs:
         run: ctest --preset Release --output-on-failure
 
   macos:
-    name: macOS / AppleClang
-    runs-on: macos-14
+    name: macOS / LLVM Clang
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: |
+          brew install llvm
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
       - name: Configure
         env:
