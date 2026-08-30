@@ -84,6 +84,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 if(BALL_ENABLE_MODULES)
+	file(GLOB BALL_MODULE_SOURCES CONFIGURE_DEPENDS
+		${SOURCE_DIR}/ball/*.cppm
+		${SOURCE_DIR}/ball/types/*.cppm
+	)
+
 	set_target_properties(${PROJECT_NAME} PROPERTIES
 		CXX_SCAN_FOR_MODULES ON
 	)
@@ -93,32 +98,7 @@ if(BALL_ENABLE_MODULES)
 		TYPE CXX_MODULES
 		BASE_DIRS ${SOURCE_DIR}
 		FILES
-			${SOURCE_DIR}/ball/new.cppm
-			${SOURCE_DIR}/ball/time.cppm
-			${SOURCE_DIR}/ball/types/core.cppm
-			${SOURCE_DIR}/ball/types/bits.cppm
-			${SOURCE_DIR}/ball/types/elements.cppm
-			${SOURCE_DIR}/ball/types/fixed.cppm
-			${SOURCE_DIR}/ball/types/math.cppm
-			${SOURCE_DIR}/ball/types/number.cppm
-			${SOURCE_DIR}/ball/types/pair.cppm
-			${SOURCE_DIR}/ball/types/prefetch.cppm
-			${SOURCE_DIR}/ball/types/allocator.cppm
-			${SOURCE_DIR}/ball/types/array.cppm
-			${SOURCE_DIR}/ball/types/elementspack.cppm
-			${SOURCE_DIR}/ball/types/vectoriterator.cppm
-			${SOURCE_DIR}/ball/types/slotiterator.cppm
-			${SOURCE_DIR}/ball/types/reflect.cppm
-			${SOURCE_DIR}/ball/types/viewbase.cppm
-			${SOURCE_DIR}/ball/types/view.cppm
-			${SOURCE_DIR}/ball/types/stringview.cppm
-			${SOURCE_DIR}/ball/types/hash.cppm
-			${SOURCE_DIR}/ball/types/vector.cppm
-			${SOURCE_DIR}/ball/types/string.cppm
-			${SOURCE_DIR}/ball/types/rbtree.cppm
-			${SOURCE_DIR}/ball/types/hashmap.cppm
-			${SOURCE_DIR}/ball/types/delegate.cppm
-			${SOURCE_DIR}/ball/types.cppm
+			${BALL_MODULE_SOURCES}
 	)
 endif()
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
