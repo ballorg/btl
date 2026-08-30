@@ -32,4 +32,4 @@ jobs:
         run: cmake --build --preset Release --parallel
 
       - name: Test
-        run: ctest --preset Release --output-on-failure --verbose
+        run: ctest --preset Release --verbose
