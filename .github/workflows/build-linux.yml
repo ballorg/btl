@@ -1,0 +1,45 @@
+name: Build and test / Linux
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Linux / ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC 14
+            cc: gcc-14
+            cxx: g++-14
+            packages: gcc-14 g++-14
+          - name: Clang 18
+            cc: clang-18
+            cxx: clang++-18
+            packages: clang-18
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install compiler
+        run: sudo apt-get update && sudo apt-get install --yes ${{ matrix.packages }}
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: cmake --preset Release
+
+      - name: Build
+        run: cmake --build --preset Release --parallel
+
+      - name: Test
+        run: ctest --preset Release --output-on-failure --verbose

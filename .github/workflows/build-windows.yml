@@ -1,0 +1,46 @@
+name: Build and test / Windows
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows / MSVC
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Locate Visual Studio
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_INSTALL=%%i"
+          if not defined VS_INSTALL exit /b 1
+          echo VS_INSTALL=%VS_INSTALL%>>"%GITHUB_ENV%"
+
+      - name: Configure
+        shell: cmd
+        run: |
+          call "%VS_INSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          if errorlevel 1 exit /b %errorlevel%
+          cmake --preset Release
+
+      - name: Build
+        shell: cmd
+        run: |
+          call "%VS_INSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          if errorlevel 1 exit /b %errorlevel%
+          cmake --build --preset Release --parallel
+
+      - name: Test
+        shell: cmd
+        run: |
+          call "%VS_INSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          if errorlevel 1 exit /b %errorlevel%
+          ctest --preset Release --output-on-failure --verbose
