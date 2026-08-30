@@ -11,7 +11,7 @@ module Ball.Types;
 import Ball.New;
 import Ball.Time;
 import :Bits;
-import :Core;
+import :Meta;
 import :Hash;
 import :Math;
 import :String;

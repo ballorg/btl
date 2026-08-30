@@ -21,7 +21,7 @@ import :Tests.Case11;
 
 using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
-int main()
+extern "C++" int main()
 {
 	TestsOutput_t str;
 

@@ -4,7 +4,7 @@ module;
 module Ball.Types;
 
 import Ball.New;
-import :Core;
+import :Meta;
 import :Delegate;
 import :String;
 import :StringView;

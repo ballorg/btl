@@ -1,0 +1,28 @@
+file(GLOB BALL_META_HEADERS CONFIGURE_DEPENDS
+	RELATIVE "${INCLUDE_DIR}/ball/types"
+	"${INCLUDE_DIR}/ball/types/meta/*.hpp"
+)
+ball_generate_module(PARTITION Meta HEADERS base.h ${BALL_META_HEADERS} NO_DEFAULT_IMPORTS NO_MEMORY)
+
+ball_generate_module(PARTITION Allocator HEADERS memoryaligned.h allocator.hpp GLOBAL_HEADERS c/assert.h)
+ball_generate_module(PARTITION Array HEADERS array.hpp GLOBAL_HEADERS c/assert.h IMPORTS :Math)
+ball_generate_module(PARTITION Bits HEADERS bits.hpp GLOBAL_HEADERS c/assert.h c/bits.h)
+ball_generate_module(PARTITION Elements HEADERS elements.hpp GLOBAL_HEADERS c/assert.h)
+ball_generate_module(PARTITION ElementsPack HEADERS elementspack.hpp GLOBAL_HEADERS c/assert/static.h IMPORTS :Array :Elements :Fixed)
+ball_generate_module(PARTITION Fixed HEADERS fixed.hpp GLOBAL_HEADERS fixed.h)
+ball_generate_module(PARTITION Hash HEADERS hash.hpp GLOBAL_HEADERS c/assert.h c/assert/static.h c/nouniqueaddress.h IMPORTS :Bits :Math :StringView)
+ball_generate_module(PARTITION HashMap HEADERS hashmap.hpp GLOBAL_HEADERS c/assert.h c/nouniqueaddress.h hashmap.h meta/fixed.h reflect.h IMPORTS :Bits :Elements :Fixed :Hash :Reflect :SlotIterator :Vector)
+ball_generate_module(PARTITION Math HEADERS math.hpp GLOBAL_HEADERS c/math.h IMPORTS :Bits :Elements)
+ball_generate_module(PARTITION Number HEADERS number.hpp IMPORTS :Math)
+ball_generate_module(PARTITION Pair HEADERS pair.hpp)
+ball_generate_module(PARTITION Prefetch HEADERS prefetch.hpp GLOBAL_HEADERS c/prefetch.h)
+ball_generate_module(PARTITION RBTree HEADERS rbtree.hpp GLOBAL_HEADERS c/assert.h c/nouniqueaddress.h meta/fixed.h reflect.h rbtree.h IMPORTS :Elements :Fixed :Pair :Reflect :SlotIterator :Vector)
+ball_generate_module(PARTITION Reflect HEADERS reflect.hpp GLOBAL_HEADERS reflect.h)
+ball_generate_module(PARTITION SlotIterator HEADERS slotiterator.hpp GLOBAL_HEADERS c/assert.h)
+ball_generate_module(PARTITION String HEADERS string.hpp IMPORTS :Allocator :Math :Number :StringView :Vector)
+ball_generate_module(PARTITION StringView HEADERS stringview.hpp IMPORTS :Elements :View)
+ball_generate_module(PARTITION Vector HEADERS vector.hpp GLOBAL_HEADERS c/assert.h IMPORTS :Allocator :Bits :Elements :Fixed :Math :VectorIterator :View :ViewBase)
+ball_generate_module(PARTITION VectorIterator HEADERS vectoriterator.hpp)
+ball_generate_module(PARTITION View HEADERS view.hpp GLOBAL_HEADERS c/assert.h IMPORTS :Math :ViewBase)
+ball_generate_module(PARTITION ViewBase HEADERS viewbase.hpp GLOBAL_HEADERS c/assert/static.h c/assert.h IMPORTS :Elements :ElementsPack :Fixed :Math :Number :Prefetch)
+ball_generate_module(PARTITION Delegate HEADERS delegate.hpp GLOBAL_HEADERS c/assert.h c/nodiscrad.h IMPORTS :Vector)

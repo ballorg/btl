@@ -84,9 +84,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 if(BALL_ENABLE_MODULES)
+	set(BALL_GENERATED_MODULE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+	file(REMOVE_RECURSE "${BALL_GENERATED_MODULE_DIR}/ball/types")
+	include(cmake/ball/modules.cmake)
+	include(cmake/ball/types/modules.cmake)
+
 	file(GLOB BALL_MODULE_SOURCES CONFIGURE_DEPENDS
 		${SOURCE_DIR}/ball/*.cppm
 		${SOURCE_DIR}/ball/types/*.cppm
+		${BALL_GENERATED_MODULE_DIR}/ball/types/*.cppm
 	)
 
 	set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -96,7 +102,7 @@ if(BALL_ENABLE_MODULES)
 	PUBLIC
 		FILE_SET cxx_modules
 		TYPE CXX_MODULES
-		BASE_DIRS ${SOURCE_DIR}
+		BASE_DIRS ${SOURCE_DIR} ${BALL_GENERATED_MODULE_DIR}
 		FILES
 			${BALL_MODULE_SOURCES}
 	)

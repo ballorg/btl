@@ -4,7 +4,7 @@
 
 The linear-storage stack: fixed arrays, non-owning views, the inline/heap storage substrate, and the unified owning vector with single-column and multi-column SoA specializations. See [architecture.md](../architecture.md#the-storage-stack) for how the layers compose.
 
-In module builds each container component is owned by its matching internal partition (`Allocator`, `Array`, `Elements`, `ElementsPack`, `ViewBase`, `View`, `VectorIterator`, or `Vector`) and is re-exported by `Ball.Types`; shared base and meta declarations remain in `Core`.
+In module builds each container component is owned by its matching generated internal partition (`Allocator`, `Array`, `Elements`, `ElementsPack`, `ViewBase`, `View`, `VectorIterator`, or `Vector`) and is re-exported by `Ball.Types`; shared base and meta declarations arrive through `Meta`.
 
 ## Responsibilities
 

@@ -1,7 +1,7 @@
 export module Ball.Types;
 
 export import Ball.New;
-export import :Core;
+export import :Meta;
 export import :Bits;
 export import :Elements;
 export import :Fixed;

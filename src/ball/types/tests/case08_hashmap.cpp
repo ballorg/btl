@@ -9,7 +9,7 @@ module Ball.Types;
 
 import Ball.New;
 import Ball.Time;
-import :Core;
+import :Meta;
 import :HashMap;
 import :String;
 import :StringView;

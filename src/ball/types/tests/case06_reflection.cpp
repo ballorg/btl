@@ -7,7 +7,7 @@ module;
 module Ball.Types;
 
 import Ball.New;
-import :Core;
+import :Meta;
 import :Reflect;
 import :String;
 import :StringView;

@@ -5,7 +5,7 @@ module;
 module Ball.Types;
 
 import Ball.New;
-import :Core;
+import :Meta;
 import :String;
 
 // Macros section.
@@ -34,7 +34,7 @@ extern "C"
 using namespace BTL;
 
 // Entry point section.
-int main()
+extern "C++" int main()
 {
 	// Fixed types.
 

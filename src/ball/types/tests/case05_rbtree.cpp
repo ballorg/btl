@@ -9,7 +9,7 @@ module;
 module Ball.Types;
 
 import Ball.New;
-import :Core;
+import :Meta;
 import :Pair;
 import :RBTree;
 import :Reflect;
