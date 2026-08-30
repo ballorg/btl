@@ -1,15 +1,15 @@
 module;
 
-#include "memory.h"
+#include <ball/types/memory.h>
 export module Ball.Types:Number;
 
 import Ball.New;
 import :Core;
 import :Math;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "number.hpp"
+#include <ball/types/number.hpp>
 }

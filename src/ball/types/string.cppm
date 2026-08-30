@@ -1,6 +1,6 @@
 module;
 
-#include "memory.h"
+#include <ball/types/memory.h>
 
 export module Ball.Types:String;
 
@@ -12,9 +12,9 @@ import :Number;
 import :StringView;
 import :Vector;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "string.hpp"
+#include <ball/types/string.hpp>
 }

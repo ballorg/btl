@@ -1,7 +1,7 @@
 module;
 
-#include "memory.h"
-#include "c/assert.h"
+#include <ball/types/memory.h>
+#include <ball/types/c/assert.h>
 
 export module Ball.Types:Vector;
 
@@ -16,9 +16,9 @@ import :VectorIterator;
 import :View;
 import :ViewBase;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "vector.hpp"
+#include <ball/types/vector.hpp>
 }

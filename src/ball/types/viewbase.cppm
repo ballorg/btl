@@ -1,8 +1,8 @@
 module;
 
-#include "memory.h"
-#include "c/assert/static.h"
-#include "c/assert.h"
+#include <ball/types/memory.h>
+#include <ball/types/c/assert/static.h>
+#include <ball/types/c/assert.h>
 
 export module Ball.Types:ViewBase;
 
@@ -15,9 +15,9 @@ import :Math;
 import :Number;
 import :Prefetch;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "viewbase.hpp"
+#include <ball/types/viewbase.hpp>
 }

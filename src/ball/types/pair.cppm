@@ -1,14 +1,14 @@
 module;
 
-#include "memory.h"
+#include <ball/types/memory.h>
 export module Ball.Types:Pair;
 
 import Ball.New;
 import :Core;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "pair.hpp"
+#include <ball/types/pair.hpp>
 }

@@ -1,7 +1,7 @@
 module;
 
-#include "memory.h"
-#include "c/assert/static.h"
+#include <ball/types/memory.h>
+#include <ball/types/c/assert/static.h>
 
 export module Ball.Types:ElementsPack;
 
@@ -11,9 +11,9 @@ import :Array;
 import :Elements;
 import :Fixed;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "elementspack.hpp"
+#include <ball/types/elementspack.hpp>
 }

@@ -1,7 +1,7 @@
 module;
 
-#include "memory.h"
-#include "c/math.h"
+#include <ball/types/memory.h>
+#include <ball/types/c/math.h>
 
 export module Ball.Types:Math;
 
@@ -10,9 +10,9 @@ import :Core;
 import :Bits;
 import :Elements;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "math.hpp"
+#include <ball/types/math.hpp>
 }

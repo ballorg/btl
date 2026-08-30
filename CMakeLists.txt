@@ -91,34 +91,34 @@ if(BALL_ENABLE_MODULES)
 	PUBLIC
 		FILE_SET cxx_modules
 		TYPE CXX_MODULES
-		BASE_DIRS ${INCLUDE_DIR}
+		BASE_DIRS ${SOURCE_DIR}
 		FILES
-			${INCLUDE_DIR}/ball/new.cppm
-			${INCLUDE_DIR}/ball/time.cppm
-			${INCLUDE_DIR}/ball/types/core.cppm
-			${INCLUDE_DIR}/ball/types/bits.cppm
-			${INCLUDE_DIR}/ball/types/elements.cppm
-			${INCLUDE_DIR}/ball/types/fixed.cppm
-			${INCLUDE_DIR}/ball/types/math.cppm
-			${INCLUDE_DIR}/ball/types/number.cppm
-			${INCLUDE_DIR}/ball/types/pair.cppm
-			${INCLUDE_DIR}/ball/types/prefetch.cppm
-			${INCLUDE_DIR}/ball/types/allocator.cppm
-			${INCLUDE_DIR}/ball/types/array.cppm
-			${INCLUDE_DIR}/ball/types/elementspack.cppm
-			${INCLUDE_DIR}/ball/types/vectoriterator.cppm
-			${INCLUDE_DIR}/ball/types/slotiterator.cppm
-			${INCLUDE_DIR}/ball/types/reflect.cppm
-			${INCLUDE_DIR}/ball/types/viewbase.cppm
-			${INCLUDE_DIR}/ball/types/view.cppm
-			${INCLUDE_DIR}/ball/types/stringview.cppm
-			${INCLUDE_DIR}/ball/types/hash.cppm
-			${INCLUDE_DIR}/ball/types/vector.cppm
-			${INCLUDE_DIR}/ball/types/string.cppm
-			${INCLUDE_DIR}/ball/types/rbtree.cppm
-			${INCLUDE_DIR}/ball/types/hashmap.cppm
-			${INCLUDE_DIR}/ball/types/delegate.cppm
-			${INCLUDE_DIR}/ball/types.cppm
+			${SOURCE_DIR}/ball/new.cppm
+			${SOURCE_DIR}/ball/time.cppm
+			${SOURCE_DIR}/ball/types/core.cppm
+			${SOURCE_DIR}/ball/types/bits.cppm
+			${SOURCE_DIR}/ball/types/elements.cppm
+			${SOURCE_DIR}/ball/types/fixed.cppm
+			${SOURCE_DIR}/ball/types/math.cppm
+			${SOURCE_DIR}/ball/types/number.cppm
+			${SOURCE_DIR}/ball/types/pair.cppm
+			${SOURCE_DIR}/ball/types/prefetch.cppm
+			${SOURCE_DIR}/ball/types/allocator.cppm
+			${SOURCE_DIR}/ball/types/array.cppm
+			${SOURCE_DIR}/ball/types/elementspack.cppm
+			${SOURCE_DIR}/ball/types/vectoriterator.cppm
+			${SOURCE_DIR}/ball/types/slotiterator.cppm
+			${SOURCE_DIR}/ball/types/reflect.cppm
+			${SOURCE_DIR}/ball/types/viewbase.cppm
+			${SOURCE_DIR}/ball/types/view.cppm
+			${SOURCE_DIR}/ball/types/stringview.cppm
+			${SOURCE_DIR}/ball/types/hash.cppm
+			${SOURCE_DIR}/ball/types/vector.cppm
+			${SOURCE_DIR}/ball/types/string.cppm
+			${SOURCE_DIR}/ball/types/rbtree.cppm
+			${SOURCE_DIR}/ball/types/hashmap.cppm
+			${SOURCE_DIR}/ball/types/delegate.cppm
+			${SOURCE_DIR}/ball/types.cppm
 	)
 endif()
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})

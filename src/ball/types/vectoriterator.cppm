@@ -1,14 +1,14 @@
 module;
 
-#include "memory.h"
+#include <ball/types/memory.h>
 export module Ball.Types:VectorIterator;
 
 import Ball.New;
 import :Core;
 
-#include "module.h"
+#include <ball/types/module.h>
 
 export namespace BTL
 {
-#include "vectoriterator.hpp"
+#include <ball/types/vectoriterator.hpp>
 }
