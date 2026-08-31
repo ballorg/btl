@@ -47,6 +47,7 @@ namespace
 	struct CAdapterBase
 	{
 		using C = T;
+		static constexpr size_t FIND_PASSES = 1u;
 
 		static void Reserve( C &, size_t ) {}
 		static bool Insert( C &map, size_t key ) { return map.emplace( key, key * 17u + 3u ).second; }
@@ -64,12 +65,14 @@ namespace
 
 	struct CAdapter_StdUnorderedMap : CAdapterBase< std::unordered_map< size_t, size_t > >
 	{
+		static constexpr size_t FIND_PASSES = 32u;
 		static void Reserve( C &map, size_t count ) { map.reserve( count ); }
 	};
 
 	struct CAdapter_RBTree
 	{
 		using C = Tree_t;
+		static constexpr size_t FIND_PASSES = 1u;
 
 		static void Reserve( C &, size_t ) {}
 		static bool Insert( C &tree, size_t key ) { return !IsEndIndex( tree, InsertNode( tree, key ) ); }
@@ -92,8 +95,14 @@ namespace
 	struct CAdapter_HashMap
 	{
 		using C = BTL::HashMap32_t< size_t, size_t >;
+		static constexpr size_t FIND_PASSES = 32u;
 
-		static void Reserve( C &, size_t ) {}
+		static void Reserve( C &map, size_t count )
+		{
+			const C::Index_t nBuckets = BTL::BitCeil( static_cast< C::Index_t >( count * 2u ) );
+
+			map.SetCount( nBuckets );
+		}
 		static bool Insert( C &map, size_t key ) { return map.Insert( key, key * 17u + 3u ) != map.EndIndex(); }
 		static bool Find( const C &map, size_t key )
 		{
@@ -147,13 +156,16 @@ namespace
 
 		BALL_PROF_BEGIN( MapFindBenchmark );
 
-		for ( size_t key : keys )
+		for ( size_t nPass = 0; nPass < A::FIND_PASSES; ++nPass )
 		{
-			if ( !A::Find( container, key ) )
-				result.m_bOk = false;
+			for ( size_t key : keys )
+			{
+				if ( !A::Find( container, key ) )
+					result.m_bOk = false;
+			}
 		}
 
-		result.m_Find = BALL_PROF_END( MapFindBenchmark );
+		result.m_Find = BTL::CTimeNS( BALL_PROF_END( MapFindBenchmark ).GetNSs() / A::FIND_PASSES );
 
 		BALL_PROF_BEGIN( MapEraseBenchmark );
 

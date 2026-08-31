@@ -195,7 +195,7 @@ public:
 		// the table nor walks through intermediate capacities. SetCount clears the
 		// newly exposed packed state bits to FREE and performs no allocation for N.
 		if constexpr ( N )
-			Nodes().SetCount( N );
+			Storage_t::SetCount( N );
 	}
 
 	~CHashMapBase() noexcept = default;
@@ -237,13 +237,10 @@ protected:
 	///-----------------------------------------------------------------------------
 	void ResetTable( Index_t nNewCapacity )
 	{
-		Nodes().SetCount( nNewCapacity );
-		memset( Nodes().template Packed_BaseBy< State_t >(), 0, Nodes().template SizeBy< State_t >() );
-	}
+		Storage_t::SetCount( nNewCapacity );
 
-	static constexpr bool IsOccupiedBit( const uchar_t *pStateBits, Index_t i ) noexcept
-	{
-		return pStateBits[ i >> 3 ] & static_cast< uchar_t >( 1u << ( i & 7 ) );
+		if ( nNewCapacity )
+			memset( Nodes().template Packed_BaseBy< State_t >(), 0, Nodes().template SizeBy< State_t >() );
 	}
 
 	template < typename TKeyColumn >
@@ -254,7 +251,7 @@ protected:
 
 		for ( ;; )
 		{
-			if ( !IsOccupiedBit( pStateBits, i ) )
+			if ( !Storage_t::template Packed_GetDataBitBy< State_t >( pStateBits, i ) )
 				return NIL_INDEX;
 
 			if ( ReflectAccess( pKeys[ i ] ) == key )
@@ -287,14 +284,14 @@ protected:
 		const Index_t nMask = static_cast< Index_t >( nCapacity - 1 );
 		const Index_t iHome = HomeBucket( key, nCapacity );
 		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
-		const auto *pKeys = PayloadColumn< 0 >();
+		const auto *pKeys = Storage_t::template BaseBy< HashKeyColumn_t< K > >();
 		Index_t i = iHome;
 
 		nProbeLength = 0;
 
 		for ( ;; )
 		{
-			if ( !IsOccupiedBit( pStateBits, i ) )
+			if ( !Storage_t::template Packed_GetDataBitBy< State_t >( pStateBits, i ) )
 			{
 				bExists = false;
 
@@ -347,7 +344,7 @@ protected:
 
 		const Index_t iHome = HomeBucket( key, nCapacity );
 		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
-		const auto *pKeys = PayloadColumn< 0 >();
+		const auto *pKeys = Storage_t::template BaseBy< HashKeyColumn_t< K > >();
 
 		return FindInTable( key, nCapacity, iHome, pStateBits, pKeys );
 	}
@@ -400,7 +397,7 @@ protected:
 		const Index_t nCapacity = BucketCount();
 		const Index_t nMask = static_cast< Index_t >( nCapacity - 1 );
 		const uchar_t *pStateBits = Nodes().template Packed_BaseBy< State_t >();
-		const auto *pKeys = PayloadColumn< 0 >();
+		const auto *pKeys = Storage_t::template BaseBy< HashKeyColumn_t< K > >();
 		Index_t iHole = iRemove;
 
 		for ( ;; )
@@ -411,7 +408,7 @@ protected:
 			{
 				i = static_cast< Index_t >( ( i + 1 ) & nMask );
 
-				if ( !IsOccupiedBit( pStateBits, i ) )
+				if ( !Storage_t::template Packed_GetDataBitBy< State_t >( pStateBits, i ) )
 				{
 					SetState( iHole, State_t::FREE );
 
@@ -484,7 +481,7 @@ protected:
 
 		for ( Index_t i = 0, w = 0; i < nBuckets; ++i )
 		{
-			if ( IsOccupiedBit( pStateBits, i ) )
+			if ( Storage_t::template Packed_GetDataBitBy< State_t >( pStateBits, i ) )
 				CollectRow( temp, w++, i, ColumnSequence_t() );
 		}
 
@@ -513,12 +510,12 @@ protected:
 		return nUsed * LOAD_FACTOR_DEN >= nCapacity * LOAD_FACTOR_NUM;
 	}
 
-	/// @brief Doubles the table (rehashing every key), guarding the index type.
+	/// @brief Doubles the geometric capacity reported by `CBufferVector`.
 	///
 	/// @complexity O(capacity).
 	void GrowTable()
 	{
-		const size_t nWide = static_cast< size_t >( BucketCount() ) * 2u;
+		const size_t nWide = static_cast< size_t >( Storage_t::Capacity() ) * 2u;
 		const Index_t nNewCapacity = static_cast< Index_t >( nWide );
 
 		BALL_ASSERT_MESSAGE( nNewCapacity && static_cast< size_t >( nNewCapacity ) == nWide, "Hash table capacity overflowed its index type" );
@@ -739,7 +736,7 @@ public:
 			return *this;
 
 		Hasher() = other.Hasher();
-		Clear();
+		ResetTable( other.BucketCount() );
 
 		for ( Index_t i = other.FirstIndex(); i != other.EndIndex(); i = other.NextIndex( i ) )
 			CopyRowFrom( other, i, ColumnSequence_t() );
@@ -755,9 +752,9 @@ public:
 			return *this;
 
 		Hasher() = Move( other.Hasher() );
-		Clear();
+		ResetTable( other.BucketCount() );
 
-		for ( Index_t i = other.FirstOccupied(); i != other.EndIndex(); i = other.NextOccupied( i ) )
+		for ( Index_t i = other.FirstIndex(); i != other.EndIndex(); i = other.NextIndex( i ) )
 			MoveRowFrom( other, i, ColumnSequence_t() );
 
 		other.Clear();

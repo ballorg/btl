@@ -224,6 +224,21 @@ void Case08_HashMap( TestsOutput_t &sOut )
 		LogMapCheck( sOut, "buffer map overflows to heap", bOk );
 	}
 
+	// --- Explicit capacity reservation -----------------------------------------
+	{
+		Map_t reserved;
+		reserved.SetCount( 2048 );
+		const auto nReservedBuckets = reserved.BucketCount();
+		bool bOk = reserved.IsEmpty() && nReservedBuckets >= 1000;
+
+		for ( size_t i = 0; i < 1000; ++i )
+			bOk = bOk && reserved.Insert( i, ValueOf( i ) ) != reserved.EndIndex();
+
+		bOk = bOk && reserved.BucketCount() == nReservedBuckets;
+		bAllOk = bAllOk && bOk;
+		LogMapCheck( sOut, "base vector pre-sizing avoids growth", bOk );
+	}
+
 	// --- Unified variadic aliases cover sets and multi-column maps -------------
 	{
 		BTL::HashMap32_t< size_t > set;
@@ -253,10 +268,11 @@ void Case08_HashMap( TestsOutput_t &sOut )
 		}
 
 		Map_t copy( source );
-		const bool bOk = MatchesReference( copy, refSource, sOut );
+		Map_t moved( BTL::Move( copy ) );
+		const bool bOk = MatchesReference( moved, refSource, sOut ) && copy.IsEmpty();
 
 		bAllOk = bAllOk && bOk;
-		LogMapCheck( sOut, "copy reproduces contents", bOk );
+		LogMapCheck( sOut, "copy and move reproduce contents", bOk );
 	}
 
 	sOut.AppendMultiple( "BTL::HashMap_t: " );
