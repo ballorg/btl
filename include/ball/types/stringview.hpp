@@ -3,15 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "meta/issame.hpp"
-#		include "meta/removecv.hpp"
-#		include "view.hpp"
-#		include "elements.hpp"
-#	endif
-
 template < typename I, typename T, I N = 0 >
 class CStringView : public CView< I, T, N >
 {

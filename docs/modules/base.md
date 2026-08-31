@@ -17,7 +17,7 @@ The lowest layer of Ball: plain C headers under [include/ball/types/base/](../..
 
 ## Public Interface
 
-The aliases and macros above; there are no classes at this layer. When consumed through `<ball/types.hpp>`, the aliases land inside `namespace BTL` (see [architecture.md](../architecture.md)); [base.hpp](../../include/ball/types/base.hpp) additionally exposes the raw C set as `Base`.
+The aliases and macros above; there are no classes at this layer. When consumed through `<ball/types.hpp>`, [base.h](../../include/ball/types/base.h) is included at the top of [meta.hpp](../../include/ball/types/meta.hpp), so the aliases land inside `namespace BTL` (see [architecture.md](../architecture.md)), matching how the generated `Meta` partition includes it. [base.hpp](../../include/ball/types/base.hpp), which wraps the same headers in `namespace BTL::Base`, is not part of the umbrella and is unused by any partition.
 
 ## Data Structures
 

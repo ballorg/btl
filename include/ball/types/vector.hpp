@@ -3,30 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "c/assert.h"
-#		include "fixed.hpp"
-#		include "meta/fixed.hpp"
-#		include "meta/first.hpp"
-#		include "meta/get.hpp"
-#		include "meta/indexsequence.hpp"
-#		include "meta/isintegral.hpp"
-#		include "meta/conditional.hpp"
-#		include "meta/typeinfo.hpp"
-#		include "meta/vectorallocatortype.hpp"
-#		include "meta/vectorviewtypes.hpp"
-#		include "meta/xvalue.hpp"
-#		include "allocator.hpp"
-#		include "bits.hpp"
-#		include "elements.hpp"
-#		include "memory.h"
-#		include "math.hpp"
-#		include "view.hpp"
-#		include "viewbase.hpp"
-#		include "vectoriterator.hpp"
-#	endif
-
 template < class A, class B, typename I, I N, typename TI, typename... Ts >
 class CVectorBase : public A, public B
 {

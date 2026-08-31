@@ -3,10 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "c/prefetch.h"
-#	endif
-
 /// @brief Selects whether a cache hint targets a subsequent read or write.
 enum class EPrefetchAccess : bool
 {

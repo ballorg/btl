@@ -4,7 +4,6 @@ module;
 export module Ball.Types:@BALL_MODULE_PARTITION@;
 
 @BALL_MODULE_IMPORTS@
-@BALL_MODULE_CONFIGURATION@
 export namespace BTL
 {
 @BALL_MODULE_INCLUDES@}

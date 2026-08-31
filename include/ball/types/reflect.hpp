@@ -4,21 +4,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "reflect.h"
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "c/macros.h"
-#		include "meta/enableif.hpp"
-#		include "meta/reflectfield.hpp"
-#		include "meta/reflectdescriptor.hpp"
-#		include "meta/reflecttraits.hpp"
-#		include "meta/reflectforeach.hpp"
-#		include "meta/typeinfo.hpp"
-#		include "meta/size.hpp"
-#		include "meta/tuple.hpp"
-#	endif
-
 // ---------------------------------------------------------------------------
 // Reflected value primitives (merged from meta/reflectvalue.hpp). Defined here,
 // ahead of the field/descriptor cluster below, which depends on them.

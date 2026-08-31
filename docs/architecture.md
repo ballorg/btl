@@ -1,6 +1,6 @@
 # Architecture
 
-Ball is organized as a strict layering of headers under [include/ball/](../include/ball/). Higher layers include lower ones; nothing includes upward.
+Ball is organized as a strict layering of headers under [include/ball/](../include/ball/). Component headers carry no includes of their own; ordering is imposed externally, by the umbrella header [include/ball/types.hpp](../include/ball/types.hpp) in header mode and by the generated partition manifest [cmake/ball/types/modules.cmake](../cmake/ball/types/modules.cmake) in module mode. Both list higher layers after lower ones; nothing depends upward.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -25,13 +25,13 @@ Ball is organized as a strict layering of headers under [include/ball/](../inclu
 
 ## Namespace and module composition
 
-Public headers do not open a namespace themselves. The umbrella header [include/ball/types.hpp](../include/ball/types.hpp) includes every component **inside** `BALL_EXPORT namespace BTL { ... }`, so all types documented here are `BTL::` types when consumed through `<ball/types.hpp>` (or `import Ball.Types;`). Only `new.hpp` and `memory.h` are included before the namespace, keeping placement `new`, `size_t`, and the CRT imports global.
+Public headers do not open a namespace themselves. The umbrella header [include/ball/types.hpp](../include/ball/types.hpp) includes every component **inside** `BALL_EXPORT namespace BTL { ... }`, so all types documented here are `BTL::` types when consumed through `<ball/types.hpp>` (or `import Ball.Types;`). Only `new.hpp` and the macro-only/CRT headers (`types/memory.h`, `types/c/*.h`, `types/fixed.h`, `types/hashmap.h`, `types/meta/fixed.h`, `types/rbtree.h`, `types/reflect.h`) are included before the namespace, keeping placement `new`, `size_t`, CRT imports, and `BALL_*` macros global — the same split the generated partitions' global module fragments (`GLOBAL_HEADERS`) make.
 
 With `BALL_ENABLE_MODULES`, the generated `Ball.New` interface exports the global placement allocation functions from [new.hpp](../include/ball/new.hpp). The generated `Ball.Types` interface re-exports `Ball.New`, the complete generated `Meta` partition, and every generated component partition. `Meta` owns the base aliases, traits, type inspection, and reflection descriptors.
 
 The shared module-generation functions live in [cmake/modules.cmake](../cmake/modules.cmake). All three public interfaces are generated into the build tree from [module.cppm.in](../cmake/ball/module.cppm.in) and the declarative [modules.cmake](../cmake/ball/modules.cmake) manifest. That manifest records the headers and global-fragment dependencies exported by `Ball.New` and `Ball.Time`, plus the ordered partition re-exports of `Ball.Types`.
 
-Component interfaces are generated into the build tree from the shared [module.cppm.in](../cmake/ball/types/module.cppm.in) template and the declarative [modules.cmake](../cmake/ball/types/modules.cmake) manifest. The `Meta` header set is discovered automatically with `file(GLOB ... CONFIGURE_DEPENDS)`; the manifest records only the partition name, owning headers, global-fragment headers, and extra partition imports for `Allocator`, `Array`, `Bits`, `Elements`, `ElementsPack`, `Fixed`, `Hash`, `Math`, `Number`, `Pair`, `Prefetch`, `Reflect`, `SlotIterator`, `StringView`, `VectorIterator`, `ViewBase`, `View`, `Vector`, `String`, `RBTree`, `HashMap`, and `Delegate`. The generator supplies the common global module fragment, `Ball.New` and `Meta` imports, module-mode configuration, exported `BTL` namespace, and header inclusion. The macro-only [module.h](../include/ball/types/module.h) controls module-mode header dependencies. These partitions are implementation details; ordinary consumers import `Ball.Types`. The generated `Ball.Time` module independently exports the timing layer.
+Component interfaces are generated into the build tree from the shared [module.cppm.in](../cmake/ball/types/module.cppm.in) template and the declarative [modules.cmake](../cmake/ball/types/modules.cmake) manifest — the authoritative dependency manifest for module mode, and the model the umbrella header mirrors for header mode. The `Meta` header set is discovered automatically with `file(GLOB ... CONFIGURE_DEPENDS)`; the manifest records only the partition name, owning headers, global-fragment headers, and extra partition imports for `Allocator`, `Array`, `Bits`, `Elements`, `ElementsPack`, `Fixed`, `Hash`, `Math`, `Number`, `Pair`, `Prefetch`, `Reflect`, `SlotIterator`, `StringView`, `VectorIterator`, `ViewBase`, `View`, `Vector`, `String`, `RBTree`, `HashMap`, and `Delegate`. The generator supplies the common global module fragment, `Ball.New` and `Meta` imports, the exported `BTL` namespace, and header inclusion. These partitions are implementation details; ordinary consumers import `Ball.Types`. The generated `Ball.Time` module independently exports the timing layer.
 
 Placement `new` remains in the global namespace, but module consumers obtain it from `Ball.New` directly or through `Ball.Types`. Header-mode consumers continue to use [new.hpp](../include/ball/new.hpp). Generated component interfaces place the required C runtime declarations in their global module fragments.
 
@@ -60,6 +60,8 @@ Every level of the stack exists in two capacity flavors selected by the inline c
 The SoA substrate addresses columns **by type**. Two columns of the same type would resolve to the same storage and alias each other, so every column of a multi-column container must have a distinct type. The [reflection module](modules/reflection.md) provides `BALL_REFLECT_TAGGED(_TEMPLATE)` which wraps a payload type in a uniquely-tagged [CReflect](types/BTL.CReflect.md); the tree tags its key and link columns (`RBTreeKeyColumn_t`, `RBTreeLeftColumn_t`, …) and the hash map tags its key (`HashKeyColumn_t`) this way. User value columns that share a type must be tagged by the user.
 
 ## Dependency summary
+
+The logical layering below; [cmake/ball/types/modules.cmake](../cmake/ball/types/modules.cmake) is the authoritative per-component dependency manifest (`GLOBAL_HEADERS`, `HEADERS`, `IMPORTS`) that both module generation and the umbrella header follow.
 
 | Component | Depends on |
 | --- | --- |

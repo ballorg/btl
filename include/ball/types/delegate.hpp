@@ -3,26 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "c/assert.h"
-#		include "c/nodiscrad.h"
-#		include "meta/decay.hpp"
-#		include "meta/enableif.hpp"
-#		include "meta/get.hpp"
-#		include "meta/isconst.hpp"
-#		include "meta/ispointer.hpp"
-#		include "meta/issame.hpp"
-#		include "meta/memberfunction.hpp"
-#		include "meta/pack.hpp"
-#		include "meta/removecv.hpp"
-#		include "meta/removereference.hpp"
-#		include "meta/return.hpp"
-#		include "meta/sequence.hpp"
-#		include "meta/variant.hpp"
-#		include "meta/xvalue.hpp"
-#		include "vector.hpp"
-#	endif
-
 #	ifndef DELEGATE_INLINE_ALLOCATION_SIZE
 #		define DELEGATE_INLINE_ALLOCATION_SIZE 64
 #	endif

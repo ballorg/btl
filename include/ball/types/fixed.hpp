@@ -3,13 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "meta/fixed.hpp"
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "fixed.h"
-#	endif
-
 ///-----------------------------------------------------------------------------
 /// @brief Trivial value type that stores an always-normalized fixed-width integer.
 ///

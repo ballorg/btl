@@ -3,17 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "c/assert.h"
-#		include "meta/constevaluated.hpp"
-#		include "meta/ismemmovesafe.hpp"
-#		include "meta/removereference.hpp"
-#		include "meta/xvalue.hpp"
-#		include "memory.h"
-#	endif
-
 template < typename T >
 constexpr T *ConstructElement( T *pMemory )
 {

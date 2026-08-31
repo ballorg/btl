@@ -3,15 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "meta/xvalue.hpp"
-#		include "math.hpp"
-#		include "number.hpp"
-#		include "stringview.hpp"
-#		include "vector.hpp"
-#	endif
-
 template < class B, typename I, typename T >
 class CStringImpl : public B
 {

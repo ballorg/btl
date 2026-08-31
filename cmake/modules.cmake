@@ -32,7 +32,6 @@ function(ball_generate_public_module)
 
 	if(MODULE_HEADER)
 		string(APPEND BALL_PUBLIC_MODULE_CONTENT
-			"#define BALL_ENABLE_MODULE\n"
 			"#undef BALL_EXPORT\n"
 			"#define BALL_EXPORT export\n"
 			"#include \"ball/${MODULE_HEADER}\"\n"
@@ -58,7 +57,7 @@ endfunction()
 function(ball_generate_module)
 	cmake_parse_arguments(
 		MODULE
-		"NO_BALL_NEW;NO_DEFAULT_IMPORTS;NO_MEMORY;NO_MODULE_CONFIGURATION"
+		"NO_BALL_NEW;NO_DEFAULT_IMPORTS;NO_MEMORY"
 		"PARTITION"
 		"HEADERS;GLOBAL_HEADERS;IMPORTS"
 		${ARGN}
@@ -74,7 +73,6 @@ function(ball_generate_module)
 	set(BALL_MODULE_PARTITION "${MODULE_PARTITION}")
 	set(BALL_MODULE_GLOBAL_INCLUDES "")
 	set(BALL_MODULE_IMPORTS "")
-	set(BALL_MODULE_CONFIGURATION "")
 	set(BALL_MODULE_INCLUDES "")
 
 	if(NOT MODULE_NO_MEMORY)
@@ -94,9 +92,6 @@ function(ball_generate_module)
 		string(APPEND BALL_MODULE_IMPORTS "import ${IMPORT};\n")
 	endforeach()
 
-	if(NOT MODULE_NO_MODULE_CONFIGURATION)
-		set(BALL_MODULE_CONFIGURATION "#include \"ball/types/module.h\"\n")
-	endif()
 	foreach(HEADER IN LISTS MODULE_HEADERS)
 		string(APPEND BALL_MODULE_INCLUDES "#include \"ball/types/${HEADER}\"\n")
 	endforeach()

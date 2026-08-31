@@ -3,13 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "meta/fixed.hpp"
-#		include "math.hpp"
-#	endif
-
 ///-----------------------------------------------------------------------------
 /// @brief Count of base-NS digits required to represent unsigned @p u.
 ///        Returns at least 1 (i.e., u==0 => 1).

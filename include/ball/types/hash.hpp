@@ -3,22 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "c/assert/static.h"
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "bits.hpp"
-#		include "c/assert.h"
-#		include "c/nouniqueaddress.h"
-#		include "meta/constevaluated.hpp"
-#		include "meta/enableif.hpp"
-#		include "meta/fibonacci.hpp"
-#		include "meta/fixed.hpp"
-#		include "meta/isintegral.hpp"
-#		include "math.hpp"
-#		include "stringview.hpp"
-#	endif
-
 ///-----------------------------------------------------------------------------
 /// @brief Stateless Fibonacci (multiplicative golden-ratio) hashing policy.
 ///

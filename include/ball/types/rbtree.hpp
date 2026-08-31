@@ -3,24 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "rbtree.h"
-
-#		include "base/arch.h"
-#		include "c/assert.h"
-#		include "elements.hpp"
-#		include "fixed.hpp"
-#		include "meta/fixed.hpp"
-#		include "meta/get.hpp"
-#		include "meta/indexsequence.hpp"
-#		include "meta/indextype.hpp"
-#		include "meta/xvalue.hpp"
-#		include "pair.hpp"
-#		include "reflect.hpp"
-#		include "slotiterator.hpp"
-#		include "vector.hpp"
-#	endif
-
 enum class ERBTreeColor : uint1_t
 {
 	BLACK = 0,

@@ -18,4 +18,4 @@ A scoped compile-time access mode for selecting read or write cache hints.
 
 ## Relationships
 
-[CViewBase](BTL.CViewBase.md) uses the value as the first template argument of its protected `PrefetchRow< ACCESS, Ks... >( i )` helper. The C++ header includes [c/prefetch.h](../../include/ball/types/c/prefetch.h), which provides the compiler-specific `BALL_PREFETCH_READ` and `BALL_PREFETCH_WRITE` macros used by the helper.
+[CViewBase](BTL.CViewBase.md) uses the value as the first template argument of its protected `PrefetchRow< ACCESS, Ks... >( i )` helper, which needs the compiler-specific `BALL_PREFETCH_READ`/`BALL_PREFETCH_WRITE` macros from [c/prefetch.h](../../include/ball/types/c/prefetch.h); in header mode that header reaches all consumers through the umbrella header's global include list, not through `prefetch.hpp` itself.

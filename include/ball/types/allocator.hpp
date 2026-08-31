@@ -3,13 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch/unsigned.h"
-#		include "c/assert.h"
-#		include "meta/fixed.hpp"
-#		include "memoryaligned.h"
-#	endif
-
 class CAllocatorBase
 {
 public:

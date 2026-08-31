@@ -3,12 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "meta/conditional.hpp"
-#		include "meta/fixed.hpp"
-#	endif
-
 template < typename T >
 class CVector_Packed_Reference
 {

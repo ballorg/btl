@@ -3,15 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "c/math.h"
-#		include "meta/xvalue.hpp"
-#		include "elements.hpp"
-#		include "bits.hpp"
-#	endif
-
 /// @brief Computes power of 10 at compile/runtime without floating point.
 /// @tparam P The exponent.
 /// @return 10^P as unsigned long long.

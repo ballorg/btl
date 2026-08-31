@@ -3,11 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "c/assert.h"
-#		include "meta/conditional.hpp"
-#	endif
-
 ///-----------------------------------------------------------------------------
 /// @brief Slot iterator shared by the (SoA) map.
 ///

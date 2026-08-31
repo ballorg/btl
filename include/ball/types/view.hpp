@@ -3,16 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "c/assert.h"
-#		include "meta/fixed.hpp"
-#		include "meta/isconst.hpp"
-#		include "math.hpp"
-#		include "viewbase.hpp"
-#	endif
-
 template < typename I, typename T, I N = 0 >
 class CView : public CViewBase< I, N, size8_t, T >
 {

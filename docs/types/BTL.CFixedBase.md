@@ -2,7 +2,7 @@
 
 ## Overview
 
-The cluster that gives BTL integers of *any* logical bit width 1..64 and, more importantly, tells containers which types can be stored as packed bit arrays. It spans two headers: [meta/fixed.hpp](../../include/ball/types/meta/fixed.hpp) contains the base-independent tags and metadata, while [fixed.hpp](../../include/ball/types/fixed.hpp) adds the `CFixedBase` wrapper and the 1..64 alias grids backed by Ball's base integer types. The macro-only [fixed.h](../../include/ball/types/fixed.h) exposes `BALL_FIXED_FOR_EACH_BITS` to both header and module consumers.
+The cluster that gives BTL integers of *any* logical bit width 1..64 and, more importantly, tells containers which types can be stored as packed bit arrays. It spans two headers: [meta/fixed.hpp](../../include/ball/types/meta/fixed.hpp) contains the base-independent tags and metadata, while [fixed.hpp](../../include/ball/types/fixed.hpp) adds the `CFixedBase` wrapper and the 1..64 alias grids backed by Ball's base integer types. The macro-only [fixed.h](../../include/ball/types/fixed.h) exposes `BALL_FIXED_FOR_EACH_BITS` to both header and module consumers: header-mode consumers get it from the umbrella header's global include list, module consumers from the `Fixed` partition's global module fragment.
 
 ## Declaration
 

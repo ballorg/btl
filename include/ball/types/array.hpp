@@ -3,14 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "c/assert.h"
-#		include "meta/fixed.hpp"
-#		include "math.hpp"
-#	endif
-
 template < typename I, typename T >
 class CEmptyArray
 {

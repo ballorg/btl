@@ -2,7 +2,7 @@
 
 ## Overview
 
-Ball's replacement for `<type_traits>` and friends, under [include/ball/types/meta/](../../include/ball/types/meta/). It provides type traits, value and type packs, index sequences, fixed-width integer metadata, the derived Fibonacci-hash constants, and the descriptor machinery behind reflection. The aggregate header [meta.hpp](../../include/ball/types/meta.hpp) pulls in the commonly used subset; several headers (reflect*, typeinfo, indexsequence, tuple) are included directly by their consumers.
+Ball's replacement for `<type_traits>` and friends, under [include/ball/types/meta/](../../include/ball/types/meta/). It provides type traits, value and type packs, index sequences, fixed-width integer metadata, the derived Fibonacci-hash constants, and the descriptor machinery behind reflection. The aggregate header [meta.hpp](../../include/ball/types/meta.hpp) includes every `meta/*.hpp` header, mirroring the `file(GLOB ...)` that feeds the generated `Meta` partition; it is the sole entry point for the layer in both header and module mode.
 
 Module builds expose this complete layer through the generated `Ball.Types:Meta` partition. Its headers are discovered from `include/ball/types/meta/*.hpp` with `file(GLOB ... CONFIGURE_DEPENDS)` in [cmake/ball/types/modules.cmake](../../cmake/ball/types/modules.cmake) and rendered through the shared [module.cppm.in](../../cmake/ball/types/module.cppm.in) template.
 
@@ -53,4 +53,4 @@ The core traits depend only on other `meta/` headers and built-in C++ types. The
 
 ## Relationships
 
-Every container header includes parts of this module. The fixed-width metadata cluster (`MFixed`, `MFixedMetadata` in [meta/fixed.hpp](../../include/ball/types/meta/fixed.hpp), wrappers in [types/fixed.hpp](../../include/ball/types/fixed.hpp)) is documented at [BTL::CFixedBase](../types/BTL.CFixedBase.md).
+Every container depends on parts of this module, supplied by the umbrella header or `import :Meta;`. The fixed-width metadata cluster (`MFixed`, `MFixedMetadata` in [meta/fixed.hpp](../../include/ball/types/meta/fixed.hpp), wrappers in [types/fixed.hpp](../../include/ball/types/fixed.hpp)) is documented at [BTL::CFixedBase](../types/BTL.CFixedBase.md).

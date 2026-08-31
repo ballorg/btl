@@ -4,7 +4,7 @@
 
 A compile-time field-reflection facility: macros declare reflected fields inside a class, the meta layer assembles per-field specifications into a class descriptor, and the descriptor drives enumeration and raw byte serialization. The same `CReflect` wrapper doubles as the **column tag** mechanism that keeps same-typed SoA columns distinct (see [architecture.md](../architecture.md#same-type-soa-columns-and-reflect-tags)).
 
-Entry header: [reflect.hpp](../../include/ball/types/reflect.hpp); module consumers include the macro-only [reflect.h](../../include/ball/types/reflect.h) when using `BALL_REFLECT_*`. Descriptor machinery: [meta/reflectvalue.hpp](../../include/ball/types/meta/reflectvalue.hpp), [meta/reflectfield.hpp](../../include/ball/types/meta/reflectfield.hpp), [meta/reflectdescriptor.hpp](../../include/ball/types/meta/reflectdescriptor.hpp), [meta/reflecttraits.hpp](../../include/ball/types/meta/reflecttraits.hpp), [meta/reflectforeach.hpp](../../include/ball/types/meta/reflectforeach.hpp).
+Entry header: [reflect.hpp](../../include/ball/types/reflect.hpp); the macro-only [reflect.h](../../include/ball/types/reflect.h), needed for `BALL_REFLECT_*`, reaches all consumers through the umbrella header's global include list (or a partition's global module fragment). Descriptor machinery: [meta/reflectvalue.hpp](../../include/ball/types/meta/reflectvalue.hpp), [meta/reflectfield.hpp](../../include/ball/types/meta/reflectfield.hpp), [meta/reflectdescriptor.hpp](../../include/ball/types/meta/reflectdescriptor.hpp), [meta/reflecttraits.hpp](../../include/ball/types/meta/reflecttraits.hpp), [meta/reflectforeach.hpp](../../include/ball/types/meta/reflectforeach.hpp).
 
 ## Responsibilities
 

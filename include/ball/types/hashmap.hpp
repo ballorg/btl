@@ -3,27 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "hashmap.h"
-
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "bits.hpp"
-#		include "c/assert.h"
-#		include "c/nouniqueaddress.h"
-#		include "elements.hpp"
-#		include "fixed.hpp"
-#		include "hash.hpp"
-#		include "meta/fixed.hpp"
-#		include "meta/get.hpp"
-#		include "meta/indexsequence.hpp"
-#		include "meta/indextype.hpp"
-#		include "meta/xvalue.hpp"
-#		include "vector.hpp"
-#		include "reflect.hpp"
-#		include "slotiterator.hpp"
-#	endif
-
 ///-----------------------------------------------------------------------------
 /// @brief Per-slot occupancy state of an open-addressing hash table.
 ///

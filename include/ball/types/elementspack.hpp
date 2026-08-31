@@ -3,20 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "base/arch.h"
-#		include "base/fixed.h"
-#		include "c/assert/static.h"
-#		include "meta/constevaluated.hpp"
-#		include "meta/indextype.hpp"
-#		include "meta/pack.hpp"
-#		include "meta/removecv.hpp"
-#		include "meta/select.hpp"
-#		include "array.hpp"
-#		include "elements.hpp"
-#		include "fixed.hpp"
-#	endif
-
 template < typename I, typename T >
 struct MElementsPackBase
 {

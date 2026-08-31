@@ -3,10 +3,6 @@
 
 #	pragma once
 
-#	if !defined( BALL_ENABLE_MODULE )
-#		include "meta/xvalue.hpp"
-#	endif
-
 template < typename K, typename V >
 struct Pair_t
 {
