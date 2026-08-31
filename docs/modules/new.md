@@ -2,7 +2,7 @@
 
 ## Overview
 
-`Ball.New` exports the freestanding placement allocation functions declared by [include/ball/new.hpp](../../include/ball/new.hpp). It is independent of `Ball.Types` and is also re-exported by that umbrella module.
+`Ball.New` exports the freestanding placement allocation functions declared by [include/ball/new.hpp](../../include/ball/new.hpp). Its interface is generated from the public-module [template](../../cmake/ball/module.cppm.in) and the common [module declarations](../../cmake/ball/modules.cmake). It is independent of `Ball.Types` and is also re-exported by that umbrella module.
 
 ## Public Interface
 

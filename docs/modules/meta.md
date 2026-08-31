@@ -4,7 +4,7 @@
 
 Ball's replacement for `<type_traits>` and friends, under [include/ball/types/meta/](../../include/ball/types/meta/). It provides type traits, value and type packs, index sequences, fixed-width integer metadata, the derived Fibonacci-hash constants, and the descriptor machinery behind reflection. The aggregate header [meta.hpp](../../include/ball/types/meta.hpp) pulls in the commonly used subset; several headers (reflect*, typeinfo, indexsequence, tuple) are included directly by their consumers.
 
-Module builds expose this complete layer through the generated `Ball.Types:Meta` partition. Its headers are discovered from `include/ball/types/meta/*.hpp` with `file(GLOB ... CONFIGURE_DEPENDS)` in [cmake/ball/types/modules.cmake](../../cmake/ball/types/modules.cmake) and rendered through the shared [module.cppm.in](../../cmake/ball/module.cppm.in) template.
+Module builds expose this complete layer through the generated `Ball.Types:Meta` partition. Its headers are discovered from `include/ball/types/meta/*.hpp` with `file(GLOB ... CONFIGURE_DEPENDS)` in [cmake/ball/types/modules.cmake](../../cmake/ball/types/modules.cmake) and rendered through the shared [module.cppm.in](../../cmake/ball/types/module.cppm.in) template.
 
 ## Responsibilities
 

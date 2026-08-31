@@ -1,6 +1,6 @@
 # Agent Instructions — Ball
 
-Ball is a freestanding C++20 container/utility library (namespace `BTL`, optional public C++20 modules `Ball.Types` / `Ball.Time`). Public headers live under `include/ball/`; handwritten module interfaces and the few compiled sources live under `src/ball/`; generated component interfaces are declared in `cmake/ball/types/modules.cmake`; tests live under `src/ball/types/tests/`.
+Ball is a freestanding C++20 container/utility library (namespace `BTL`, optional public C++20 modules `Ball.Types` / `Ball.Time`). Public headers live under `include/ball/`; the few compiled sources and handwritten test module interfaces live under `src/ball/`; generated public and component interfaces are declared in `cmake/ball/modules.cmake` and `cmake/ball/types/modules.cmake`; tests live under `src/ball/types/tests/`.
 
 ## Ball Documentation
 
