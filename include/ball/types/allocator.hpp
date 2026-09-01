@@ -3,6 +3,8 @@
 
 #	pragma once
 
+/// @brief Stateless byte-level allocation policy. The blocks carry no header, so
+///        every release/resize takes back the size the block was allocated with.
 class CAllocatorBase
 {
 public:
@@ -11,19 +13,14 @@ public:
 		return Ball_AllocAlign( nSize, nAligned );
 	}
 
-	static ptr_t Realloc( ptr_t pMem, size_t nSize, size_t nAligned )
+	static ptr_t Realloc( ptr_t pMem, size_t nOldSize, size_t nNewSize, size_t nAligned )
 	{
-		return Ball_ReallocAlign( pMem, nSize, nAligned );
+		return Ball_ReallocAlign( pMem, nOldSize, nNewSize, nAligned );
 	}
 
-	static void Free( ptr_t pMem )
+	static void Free( ptr_t pMem, size_t nSize, size_t nAligned )
 	{
-		Ball_FreeAlign( pMem );
-	}
-
-	static size_t Size( ptr_t pMem, size_t nAligned, size_t nOffset = 0 )
-	{
-		return Ball_SizeAlign( pMem, nAligned, nOffset );
+		Ball_FreeAlign( pMem, nSize, nAligned );
 	}
 }; // class CAllocatorBase
 
@@ -40,11 +37,17 @@ public:
 	}
 	static T *Alloc( I nCount ) { return Alloc( nCount, ALIGN_SIZE ); }
 
-	static T *Realloc( T *pMem, I nCount, size_t nAligned )
+	static T *Realloc( T *pMem, I nOldCount, I nNewCount, size_t nAligned )
 	{
-		return reinterpret_cast< T * >( Base_t::Realloc( pMem, nCount * sizeof( T ), nAligned ) );
+		return reinterpret_cast< T * >( Base_t::Realloc( pMem, nOldCount * sizeof( T ), nNewCount * sizeof( T ), nAligned ) );
 	}
-	static T *Realloc( T *pMem, I nCount ) { return Realloc( pMem, nCount, ALIGN_SIZE ); }
+	static T *Realloc( T *pMem, I nOldCount, I nNewCount ) { return Realloc( pMem, nOldCount, nNewCount, ALIGN_SIZE ); }
+
+	static void Free( T *pMem, I nCount, size_t nAligned )
+	{
+		Base_t::Free( pMem, nCount * sizeof( T ), nAligned );
+	}
+	static void Free( T *pMem, I nCount ) { Free( pMem, nCount, ALIGN_SIZE ); }
 }; // class CAllocator
 
 #endif // !defined( _INCLUDE_BALL_TYPES_CALLOCATOR_HPP_ )

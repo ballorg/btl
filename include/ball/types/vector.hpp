@@ -378,8 +378,10 @@ protected:
 		{
 			if ( bWasOverflow )
 			{
+				const I nOldCapacity = Capacity();
+
 				( CopyToFixedBy< Ts >( nCopyCount ), ... );
-				BaseAllocator_t::Free( pOldData );
+				BaseAllocator_t::Free( pOldData, BlockSize( nOldCapacity ), BlockAlignment() );
 			}
 
 			return nullptr;
@@ -398,7 +400,7 @@ protected:
 			if ( bWasOverflow )
 			{
 				const I nOldCapacity = Capacity();
-				uint8_t *pNewData = reinterpret_cast< uint8_t * >( BaseAllocator_t::Realloc( pOldData, BlockSize( nNewCapacity ), BlockAlignment() ) );
+				uint8_t *pNewData = reinterpret_cast< uint8_t * >( BaseAllocator_t::Realloc( pOldData, BlockSize( nOldCapacity ), BlockSize( nNewCapacity ), BlockAlignment() ) );
 
 				BALL_ASSERT_MESSAGE( pNewData != nullptr, "Failed to reallocate vector storage" );
 
@@ -415,13 +417,14 @@ protected:
 			}
 		}
 
+		const I nOldCapacity = Capacity();
 		uint8_t *pNewData = reinterpret_cast< uint8_t * >( BaseAllocator_t::Alloc( BlockSize( nNewCapacity ), BlockAlignment() ) );
 
 		BALL_ASSERT_MESSAGE( pNewData != nullptr, "Failed to allocate vector SoA storage" );
 		( CopyToDataBy< Ts >( pNewData, nNewCapacity, nCopyCount ), ... );
 
 		if ( bWasOverflow )
-			BaseAllocator_t::Free( pOldData );
+			BaseAllocator_t::Free( pOldData, BlockSize( nOldCapacity ), BlockAlignment() );
 
 		return pNewData;
 	}
@@ -506,7 +509,7 @@ protected:
 		uint8_t *pData = FirstData();
 
 		if ( pData )
-			BaseAllocator_t::Free( pData );
+			BaseAllocator_t::Free( pData, BlockSize( Capacity() ), BlockAlignment() );
 	}
 
 };

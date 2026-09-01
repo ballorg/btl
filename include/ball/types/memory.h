@@ -3,6 +3,7 @@
 
 #	include "c/macros.h"
 
+#	include "base/arch/pointer.h"
 #	include "base/arch/size.h"
 
 #	if defined( BALL_MSVC )
@@ -24,5 +25,14 @@ BALL_EXTERN_C void *memset( void *pDest, int nFill, size_t nCount ) BALL_CRT_NOE
 BALL_EXTERN_C void *memcpy( void *pDest, const void *pSrc, size_t nCount ) BALL_CRT_NOEXCEPT;
 BALL_EXTERN_C void *memmove( void *pDest, const void *pSrc, size_t nCount ) BALL_CRT_NOEXCEPT;
 #	endif // defined( BALL_MSVC )
+
+///-----------------------------------------------------------------------------
+/// @brief Page-backed allocation (mmap/VirtualAlloc) with no header at all
+///        (unlike Ball_AllocAlign & Co.): the mapping is handed out as is, so
+///        the caller keeps the size and passes it back on release/resize.
+///-----------------------------------------------------------------------------
+BALL_EXTERN_C ptr_t Ball_Alloc( size_t nSize );
+BALL_EXTERN_C ptr_t Ball_Realloc( ptr_t pMem, size_t nOldSize, size_t nNewSize );
+BALL_EXTERN_C void Ball_Free( ptr_t pMem, size_t nSize );
 
 #endif // !defined( _INCLUDE_BALL_TYPES_MEMORY_H_ )
