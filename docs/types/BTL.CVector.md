@@ -62,7 +62,7 @@ Any operation that changes the count can reallocate or migrate storage: `Insert`
 ## Operations
 
 - `CVectorBase`: common one-or-many-column allocation, relocation, copying, packed storage, and heap↔inline migration.
-- `CVectorImpl`: shared view adaptation and row-wise `Insert`, `AddToHead`/`AddToTail`, `Remove`, `SetCount`/`SetCountRaw`, and whole-row or per-column search. Its one-column specialization additionally supplies array/view insertion, `Replace`/`ReplaceRange`, and related linear conveniences. The single-column `AddToTail` path updates the existing allocation directly between power-of-two growth boundaries, avoiding the general insertion machinery while preserving the same storage model.
+- `CVectorImpl`: shared view adaptation and row-wise `Insert`, `AddToHead`/`AddToTail`, `Remove`, `SetCount`/`SetCountRaw`, and whole-row or per-column search. Its one-column specialization additionally supplies array/view insertion, `Replace`/`ReplaceRange`, and related linear conveniences. Single-element `AddToHead` and `AddToTail` reserve their destination through the same protected `EnsureInsert` path used by the other insertion operations.
 - Wrappers: `CVector` ↔ `CBufferVector` constructors and assignments copy contents. Their rvalue forms and `MoveFrom` transfer the contents and leave the source empty; differing inline layouts mean this is a content transfer rather than guaranteed pointer stealing.
 - Convenience append: one-column wrappers accept `vector += element` and `vector += otherVector`; appending a container adds all of its elements at the tail. Self-append is supported through a temporary copy.
 

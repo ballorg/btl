@@ -818,8 +818,29 @@ public:
 		return nIndex + nCount;
 	}
 
-	constexpr I AddToHead( const T &element ) { return Insert( 0, element ); }
-	constexpr I AddToHead( T &&element ) { return Insert( 0, Move( element ) ); }
+	constexpr I AddToHead( const T &element )
+	{
+		T *pData = EnsureInsert( 0, 1 );
+
+		if constexpr ( IS_PACKED_STORAGE )
+			Packed_Set( 0, element );
+		else
+			ConstructElement( pData, element );
+
+		return 1;
+	}
+
+	constexpr I AddToHead( T &&element )
+	{
+		T *pData = EnsureInsert( 0, 1 );
+
+		if constexpr ( IS_PACKED_STORAGE )
+			Packed_Set( 0, Move( element ) );
+		else
+			ConstructElement( pData, Move( element ) );
+
+		return 1;
+	}
 	constexpr I AddToHead( ConstView_t v ) { return Insert( 0, v ); }
 	template < I N > constexpr I AddToHead( const I nCount, const T ( &arrElements )[ N ] ) { return Insert( 0, ConstGrowableView_t< N >( nCount, arrElements ) ); }
 	template < I N > constexpr I AddToHead( const I nCount, T ( &&arrElements )[ N ] ) { return Insert( 0, ConstGrowableView_t< N >( nCount, Move( arrElements ) ) ); }
@@ -827,8 +848,31 @@ public:
 	// template < I N > constexpr I AddToHead( T ( &&arrElements )[ N ] ) { return Insert( 0, Move( arrElements ) ); }
 	template < typename ...Ts > constexpr I AddMultipleToHead( Ts &&...args ) { return InsertMultiple( 0, Forward< Ts >( args )... ); }
 
-	constexpr I AddToTail( const T &element ) { return Append( element ); }
-	constexpr I AddToTail( T &&element ) { return Append( Move( element ) ); }
+	constexpr I AddToTail( const T &element )
+	{
+		const I nIndex = Count();
+		T *pData = EnsureInsert( nIndex, 1 );
+
+		if constexpr ( IS_PACKED_STORAGE )
+			Packed_Set( nIndex, element );
+		else
+			ConstructElement( pData, element );
+
+		return nIndex + 1;
+	}
+
+	constexpr I AddToTail( T &&element )
+	{
+		const I nIndex = Count();
+		T *pData = EnsureInsert( nIndex, 1 );
+
+		if constexpr ( IS_PACKED_STORAGE )
+			Packed_Set( nIndex, Move( element ) );
+		else
+			ConstructElement( pData, Move( element ) );
+
+		return nIndex + 1;
+	}
 	constexpr I AddToTail( ConstView_t v ) { return Insert( Count(), v ); }
 	template < I N > constexpr I AddToTail( GrowableView_t< N > v ) { return Insert( Count(), v ); }
 	template < I N > constexpr I AddToTail( ConstGrowableView_t< N > v ) { return Insert( Count(), v ); }
@@ -1122,37 +1166,6 @@ public:
 protected:
 	using Base_t::Set;
 
-	/// Append is the hottest vector operation. It does not need the bounds checks
-	/// or suffix-shift branch of the general insertion path.
-	template < typename U >
-	constexpr I Append( U &&element )
-	{
-		const I nOldCount = Count();
-		const I nNewCount = nOldCount + 1;
-		T *pData;
-
-		// A geometric allocation only changes immediately after a power of two.
-		// Avoid recomputing BitCeil and walking the allocator path for every append.
-		if ( nOldCount > Base_t::COMMON_FIXED_COUNT
-			&& ( static_cast< Unsigned_t >( nOldCount ) & static_cast< Unsigned_t >( nOldCount - 1 ) ) )
-		{
-			pData = Base_t::Data();
-			Base_t::SetCount( nNewCount );
-		}
-		else
-		{
-			pData = EnsureCapacity( nNewCount );
-			Set( nNewCount, pData );
-		}
-
-		if constexpr ( IS_PACKED_STORAGE )
-			Packed_Set( nOldCount, static_cast< T >( Forward< U >( element ) ) );
-		else
-			ConstructElement( &pData[ nOldCount ], Forward< U >( element ) );
-
-		return nNewCount;
-	}
-
 	constexpr T *EnsureCapacity( I nRequested )
 	{
 		uint8_t *pData = Base_t::EnsureCapacity( nRequested );
@@ -1190,7 +1203,7 @@ protected:
 		if ( nIndex < nOldCount )
 		{
 			if constexpr ( IS_PACKED_STORAGE )
-				Packed_ShiftRowsRightBy( nIndex, nOldCount - nIndex, nAddCount );
+				this->template Packed_ShiftRowsRightBy< T >( nIndex, nOldCount - nIndex, nAddCount );
 			else
 				ShiftElementsRight( &pData[ nIndex + nAddCount ], &pData[ nIndex ], &pData[ nOldCount ] );
 		}
