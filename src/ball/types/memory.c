@@ -22,6 +22,52 @@ BALL_DLL_IMPORT LPVOID BALL_WINAPI VirtualAlloc( LPVOID pAddress, SIZE_T nSize, 
 BALL_DLL_IMPORT BOOL BALL_WINAPI VirtualFree( LPVOID pAddress, SIZE_T nSize, DWORD nFreeType );
 #endif
 
+///-----------------------------------------------------------------------------
+/// @brief  System page size, queried once and cached for the process lifetime.
+/// @note   WinAPI: VirtualAlloc commits whole pages, and every architecture Ball
+///         builds for uses 4 KiB ones, so no system query is needed there.
+///         A race between two initializers is harmless: both store the same value.
+///-----------------------------------------------------------------------------
+static size_t g_nPageSize;
+
+static inline size_t Ball_PageSize( void )
+{
+	size_t nPageSize = g_nPageSize;
+
+	if ( !nPageSize )
+	{
+#if defined( BALL_WIN )
+		nPageSize = BALL_DEFAULT_PAGE_SIZE;
+#else // !defined( BALL_WIN )
+		const long_t nQueried = sysconf( BALL_SC_PAGESIZE );
+
+		nPageSize = nQueried > 0 ? ( size_t )nQueried : BALL_DEFAULT_PAGE_SIZE;
+#endif // defined( BALL_WIN )
+
+		g_nPageSize = nPageSize;
+	}
+
+	return nPageSize;
+}
+
+///-----------------------------------------------------------------------------
+/// @brief  Span the system actually handed out for a block of @p nSize bytes.
+/// @param  nSize  Size the block was requested with.
+/// @param  nAlign Alignment it was requested with (1 for the unaligned entry points).
+/// @return Byte span the block owns, always >= @p nSize.
+/// @note   mmap/VirtualAlloc round every request up to whole pages, and the
+///         over-aligned path trims to whole @p nAlign spans, so a block always
+///         owns more memory than was asked for. Resizes that stay inside that
+///         span need no system call, no move and no copy at all.
+///-----------------------------------------------------------------------------
+static inline size_t Ball_MappedSize( size_t nSize, size_t nAlign )
+{
+	const size_t nPageSize = Ball_PageSize();
+	const size_t nSpan = nAlign > nPageSize ? nAlign : nPageSize;
+
+	return BALL_ROUND_UP( nSize, nSpan );
+}
+
 #if defined( BALL_APPLE )
 static inline ptr_t Ball_Realloc_MemoryRemap( ptr_t pOldAddress, size_t nOldSize, size_t nNewSize, int nFlags )
 {
@@ -154,6 +200,7 @@ void Ball_Free( ptr_t pMem, size_t nSize )
 /// @return New pointer (possibly moved), or BALL_NULL on failure or zero size.
 /// @note
 ///   * BALL_NULL pMem behaves like Ball_Alloc; a zero nNewSize behaves like Ball_Free.
+///   * Resizes inside the page span the block already owns return it untouched.
 ///   * Unix: tries mremap( MREMAP_MAYMOVE ) for in-place/move resize first.
 ///   * Fallback (WinAPI, or mremap failure): allocate a new block, copy
 ///     min( old, new ) bytes, free the old block.
@@ -170,9 +217,18 @@ ptr_t Ball_Realloc( ptr_t pMem, size_t nOldSize, size_t nNewSize )
 		return BALL_NULL;
 	}
 
+	const size_t nOldMapped = Ball_MappedSize( nOldSize, 1u ), nNewMapped = Ball_MappedSize( nNewSize, 1u );
+
+	// The block already spans the pages the new size needs: both sizes release
+	// the very same mapping, so there is nothing left to ask the system for.
+	if ( nOldMapped == nNewMapped )
+		return pMem;
+
 #if !defined( BALL_WIN )
 	{
-		ptr_t pRemapped = Ball_Realloc_MemoryRemap( pMem, nOldSize, nNewSize, BALL_MREMAP_MAYMOVE );
+		// Page-rounded bounds: the tail the mapping could grow into starts at a
+		// page boundary, which is what makes an in-place remap possible at all.
+		ptr_t pRemapped = Ball_Realloc_MemoryRemap( pMem, nOldMapped, nNewMapped, BALL_MREMAP_MAYMOVE );
 
 		if ( pRemapped != BALL_MAP_FAILED )
 			return pRemapped;
@@ -204,9 +260,7 @@ static inline size_t Ball_AllocGranularity( void )
 #if defined( BALL_WIN )
 	return BALL_WINAPI_ALLOCATION_GRANULARITY;
 #else // !defined( BALL_WIN )
-	const long_t nPageSize = sysconf( BALL_SC_PAGESIZE );
-
-	return nPageSize > 0 ? ( size_t )nPageSize : BALL_DEFAULT_PAGE_SIZE;
+	return Ball_PageSize();
 #endif // defined( BALL_WIN )
 }
 
@@ -300,6 +354,9 @@ void Ball_FreeAlign( ptr_t pMem, size_t nSize, size_t nAlign )
 /// @param  nAlign   Required alignment (same constraints as in alloc).
 /// @return New pointer (possibly moved) or BALL_NULL on failure.
 /// @note
+///   * Resizes inside the span the block already owns return it untouched; for
+///     an over-aligned block that span is a whole nAlign multiple, so it swallows
+///     far more growth than a page does.
 ///   * Up to the allocation granularity every resized mapping keeps satisfying
 ///     the alignment, so the plain Ball_Realloc path (mremap where available)
 ///     is used directly.
@@ -321,6 +378,9 @@ ptr_t Ball_ReallocAlign( ptr_t pMem, size_t nOldSize, size_t nNewSize, size_t nA
 
 	BALL_ASSERT_IF_MESSAGE( !nAlign || !BALL_IS_POW2( nAlign ), "Incorrect align" )
 		return BALL_NULL;
+
+	if ( Ball_MappedSize( nOldSize, nAlign ) == Ball_MappedSize( nNewSize, nAlign ) )
+		return pMem;
 
 	if ( nAlign <= Ball_AllocGranularity() )
 		return Ball_Realloc( pMem, nOldSize, nNewSize );
