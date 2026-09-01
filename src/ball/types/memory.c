@@ -15,11 +15,34 @@
 
 #	define BALL_WINAPI_MEM_COMMIT 0x00001000u
 #	define BALL_WINAPI_MEM_RESERVE 0x00002000u
+#	define BALL_WINAPI_MEM_DECOMMIT 0x00004000u
 #	define BALL_WINAPI_MEM_RELEASE 0x00008000u
 #	define BALL_WINAPI_PAGE_READWRITE 0x00000004u
 
+///-----------------------------------------------------------------------------
+/// @brief  WinAPI MEMORY_BASIC_INFORMATION, redeclared like the calls around it
+///         so that no system header is pulled in.
+/// @note   Only pAllocationBase is ever read; the remaining members are there to
+///         give the structure the exact size VirtualQuery is asked to fill.
+///-----------------------------------------------------------------------------
+typedef struct
+{
+	PVOID pBaseAddress;
+	PVOID pAllocationBase;
+	DWORD nAllocationProtect;
+#	if defined( BALL_64BITS )
+	WORD nPartitionID;
+	WORD nPadding;
+#	endif // defined( BALL_64BITS )
+	SIZE_T nRegionSize;
+	DWORD nState;
+	DWORD nProtect;
+	DWORD nType;
+} Ball_WinAPI_MemoryBasicInfo_t;
+
 BALL_DLL_IMPORT LPVOID BALL_WINAPI VirtualAlloc( LPVOID pAddress, SIZE_T nSize, DWORD nAllocationType, DWORD nProtect );
 BALL_DLL_IMPORT BOOL BALL_WINAPI VirtualFree( LPVOID pAddress, SIZE_T nSize, DWORD nFreeType );
+BALL_DLL_IMPORT SIZE_T BALL_WINAPI VirtualQuery( LPVOID pAddress, Ball_WinAPI_MemoryBasicInfo_t *pBuffer, SIZE_T nLength );
 #endif
 
 ///-----------------------------------------------------------------------------
@@ -192,6 +215,91 @@ void Ball_Free( ptr_t pMem, size_t nSize )
 #endif
 }
 
+#if defined( BALL_WIN )
+///-----------------------------------------------------------------------------
+/// @brief  Address-space headroom a moved block is reserved with, as a shift.
+/// @note   Containers grow geometrically, so reserving eight times the block
+///         swallows the next three growth steps: the pages past the requested
+///         size stay uncommitted, costing address space and nothing else.
+///-----------------------------------------------------------------------------
+#	define BALL_WINAPI_RESERVE_HEADROOM_SHIFT 3u
+
+///-----------------------------------------------------------------------------
+/// @brief  Whether the first @p nSpan bytes of @p pMem all belong to the single
+///         reservation @p pMem is the base of.
+/// @param  pMem  Block base, always the base of its own reservation.
+/// @param  nSpan Byte span the caller wants to commit.
+/// @return Non-zero when the span is entirely inside that reservation.
+/// @note   A reservation is one contiguous address range, so the last byte
+///         answers for the whole span. Without the check a commit could reach
+///         into a neighbouring reservation and hand out memory another block owns.
+///-----------------------------------------------------------------------------
+static bool_t Ball_WinAPI_OwnsSpan( ptr_t pMem, size_t nSpan )
+{
+	Ball_WinAPI_MemoryBasicInfo_t sInfo;
+
+	if ( VirtualQuery( ( LPVOID )( ( uchar_t * )pMem + nSpan - 1u ), &sInfo, sizeof( sInfo ) ) != sizeof( sInfo ) )
+		return 0;
+
+	return sInfo.pAllocationBase == pMem;
+}
+
+///-----------------------------------------------------------------------------
+/// @brief  Resize a block inside the reservation it already holds.
+/// @param  pMem       Block base, always the base of its own reservation.
+/// @param  nOldMapped Page span currently committed.
+/// @param  nNewMapped Page span wanted.
+/// @return Non-zero when the block was resized where it stands, so nothing has
+///         to be allocated, copied or released.
+/// @note   Growing commits the pages past the old span, which is the whole cost:
+///         the pages already there keep their contents and stay faulted in.
+///         Shrinking decommits the tail and keeps the reservation, so the block
+///         can grow back into it later without a move.
+///-----------------------------------------------------------------------------
+static bool_t Ball_WinAPI_ResizeInPlace( ptr_t pMem, size_t nOldMapped, size_t nNewMapped )
+{
+	if ( nNewMapped < nOldMapped )
+	{
+		( void )VirtualFree( ( LPVOID )( ( uchar_t * )pMem + nNewMapped ), nOldMapped - nNewMapped, BALL_WINAPI_MEM_DECOMMIT );
+
+		return 1;
+	}
+
+	if ( !Ball_WinAPI_OwnsSpan( pMem, nNewMapped ) )
+		return 0;
+
+	return VirtualAlloc( ( LPVOID )( ( uchar_t * )pMem + nOldMapped ), nNewMapped - nOldMapped, BALL_WINAPI_MEM_COMMIT, BALL_WINAPI_PAGE_READWRITE ) != BALL_NULL;
+}
+
+///-----------------------------------------------------------------------------
+/// @brief  Allocate a block that keeps room to grow into.
+/// @param  nCommit Page span to commit, which is what the caller may touch.
+/// @return Pointer to the committed head of the reservation, or BALL_NULL.
+/// @note   Reserves BALL_WINAPI_RESERVE_HEADROOM_SHIFT times more address space
+///         than it commits, so the growth steps that follow are plain commits
+///         through Ball_WinAPI_ResizeInPlace instead of allocate-copy-release
+///         rounds. Ball_Free stays as it is: MEM_RELEASE takes the reservation
+///         back whole, whatever part of it ended up committed.
+///-----------------------------------------------------------------------------
+static ptr_t Ball_WinAPI_AllocReserved( size_t nCommit )
+{
+	const size_t nReserve = nCommit <= ( ~( size_t )0u >> BALL_WINAPI_RESERVE_HEADROOM_SHIFT ) ? nCommit << BALL_WINAPI_RESERVE_HEADROOM_SHIFT : nCommit;
+
+	ptr_t pRaw = ( ptr_t )VirtualAlloc( BALL_NULL, nReserve, BALL_WINAPI_MEM_RESERVE, BALL_WINAPI_PAGE_READWRITE );
+
+	if ( pRaw )
+	{
+		if ( VirtualAlloc( ( LPVOID )pRaw, nCommit, BALL_WINAPI_MEM_COMMIT, BALL_WINAPI_PAGE_READWRITE ) )
+			return pRaw;
+
+		( void )VirtualFree( pRaw, 0u, BALL_WINAPI_MEM_RELEASE );
+	}
+
+	// Address space is too tight for the headroom: take exactly what was asked for.
+	return Ball_Alloc( nCommit );
+}
+#endif // defined( BALL_WIN )
+
 ///-----------------------------------------------------------------------------
 /// @brief  Reallocate memory allocated by Ball_Alloc or Ball_Realloc.
 /// @param  pMem     Old pointer previously returned by Ball_Alloc/Ball_Realloc, or BALL_NULL.
@@ -202,8 +310,11 @@ void Ball_Free( ptr_t pMem, size_t nSize )
 ///   * BALL_NULL pMem behaves like Ball_Alloc; a zero nNewSize behaves like Ball_Free.
 ///   * Resizes inside the page span the block already owns return it untouched.
 ///   * Unix: tries mremap( MREMAP_MAYMOVE ) for in-place/move resize first.
-///   * Fallback (WinAPI, or mremap failure): allocate a new block, copy
-///     min( old, new ) bytes, free the old block.
+///   * WinAPI: commits into (or decommits from) the reservation the block holds,
+///     which a moved block is given headroom in, so a growing container walks
+///     through its growth steps without allocating, copying or releasing again.
+///   * Fallback (a resize the reservation cannot hold, or mremap failure):
+///     allocate a new block, copy min( old, new ) bytes, free the old block.
 ///-----------------------------------------------------------------------------
 ptr_t Ball_Realloc( ptr_t pMem, size_t nOldSize, size_t nNewSize )
 {
@@ -224,7 +335,15 @@ ptr_t Ball_Realloc( ptr_t pMem, size_t nOldSize, size_t nNewSize )
 	if ( nOldMapped == nNewMapped )
 		return pMem;
 
-#if !defined( BALL_WIN )
+#if defined( BALL_WIN )
+	// The reservation behind the block is at least as long as the mapping it
+	// handed out, and a moved block is reserved with headroom past that, so the
+	// pages the new size needs are usually there to be committed.
+	if ( Ball_WinAPI_ResizeInPlace( pMem, nOldMapped, nNewMapped ) )
+		return pMem;
+
+	ptr_t pNew = Ball_WinAPI_AllocReserved( nNewMapped );
+#else // !defined( BALL_WIN )
 	{
 		// Page-rounded bounds: the tail the mapping could grow into starts at a
 		// page boundary, which is what makes an in-place remap possible at all.
@@ -233,9 +352,9 @@ ptr_t Ball_Realloc( ptr_t pMem, size_t nOldSize, size_t nNewSize )
 		if ( pRemapped != BALL_MAP_FAILED )
 			return pRemapped;
 	}
-#endif // !defined( BALL_WIN )
 
 	ptr_t pNew = Ball_Alloc( nNewSize );
+#endif // defined( BALL_WIN )
 
 	BALL_ASSERT_IF_MESSAGE( !pNew, "Failed to allocate new memory during reallocation" )
 		return BALL_NULL;
@@ -358,8 +477,8 @@ void Ball_FreeAlign( ptr_t pMem, size_t nSize, size_t nAlign )
 ///     an over-aligned block that span is a whole nAlign multiple, so it swallows
 ///     far more growth than a page does.
 ///   * Up to the allocation granularity every resized mapping keeps satisfying
-///     the alignment, so the plain Ball_Realloc path (mremap where available)
-///     is used directly.
+///     the alignment, so the plain Ball_Realloc path is used directly: mremap
+///     on Unix, a commit into the block's own reservation on WinAPI.
 ///   * Above it the resized mapping would land on an arbitrary granularity
 ///     boundary, so a fresh aligned block is taken, min( old, new ) bytes are
 ///     copied, and the old block is released.
