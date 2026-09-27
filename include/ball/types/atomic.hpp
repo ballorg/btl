@@ -224,8 +224,8 @@ inline void AtomicThreadFence( EMemoryOrder eOrder = EMemoryOrder::SEQ_CST ) noe
 /// @details One name spells two things. `CAtomic< T >` is a single lock-free
 /// atomic value -- the partial specialization right below. `CAtomic< I, Ts... >`,
 /// an index type followed by at least one column, is the unsynchronized
-/// concurrent SoA container, whose definition of this primary template lives in
-/// `types/concurrent.hpp`.
+/// concurrent SoA container, a second partial specialization that lives in
+/// `types/concurrent.hpp`. The primary template itself is never defined.
 ///
 /// @note The first parameter therefore changes meaning with the argument count:
 /// `CAtomic< uint32_t >` is an atomic 32-bit value, while

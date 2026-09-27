@@ -6,14 +6,15 @@
 
 It exists so a value can be shared between threads, and so an SoA column can be made atomic — [CConcurrent](BTL.CConcurrent.md) offers per-element atomic operations on exactly the columns declared `CAtomic< U >`.
 
-The name carries two shapes, told apart by argument count. `CAtomic< T >` — one argument — is this atomic value, written as a partial specialization. The primary template `CAtomic< I, Ts... >` — an index type followed by one or more columns — is the unsynchronized concurrent SoA container, documented in [CConcurrent](BTL.CConcurrent.md) and defined in [include/ball/types/concurrent.hpp](../../include/ball/types/concurrent.hpp); this header only declares it. The first parameter therefore changes meaning with the argument count: `CAtomic< uint32_t >` is an atomic 32-bit value, while `CAtomic< uint32_t, uint64_t >` is a one-column SoA indexed by `uint32_t`.
+The name carries two shapes, told apart by argument count. `CAtomic< T >` — one argument — is this atomic value, written as a partial specialization. `CAtomic< I, T0, Ts... >` — an index type followed by one or more columns — is the unsynchronized concurrent SoA container, a second partial specialization documented in [CConcurrent](BTL.CConcurrent.md) and defined in [include/ball/types/concurrent.hpp](../../include/ball/types/concurrent.hpp). The primary template `CAtomic< I, Ts... >` is only declared here and never defined, so `CAtomic< I >` with no columns is an incomplete type. The first parameter therefore changes meaning with the argument count: `CAtomic< uint32_t >` is an atomic 32-bit value, while `CAtomic< uint32_t, uint64_t >` is a one-column SoA indexed by `uint32_t`.
 
 ## Declaration
 
 - **Namespace:** `BTL`
 - **Module:** `Ball.Types` (partition `Ball.Types:Atomic`)
 - **Kind:** class template, enumeration, and supporting traits
-  - `CAtomic< typename I, typename... Ts >` — primary template, the concurrent SoA; declared here, defined by [CConcurrent](BTL.CConcurrent.md)
+  - `CAtomic< typename I, typename... Ts >` — primary template, declared here and never defined; both shapes are partial specializations of it
+  - `CAtomic< typename I, typename T0, typename... Ts >` — partial specialization, the concurrent SoA, defined by [CConcurrent](BTL.CConcurrent.md)
   - `CAtomic< typename T >` — partial specialization, the atomic value described by this document
   - `EMemoryOrder` — `RELAXED`, `CONSUME`, `ACQUIRE`, `RELEASE`, `ACQ_REL`, `SEQ_CST`
   - `MAtomicWord< size_t SIZE >` — the unsigned word a width is carried in

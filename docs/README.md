@@ -52,7 +52,7 @@ Start with [architecture.md](architecture.md) for the layer diagram and dependen
 - [BTL::CSlotIterator](types/BTL.CSlotIterator.md) — slot iterator shared by tree and hash map
 
 ### Concurrency
-- [BTL::CAtomic](types/BTL.CAtomic.md) — lock-free atomic value (`CAtomic< T >`), `EMemoryOrder`, atomic-column traits, and the primary template the lock-free SoA completes
+- [BTL::CAtomic](types/BTL.CAtomic.md) — lock-free atomic value (`CAtomic< T >`), `EMemoryOrder`, atomic-column traits, and the undefined primary template both shapes specialize
 - [BTL::CMutex](types/BTL.CMutex.md) — mutex family (`CSharedMutex`, `CNullMutex`, `CSpinBackoff`) and RAII guards (`CUniqueLock`, `CSharedLock`, `CScopedLock`)
 - [BTL::CConcurrent](types/BTL.CConcurrent.md) — thread-safe SoA container family (`CConcurrentBase`, `CBufferConcurrent`, `CAtomic< I, Ts... >`) and its synchronization policies
 

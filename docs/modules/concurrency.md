@@ -22,12 +22,12 @@ In module builds the declarations are owned by `Ball.Types:Atomic`, `Ball.Types:
 | Atomic value | `CAtomic< T >`, `EMemoryOrder`, `AtomicThreadFence` | `AtomicBool_t`, `AtomicUInt32_t`, `AtomicUInt64_t`, `AtomicSize_t`, … |
 | Mutexes | `CMutex`, `CSharedMutex`, `CNullMutex`, `CSpinBackoff` | — |
 | Lock guards | `CUniqueLock< TMutex >`, `CSharedLock< TMutex >`, `CScopedLock< TMutex >`, `DEFER_LOCK`, `ADOPT_LOCK` | — |
-| Concurrent SoA | `CConcurrentBase`, `CConcurrent`, `CBufferConcurrent`, `CAtomic< I, Ts... >` | `Concurrent(16/32/64)_t`, `BufferConcurrent(32/64)_t< N >`, `AtomicConcurrent(32/64)_t` |
+| Concurrent SoA | `CConcurrentBase`, `CConcurrent`, `CBufferConcurrent`, `CAtomic< I, T0, Ts... >` | `Concurrent(16/32/64)_t`, `BufferConcurrent(32/64)_t< N >`, `AtomicConcurrent(32/64)_t` |
 | Policies | `CMutexSynchronization`, `CSharedMutexSynchronization`, `CAtomicSynchronization` | — |
 
 Traits: `IS_ATOMIC< T >` and `AtomicValue_t< T >` identify an atomic column and name the value it carries; both match the one-argument `CAtomic< T >` only.
 
-`CAtomic` is one name over both atomic shapes, separated by argument count: `CAtomic< T >` is the value, a partial specialization declared in the `Atomic` partition, and `CAtomic< I, Ts... >` is the unsynchronized SoA container, the primary template that partition declares and the `Concurrent` partition defines.
+`CAtomic` is one name over both atomic shapes, separated by argument count: `CAtomic< T >` is the value, a partial specialization declared in the `Atomic` partition, and `CAtomic< I, T0, Ts... >` is the unsynchronized SoA container, a partial specialization in the `Concurrent` partition. The primary template the `Atomic` partition declares is never defined; see [CConcurrent](../types/BTL.CConcurrent.md) for why.
 
 ## Dependencies
 

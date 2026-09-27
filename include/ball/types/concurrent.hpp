@@ -809,16 +809,19 @@ public:
 /// and no thread changes the container's shape during shared use; see
 /// @ref CAtomicSynchronization.
 ///
-/// @note This is the definition of the primary `CAtomic` template declared in
+/// @note This is a partial specialization of the `CAtomic` template declared in
 /// `types/atomic.hpp`, so one name covers both atomic shapes: a single argument
 /// selects the atomic-value specialization, an index type plus one or more
-/// columns selects this container.
+/// columns selects this container. The primary template stays undefined on
+/// purpose: MSVC 19.44 crashes (C1001) importing a partition that defines a
+/// primary class template declared in another partition, while a partial
+/// specialization imports cleanly.
 ///-----------------------------------------------------------------------------
-template < typename I, typename... Ts >
-class CAtomic : public CConcurrentBase< CAtomicSynchronization, I, 0, Ts... >
+template < typename I, typename T0, typename... Ts >
+class CAtomic< I, T0, Ts... > : public CConcurrentBase< CAtomicSynchronization, I, 0, T0, Ts... >
 {
 public:
-	using Base_t = CConcurrentBase< CAtomicSynchronization, I, 0, Ts... >;
+	using Base_t = CConcurrentBase< CAtomicSynchronization, I, 0, T0, Ts... >;
 	using Base_t::Base_t;
 };
 
