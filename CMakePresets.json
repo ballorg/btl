@@ -59,6 +59,21 @@
 			{
 				"CMAKE_BUILD_TYPE": "Release"
 			}
+		},
+		{
+			"name": "ThreadSanitizer",
+			"displayName": "Ninja - ThreadSanitizer",
+			"description": "Data-race detection for the concurrent containers",
+			"inherits": "NinjaBase",
+
+			"cacheVariables":
+			{
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
+				"BALL_ENABLE_ASSERT": true,
+				"CMAKE_C_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
+				"CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
+				"CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
+			}
 		}
 	],
 
@@ -91,6 +106,13 @@
 			"displayName": "Ninja - Release",
 			"description": "Release building with Ninja configuration",
 			"configurePreset": "Release"
+		},
+		{
+			"name": "ThreadSanitizer",
+
+			"displayName": "Ninja - ThreadSanitizer",
+			"description": "ThreadSanitizer building with Ninja configuration",
+			"configurePreset": "ThreadSanitizer"
 		}
 	],
 
@@ -127,6 +149,15 @@
 			"name": "Release",
 			"displayName": "CTest - Ninja - Release",
 			"configurePreset": "Release",
+			"output":
+			{
+				"outputOnFailure": true
+			}
+		},
+		{
+			"name": "ThreadSanitizer",
+			"displayName": "CTest - Ninja - ThreadSanitizer",
+			"configurePreset": "ThreadSanitizer",
 			"output":
 			{
 				"outputOnFailure": true

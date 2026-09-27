@@ -22,6 +22,7 @@ add_executable(${PROJECT_TESTS_NAME}
 	${SOURCE_DIR}/ball/types/tests/case08_hashmap.cpp
 	${SOURCE_DIR}/ball/types/tests/case10_delegate.cpp
 	${SOURCE_DIR}/ball/types/tests/case11_mapbenchmark.cpp
+	${SOURCE_DIR}/ball/types/tests/case13_concurrent.cpp
 )
 
 target_sources(${PROJECT_TESTS_NAME}
@@ -40,6 +41,7 @@ PRIVATE
 		${SOURCE_DIR}/ball/types/tests/case08_hashmap.cppm
 		${SOURCE_DIR}/ball/types/tests/case10_delegate.cppm
 		${SOURCE_DIR}/ball/types/tests/case11_mapbenchmark.cppm
+		${SOURCE_DIR}/ball/types/tests/case13_concurrent.cppm
 )
 
 if(MSVC)
@@ -52,7 +54,8 @@ if(MSVC)
 	)
 endif()
 
-target_link_libraries(${PROJECT_TESTS_NAME} PRIVATE ${PROJECT_NAME})
+find_package(Threads REQUIRED)
+target_link_libraries(${PROJECT_TESTS_NAME} PRIVATE ${PROJECT_NAME} Threads::Threads)
 
 target_compile_definitions(${PROJECT_TESTS_NAME} PRIVATE BALL_TEST_ENABLE_MODULES=1)
 set_target_properties(${PROJECT_TESTS_NAME} PROPERTIES

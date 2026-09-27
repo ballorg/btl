@@ -18,6 +18,7 @@ import :Tests.Case07;
 import :Tests.Case08;
 import :Tests.Case10;
 import :Tests.Case11;
+import :Tests.Case13;
 
 using TestsOutput_t = BTL::BufferString_t< 4096 >;
 
@@ -65,6 +66,10 @@ extern "C++" int main()
 	Case11_MapBenchmark( str );
 	auto nsCase11 = BALL_PROF_END( Case11 );
 
+	BALL_PROF_BEGIN( Case13 );
+	Case13_Concurrent( str );
+	auto nsCase13 = BALL_PROF_END( Case13 );
+
 	str.AppendMultiple( "std::vector", ": ", "Done in ", nsCase01.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::Vector_t", ": ", "Done in ", nsCase02.AsMillisF(), " milliseconds\n" );
 	str += "---\n";
@@ -75,7 +80,8 @@ extern "C++" int main()
 	str.AppendMultiple( "BTL::Hash_t", ": ", "Done in ", nsCase07.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::HashMap_t", ": ", "Done in ", nsCase08.AsMillisF(), " milliseconds\n" );
 	str.AppendMultiple( "BTL::Delegate_t", ": ", "Done in ", nsCase10.AsMillisF(), " milliseconds\n" );
-	str.AppendMultiple( "BTL::MapBenchmark_t", ": ", "Done in ", nsCase11.AsMillisF(), " milliseconds\0" );
+	str.AppendMultiple( "BTL::MapBenchmark_t", ": ", "Done in ", nsCase11.AsMillisF(), " milliseconds\n" );
+	str.AppendMultiple( "BTL::Concurrent_t", ": ", "Done in ", nsCase13.AsMillisF(), " milliseconds\0" );
 
 	puts( str.String() );
 	return 0;

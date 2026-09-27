@@ -9,11 +9,13 @@
 
 #	include "types/c/assert.h"
 #	include "types/c/assert/static.h"
+#	include "types/c/atomic.h"
 #	include "types/c/bits.h"
 #	include "types/c/math.h"
 #	include "types/c/nodiscrad.h"
 #	include "types/c/nouniqueaddress.h"
 #	include "types/c/prefetch.h"
+#	include "types/c/thread.h"
 #	include "types/fixed.h"
 #	include "types/hashmap.h"
 #	include "types/meta/fixed.h"
@@ -23,6 +25,8 @@
 BALL_EXPORT namespace BTL
 {
 #	include "types/meta.hpp"
+#	include "types/atomic.hpp"
+#	include "types/lock.hpp"
 #	include "types/bits.hpp"
 #	include "types/elements.hpp"
 #	include "types/fixed.hpp"
@@ -45,6 +49,7 @@ BALL_EXPORT namespace BTL
 #	include "types/string.hpp"
 #	include "types/rbtree.hpp"
 #	include "types/hashmap.hpp"
+#	include "types/concurrent.hpp"
 #	include "types/delegate.hpp"
 };
 

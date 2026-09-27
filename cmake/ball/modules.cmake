@@ -15,6 +15,8 @@ ball_generate_public_module(
 	EXPORT_IMPORTS
 		Ball.New
 		:Meta
+		:Atomic
+		:Lock
 		:Bits
 		:Elements
 		:Fixed
@@ -36,5 +38,6 @@ ball_generate_public_module(
 		:String
 		:RBTree
 		:HashMap
+		:Concurrent
 		:Delegate
 )

@@ -7,6 +7,10 @@ Ball is organized as a strict layering of headers under [include/ball/](../inclu
 │ facades      CString  CRBTree/CRBTree  CHashMap/CHashMap │
 │              CDelegate/CMulticastDelegate                          │
 ├────────────────────────────────────────────────────────────────────┤
+│ concurrency  CConcurrent/CBufferConcurrent/CAtomic                 │
+│              CMutex  CSharedMutex  CUniqueLock  CSharedLock        │
+│              CAtomic (sits directly on base/, c/)                  │
+├────────────────────────────────────────────────────────────────────┤
 │ containers   CVector (single/SoA)  CView  CViewBase                │
 │              CElementsPack  CArray  CSlotIterator                  │
 ├────────────────────────────────────────────────────────────────────┤
@@ -25,13 +29,13 @@ Ball is organized as a strict layering of headers under [include/ball/](../inclu
 
 ## Namespace and module composition
 
-Public headers do not open a namespace themselves. The umbrella header [include/ball/types.hpp](../include/ball/types.hpp) includes every component **inside** `BALL_EXPORT namespace BTL { ... }`, so all types documented here are `BTL::` types when consumed through `<ball/types.hpp>` (or `import Ball.Types;`). Only `new.hpp` and the macro-only/CRT headers (`types/memory.h`, `types/c/*.h`, `types/fixed.h`, `types/hashmap.h`, `types/meta/fixed.h`, `types/rbtree.h`, `types/reflect.h`) are included before the namespace, keeping placement `new`, `size_t`, CRT imports, and `BALL_*` macros global — the same split the generated partitions' global module fragments (`GLOBAL_HEADERS`) make.
+Public headers do not open a namespace themselves. The umbrella header [include/ball/types.hpp](../include/ball/types.hpp) includes every component **inside** `BALL_EXPORT namespace BTL { ... }`, so all types documented here are `BTL::` types when consumed through `<ball/types.hpp>` (or `import Ball.Types;`). Only `new.hpp` and the macro-only/CRT headers (`types/memory.h`, `types/c/*.h` -- which now also carry the atomic intrinsics and the spin/yield hooks -- `types/fixed.h`, `types/hashmap.h`, `types/meta/fixed.h`, `types/rbtree.h`, `types/reflect.h`) are included before the namespace, keeping placement `new`, `size_t`, CRT imports, and `BALL_*` macros global — the same split the generated partitions' global module fragments (`GLOBAL_HEADERS`) make.
 
 With `BALL_ENABLE_MODULES`, the generated `Ball.New` interface exports the global placement allocation functions from [new.hpp](../include/ball/new.hpp). The generated `Ball.Types` interface re-exports `Ball.New`, the complete generated `Meta` partition, and every generated component partition. `Meta` owns the base aliases, traits, type inspection, and reflection descriptors.
 
 The shared module-generation functions live in [cmake/modules.cmake](../cmake/modules.cmake). All three public interfaces are generated into the build tree from [module.cppm.in](../cmake/ball/module.cppm.in) and the declarative [modules.cmake](../cmake/ball/modules.cmake) manifest. That manifest records the headers and global-fragment dependencies exported by `Ball.New` and `Ball.Time`, plus the ordered partition re-exports of `Ball.Types`.
 
-Component interfaces are generated into the build tree from the shared [module.cppm.in](../cmake/ball/types/module.cppm.in) template and the declarative [modules.cmake](../cmake/ball/types/modules.cmake) manifest — the authoritative dependency manifest for module mode, and the model the umbrella header mirrors for header mode. The `Meta` header set is discovered automatically with `file(GLOB ... CONFIGURE_DEPENDS)`; the manifest records only the partition name, owning headers, global-fragment headers, and extra partition imports for `Allocator`, `Array`, `Bits`, `Elements`, `ElementsPack`, `Fixed`, `Hash`, `Math`, `Number`, `Pair`, `Prefetch`, `Reflect`, `SlotIterator`, `StringView`, `VectorIterator`, `ViewBase`, `View`, `Vector`, `String`, `RBTree`, `HashMap`, and `Delegate`. The generator supplies the common global module fragment, `Ball.New` and `Meta` imports, the exported `BTL` namespace, and header inclusion. These partitions are implementation details; ordinary consumers import `Ball.Types`. The generated `Ball.Time` module independently exports the timing layer.
+Component interfaces are generated into the build tree from the shared [module.cppm.in](../cmake/ball/types/module.cppm.in) template and the declarative [modules.cmake](../cmake/ball/types/modules.cmake) manifest — the authoritative dependency manifest for module mode, and the model the umbrella header mirrors for header mode. The `Meta` header set is discovered automatically with `file(GLOB ... CONFIGURE_DEPENDS)`; the manifest records only the partition name, owning headers, global-fragment headers, and extra partition imports for `Allocator`, `Array`, `Bits`, `Elements`, `ElementsPack`, `Fixed`, `Hash`, `Math`, `Number`, `Pair`, `Prefetch`, `Reflect`, `SlotIterator`, `StringView`, `VectorIterator`, `ViewBase`, `View`, `Vector`, `String`, `RBTree`, `HashMap`, `Atomic`, `Lock`, `Concurrent`, and `Delegate`. The generator supplies the common global module fragment, `Ball.New` and `Meta` imports, the exported `BTL` namespace, and header inclusion. These partitions are implementation details; ordinary consumers import `Ball.Types`. The generated `Ball.Time` module independently exports the timing layer.
 
 Placement `new` remains in the global namespace, but module consumers obtain it from `Ball.New` directly or through `Ball.Types`. Header-mode consumers continue to use [new.hpp](../include/ball/new.hpp). Generated component interfaces place the required C runtime declarations in their global module fragments.
 
@@ -53,7 +57,7 @@ Every level of the stack exists in two capacity flavors selected by the inline c
 - `I(-1)` is `INVALID_INDEX`/`NIL_INDEX`; `IsValidIndex` tests against it.
 - Classes are `C*`, metaprogramming helpers are `M*`, aliases end in `_t`, enum types are `E*`.
 - Errors are contract violations checked by `BALL_ASSERT*` (from [c/assert.h](../include/ball/types/c/assert.h)); the library does not throw exceptions.
-- Nothing in the library is thread-safe; callers synchronize externally.
+- The containers are not thread-safe on their own; callers synchronize externally, or use the [concurrency module](modules/concurrency.md), whose `CConcurrent` puts one mutex over a whole SoA.
 
 ## Same-type SoA columns and reflect tags
 
@@ -70,6 +74,7 @@ The logical layering below; [cmake/ball/types/modules.cmake](../cmake/ball/types
 | utilities | base/, c/, meta/ |
 | containers | utilities, meta/, allocator, memory.h |
 | associative | containers, hash policy, reflection (column tags), slot iterator |
+| concurrency | containers (`CBufferVector`), meta/, `c/atomic.h` and `c/thread.h` |
 | strings | containers (vector stack), number/math |
 | reflection | meta/reflect*, strings (name views) |
 | delegates | containers (variadic `CVector`, `BufferVector_t`), meta/ |

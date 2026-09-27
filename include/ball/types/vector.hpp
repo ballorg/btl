@@ -1760,6 +1760,8 @@ public:
 
 		CopyFromAuto( other );
 		other.RemoveAll();
+
+		return *this;
 	}
 	constexpr CBufferVector &MoveFrom( CVector< I, T, Ts... > &&other )
 	{
